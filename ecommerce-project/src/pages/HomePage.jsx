@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import { Header } from '../components/Header';
 import './HomePage.css';
 
@@ -8,17 +8,17 @@ export function HomePage() {
     const [cart, setCart] = useState([]);
 
     useEffect(() => {
-      axios.get('http://localhost:3000/api/products')
-          .then((response) => {
-            setProducts(response.data);
-          });
-    },  []);
-      
-      axios.get('http://localhost:3000/api/cart-items')
-        .then((response) => {
-            setCart(response.data);
-        });
-    
+        axios.get('/api/products')
+            .then((response) => {
+                setProducts(response.data);
+            });
+
+        axios.get('/api/cart-items')
+            .then((response) => {
+                setCart(response.data);
+            });
+
+    }, []);
 
 
     return (
