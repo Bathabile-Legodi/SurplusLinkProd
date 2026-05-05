@@ -9,38 +9,262 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NgoNotVerifiedRouteImport } from './routes/ngo.not-verified'
+import { Route as NgoExploreRouteImport } from './routes/ngo.explore'
+import { Route as NgoDashboardRouteImport } from './routes/ngo.dashboard'
+import { Route as NgoClaimsRouteImport } from './routes/ngo.claims'
+import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
+import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
+import { Route as NgoDonationsIdRouteImport } from './routes/ngo.donations.$id'
+import { Route as DonorDonateSuccessRouteImport } from './routes/donor.donate.success'
+import { Route as DonorDonateReviewRouteImport } from './routes/donor.donate.review'
+import { Route as DonorDonateConsentRouteImport } from './routes/donor.donate.consent'
+import { Route as DonorDonateBatchRouteImport } from './routes/donor.donate.batch'
+import { Route as NgoDonationsIdUnavailableRouteImport } from './routes/ngo.donations.$id.unavailable'
+import { Route as NgoDonationsIdSuccessRouteImport } from './routes/ngo.donations.$id.success'
+import { Route as NgoDonationsIdClaimRouteImport } from './routes/ngo.donations.$id.claim'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NgoNotVerifiedRoute = NgoNotVerifiedRouteImport.update({
+  id: '/ngo/not-verified',
+  path: '/ngo/not-verified',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoExploreRoute = NgoExploreRouteImport.update({
+  id: '/ngo/explore',
+  path: '/ngo/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoDashboardRoute = NgoDashboardRouteImport.update({
+  id: '/ngo/dashboard',
+  path: '/ngo/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoClaimsRoute = NgoClaimsRouteImport.update({
+  id: '/ngo/claims',
+  path: '/ngo/claims',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDashboardRoute = DonorDashboardRouteImport.update({
+  id: '/donor/dashboard',
+  path: '/donor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoTrackIdRoute = NgoTrackIdRouteImport.update({
+  id: '/ngo/track/$id',
+  path: '/ngo/track/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoDonationsIdRoute = NgoDonationsIdRouteImport.update({
+  id: '/ngo/donations/$id',
+  path: '/ngo/donations/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateSuccessRoute = DonorDonateSuccessRouteImport.update({
+  id: '/donor/donate/success',
+  path: '/donor/donate/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateReviewRoute = DonorDonateReviewRouteImport.update({
+  id: '/donor/donate/review',
+  path: '/donor/donate/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateConsentRoute = DonorDonateConsentRouteImport.update({
+  id: '/donor/donate/consent',
+  path: '/donor/donate/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateBatchRoute = DonorDonateBatchRouteImport.update({
+  id: '/donor/donate/batch',
+  path: '/donor/donate/batch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoDonationsIdUnavailableRoute =
+  NgoDonationsIdUnavailableRouteImport.update({
+    id: '/unavailable',
+    path: '/unavailable',
+    getParentRoute: () => NgoDonationsIdRoute,
+  } as any)
+const NgoDonationsIdSuccessRoute = NgoDonationsIdSuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => NgoDonationsIdRoute,
+} as any)
+const NgoDonationsIdClaimRoute = NgoDonationsIdClaimRouteImport.update({
+  id: '/claim',
+  path: '/claim',
+  getParentRoute: () => NgoDonationsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/ngo/claims': typeof NgoClaimsRoute
+  '/ngo/dashboard': typeof NgoDashboardRoute
+  '/ngo/explore': typeof NgoExploreRoute
+  '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/donor/donate/batch': typeof DonorDonateBatchRoute
+  '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
+  '/donor/donate/success': typeof DonorDonateSuccessRoute
+  '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
+  '/ngo/track/$id': typeof NgoTrackIdRoute
+  '/ngo/donations/$id/claim': typeof NgoDonationsIdClaimRoute
+  '/ngo/donations/$id/success': typeof NgoDonationsIdSuccessRoute
+  '/ngo/donations/$id/unavailable': typeof NgoDonationsIdUnavailableRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/ngo/claims': typeof NgoClaimsRoute
+  '/ngo/dashboard': typeof NgoDashboardRoute
+  '/ngo/explore': typeof NgoExploreRoute
+  '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/donor/donate/batch': typeof DonorDonateBatchRoute
+  '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
+  '/donor/donate/success': typeof DonorDonateSuccessRoute
+  '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
+  '/ngo/track/$id': typeof NgoTrackIdRoute
+  '/ngo/donations/$id/claim': typeof NgoDonationsIdClaimRoute
+  '/ngo/donations/$id/success': typeof NgoDonationsIdSuccessRoute
+  '/ngo/donations/$id/unavailable': typeof NgoDonationsIdUnavailableRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/ngo/claims': typeof NgoClaimsRoute
+  '/ngo/dashboard': typeof NgoDashboardRoute
+  '/ngo/explore': typeof NgoExploreRoute
+  '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/donor/donate/batch': typeof DonorDonateBatchRoute
+  '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
+  '/donor/donate/success': typeof DonorDonateSuccessRoute
+  '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
+  '/ngo/track/$id': typeof NgoTrackIdRoute
+  '/ngo/donations/$id/claim': typeof NgoDonationsIdClaimRoute
+  '/ngo/donations/$id/success': typeof NgoDonationsIdSuccessRoute
+  '/ngo/donations/$id/unavailable': typeof NgoDonationsIdUnavailableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/register'
+    | '/donor/dashboard'
+    | '/ngo/claims'
+    | '/ngo/dashboard'
+    | '/ngo/explore'
+    | '/ngo/not-verified'
+    | '/donor/donate/batch'
+    | '/donor/donate/consent'
+    | '/donor/donate/review'
+    | '/donor/donate/success'
+    | '/ngo/donations/$id'
+    | '/ngo/track/$id'
+    | '/ngo/donations/$id/claim'
+    | '/ngo/donations/$id/success'
+    | '/ngo/donations/$id/unavailable'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/register'
+    | '/donor/dashboard'
+    | '/ngo/claims'
+    | '/ngo/dashboard'
+    | '/ngo/explore'
+    | '/ngo/not-verified'
+    | '/donor/donate/batch'
+    | '/donor/donate/consent'
+    | '/donor/donate/review'
+    | '/donor/donate/success'
+    | '/ngo/donations/$id'
+    | '/ngo/track/$id'
+    | '/ngo/donations/$id/claim'
+    | '/ngo/donations/$id/success'
+    | '/ngo/donations/$id/unavailable'
+  id:
+    | '__root__'
+    | '/'
+    | '/forgot-password'
+    | '/register'
+    | '/donor/dashboard'
+    | '/ngo/claims'
+    | '/ngo/dashboard'
+    | '/ngo/explore'
+    | '/ngo/not-verified'
+    | '/donor/donate/batch'
+    | '/donor/donate/consent'
+    | '/donor/donate/review'
+    | '/donor/donate/success'
+    | '/ngo/donations/$id'
+    | '/ngo/track/$id'
+    | '/ngo/donations/$id/claim'
+    | '/ngo/donations/$id/success'
+    | '/ngo/donations/$id/unavailable'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  RegisterRoute: typeof RegisterRoute
+  DonorDashboardRoute: typeof DonorDashboardRoute
+  NgoClaimsRoute: typeof NgoClaimsRoute
+  NgoDashboardRoute: typeof NgoDashboardRoute
+  NgoExploreRoute: typeof NgoExploreRoute
+  NgoNotVerifiedRoute: typeof NgoNotVerifiedRoute
+  DonorDonateBatchRoute: typeof DonorDonateBatchRoute
+  DonorDonateConsentRoute: typeof DonorDonateConsentRoute
+  DonorDonateReviewRoute: typeof DonorDonateReviewRoute
+  DonorDonateSuccessRoute: typeof DonorDonateSuccessRoute
+  NgoDonationsIdRoute: typeof NgoDonationsIdRouteWithChildren
+  NgoTrackIdRoute: typeof NgoTrackIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +272,138 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ngo/not-verified': {
+      id: '/ngo/not-verified'
+      path: '/ngo/not-verified'
+      fullPath: '/ngo/not-verified'
+      preLoaderRoute: typeof NgoNotVerifiedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/explore': {
+      id: '/ngo/explore'
+      path: '/ngo/explore'
+      fullPath: '/ngo/explore'
+      preLoaderRoute: typeof NgoExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/dashboard': {
+      id: '/ngo/dashboard'
+      path: '/ngo/dashboard'
+      fullPath: '/ngo/dashboard'
+      preLoaderRoute: typeof NgoDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/claims': {
+      id: '/ngo/claims'
+      path: '/ngo/claims'
+      fullPath: '/ngo/claims'
+      preLoaderRoute: typeof NgoClaimsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/dashboard': {
+      id: '/donor/dashboard'
+      path: '/donor/dashboard'
+      fullPath: '/donor/dashboard'
+      preLoaderRoute: typeof DonorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/track/$id': {
+      id: '/ngo/track/$id'
+      path: '/ngo/track/$id'
+      fullPath: '/ngo/track/$id'
+      preLoaderRoute: typeof NgoTrackIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/donations/$id': {
+      id: '/ngo/donations/$id'
+      path: '/ngo/donations/$id'
+      fullPath: '/ngo/donations/$id'
+      preLoaderRoute: typeof NgoDonationsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/success': {
+      id: '/donor/donate/success'
+      path: '/donor/donate/success'
+      fullPath: '/donor/donate/success'
+      preLoaderRoute: typeof DonorDonateSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/review': {
+      id: '/donor/donate/review'
+      path: '/donor/donate/review'
+      fullPath: '/donor/donate/review'
+      preLoaderRoute: typeof DonorDonateReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/consent': {
+      id: '/donor/donate/consent'
+      path: '/donor/donate/consent'
+      fullPath: '/donor/donate/consent'
+      preLoaderRoute: typeof DonorDonateConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/batch': {
+      id: '/donor/donate/batch'
+      path: '/donor/donate/batch'
+      fullPath: '/donor/donate/batch'
+      preLoaderRoute: typeof DonorDonateBatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/donations/$id/unavailable': {
+      id: '/ngo/donations/$id/unavailable'
+      path: '/unavailable'
+      fullPath: '/ngo/donations/$id/unavailable'
+      preLoaderRoute: typeof NgoDonationsIdUnavailableRouteImport
+      parentRoute: typeof NgoDonationsIdRoute
+    }
+    '/ngo/donations/$id/success': {
+      id: '/ngo/donations/$id/success'
+      path: '/success'
+      fullPath: '/ngo/donations/$id/success'
+      preLoaderRoute: typeof NgoDonationsIdSuccessRouteImport
+      parentRoute: typeof NgoDonationsIdRoute
+    }
+    '/ngo/donations/$id/claim': {
+      id: '/ngo/donations/$id/claim'
+      path: '/claim'
+      fullPath: '/ngo/donations/$id/claim'
+      preLoaderRoute: typeof NgoDonationsIdClaimRouteImport
+      parentRoute: typeof NgoDonationsIdRoute
+    }
   }
 }
 
+interface NgoDonationsIdRouteChildren {
+  NgoDonationsIdClaimRoute: typeof NgoDonationsIdClaimRoute
+  NgoDonationsIdSuccessRoute: typeof NgoDonationsIdSuccessRoute
+  NgoDonationsIdUnavailableRoute: typeof NgoDonationsIdUnavailableRoute
+}
+
+const NgoDonationsIdRouteChildren: NgoDonationsIdRouteChildren = {
+  NgoDonationsIdClaimRoute: NgoDonationsIdClaimRoute,
+  NgoDonationsIdSuccessRoute: NgoDonationsIdSuccessRoute,
+  NgoDonationsIdUnavailableRoute: NgoDonationsIdUnavailableRoute,
+}
+
+const NgoDonationsIdRouteWithChildren = NgoDonationsIdRoute._addFileChildren(
+  NgoDonationsIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  RegisterRoute: RegisterRoute,
+  DonorDashboardRoute: DonorDashboardRoute,
+  NgoClaimsRoute: NgoClaimsRoute,
+  NgoDashboardRoute: NgoDashboardRoute,
+  NgoExploreRoute: NgoExploreRoute,
+  NgoNotVerifiedRoute: NgoNotVerifiedRoute,
+  DonorDonateBatchRoute: DonorDonateBatchRoute,
+  DonorDonateConsentRoute: DonorDonateConsentRoute,
+  DonorDonateReviewRoute: DonorDonateReviewRoute,
+  DonorDonateSuccessRoute: DonorDonateSuccessRoute,
+  NgoDonationsIdRoute: NgoDonationsIdRouteWithChildren,
+  NgoTrackIdRoute: NgoTrackIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
