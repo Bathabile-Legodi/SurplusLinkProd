@@ -12,6 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
+import { Route as DonorDonateSuccessRouteImport } from './routes/donor.donate.success'
+import { Route as DonorDonateReviewRouteImport } from './routes/donor.donate.review'
+import { Route as DonorDonateConsentRouteImport } from './routes/donor.donate.consent'
+import { Route as DonorDonateBatchRouteImport } from './routes/donor.donate.batch'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -28,35 +33,105 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DonorDashboardRoute = DonorDashboardRouteImport.update({
+  id: '/donor/dashboard',
+  path: '/donor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateSuccessRoute = DonorDonateSuccessRouteImport.update({
+  id: '/donor/donate/success',
+  path: '/donor/donate/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateReviewRoute = DonorDonateReviewRouteImport.update({
+  id: '/donor/donate/review',
+  path: '/donor/donate/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateConsentRoute = DonorDonateConsentRouteImport.update({
+  id: '/donor/donate/consent',
+  path: '/donor/donate/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonateBatchRoute = DonorDonateBatchRouteImport.update({
+  id: '/donor/donate/batch',
+  path: '/donor/donate/batch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/donate/batch': typeof DonorDonateBatchRoute
+  '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
+  '/donor/donate/success': typeof DonorDonateSuccessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/donate/batch': typeof DonorDonateBatchRoute
+  '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
+  '/donor/donate/success': typeof DonorDonateSuccessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/donate/batch': typeof DonorDonateBatchRoute
+  '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
+  '/donor/donate/success': typeof DonorDonateSuccessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/forgot-password' | '/register'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/register'
+    | '/donor/dashboard'
+    | '/donor/donate/batch'
+    | '/donor/donate/consent'
+    | '/donor/donate/review'
+    | '/donor/donate/success'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/forgot-password' | '/register'
-  id: '__root__' | '/' | '/forgot-password' | '/register'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/register'
+    | '/donor/dashboard'
+    | '/donor/donate/batch'
+    | '/donor/donate/consent'
+    | '/donor/donate/review'
+    | '/donor/donate/success'
+  id:
+    | '__root__'
+    | '/'
+    | '/forgot-password'
+    | '/register'
+    | '/donor/dashboard'
+    | '/donor/donate/batch'
+    | '/donor/donate/consent'
+    | '/donor/donate/review'
+    | '/donor/donate/success'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   RegisterRoute: typeof RegisterRoute
+  DonorDashboardRoute: typeof DonorDashboardRoute
+  DonorDonateBatchRoute: typeof DonorDonateBatchRoute
+  DonorDonateConsentRoute: typeof DonorDonateConsentRoute
+  DonorDonateReviewRoute: typeof DonorDonateReviewRoute
+  DonorDonateSuccessRoute: typeof DonorDonateSuccessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +157,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/donor/dashboard': {
+      id: '/donor/dashboard'
+      path: '/donor/dashboard'
+      fullPath: '/donor/dashboard'
+      preLoaderRoute: typeof DonorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/success': {
+      id: '/donor/donate/success'
+      path: '/donor/donate/success'
+      fullPath: '/donor/donate/success'
+      preLoaderRoute: typeof DonorDonateSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/review': {
+      id: '/donor/donate/review'
+      path: '/donor/donate/review'
+      fullPath: '/donor/donate/review'
+      preLoaderRoute: typeof DonorDonateReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/consent': {
+      id: '/donor/donate/consent'
+      path: '/donor/donate/consent'
+      fullPath: '/donor/donate/consent'
+      preLoaderRoute: typeof DonorDonateConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donate/batch': {
+      id: '/donor/donate/batch'
+      path: '/donor/donate/batch'
+      fullPath: '/donor/donate/batch'
+      preLoaderRoute: typeof DonorDonateBatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +199,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   RegisterRoute: RegisterRoute,
+  DonorDashboardRoute: DonorDashboardRoute,
+  DonorDonateBatchRoute: DonorDonateBatchRoute,
+  DonorDonateConsentRoute: DonorDonateConsentRoute,
+  DonorDonateReviewRoute: DonorDonateReviewRoute,
+  DonorDonateSuccessRoute: DonorDonateSuccessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
