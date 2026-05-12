@@ -6,9 +6,37 @@ export const Route = createFileRoute("/ngo/donations/$id")({
   component: DonationDetail,
 });
 
+const donations = [
+  {
+    id: "fresh-vegetables",
+    title: "Fresh Vegetables",
+    quantity: "20 Kg",
+    pickup: "Today, 8:00 PM",
+    donor: "Fresh Market",
+    distance: "1.2 km away",
+  },
+  {
+    id: "bakery-assortment",
+    title: "Bakery Assortment",
+    quantity: "12 Loaves",
+    pickup: "Today, 9:30 PM",
+    donor: "Sunrise Bakery",
+    distance: "2.4 km away",
+  },
+  {
+    id: "dairy-batch",
+    title: "Dairy Batch",
+    quantity: "8 L",
+    pickup: "Tomorrow, 10:00 AM",
+    donor: "Green Dairy",
+    distance: "3.1 km away",
+  },
+];
+
 function DonationDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const donation = donations.find((d) => d.id === id) || donations[0];
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />
@@ -20,12 +48,12 @@ function DonationDetail() {
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           <div className="aspect-square rounded-xl border bg-secondary" />
           <div>
-            <h1 className="text-xl font-semibold capitalize">{id.replace(/-/g, " ")}</h1>
+            <h1 className="text-xl font-semibold capitalize">{donation.title}</h1>
             <dl className="mt-4 space-y-2 text-sm">
-              <Row label="Quantity" value="20 Kg" />
-              <Row label="Expiry Time" value="Today, 8:00 PM" />
-              <Row label="Donor" value="Fresh Market — Pickering Centre" />
-              <Row label="Location" value="1.2 km away" />
+              <Row label="Quantity" value={donation.quantity} />
+              <Row label="Expiry Time" value={donation.pickup} highlight />
+              <Row label="Donor" value={donation.donor} />
+              <Row label="Location" value={donation.distance} />
             </dl>
           </div>
         </div>
@@ -49,11 +77,13 @@ function DonationDetail() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex justify-between border-b py-1.5">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value}</dd>
+      <dd className={highlight ? "rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900" : "font-medium"}>
+        {value}
+      </dd>
     </div>
   );
 }
