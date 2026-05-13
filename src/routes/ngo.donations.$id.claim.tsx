@@ -16,9 +16,9 @@ function ClaimProcessing() {
     const t1 = setTimeout(() => setStep(1), 700);
     const t2 = setTimeout(() => setStep(2), 1400);
     const t3 = setTimeout(() => {
-      if (id.includes("bakery")) navigate({ to: "/ngo/donations/$id/unavailable", params: { id } });
+      if (id.includes("bakery")) navigate({ to: `/ngo/donations/${id}/unavailable` });
       else if (id.includes("dairy")) navigate({ to: "/ngo/not-verified" });
-      else navigate({ to: "/ngo/donations/$id/success", params: { id } });
+      else navigate({ to: `/ngo/donations/${id}/success` });
     }, 2200);
     return () => {
       clearTimeout(t1);
