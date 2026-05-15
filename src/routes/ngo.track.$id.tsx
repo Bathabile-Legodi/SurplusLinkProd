@@ -21,9 +21,9 @@ function TrackDelivery() {
 
         <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
           <div className="space-y-4">
-            <Stage label="Claimed" detail="Today, 4:12 PM" done />
-            <Stage label="Donor Confirmed" detail="Today, 4:25 PM" done />
-            <Stage label="In Transit" detail="ETA: 8:00 PM" active />
+            <Stage label="Claimed" detail="Today, 16:12" done />
+            <Stage label="Donor Confirmed" detail="Today, 16:25" done />
+            <Stage label="In Transit" detail="ETA: 17:11" active />
             <Stage label="Delivered" detail="Pending" />
           </div>
 
@@ -52,6 +52,23 @@ function TrackDelivery() {
             </div>
           </div>
         </div>
+
+        <section className="mt-6 rounded-xl border bg-card p-5">
+          <h2 className="text-sm font-semibold mb-3">Delivery Driver Details</h2>
+          <div className="text-sm space-y-1.5">
+            <Row label="Driver Name" value="Sipho" />
+            <Row label="Phone" value="+27 82 123 4567" />
+            <Row label="Vehicle" value="Foton Truck Mate - XP 56 VD GP" />
+          </div>
+          <div className="mt-4 flex gap-3">
+            <button className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              Call Driver
+            </button>
+            <button className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">
+              Message Driver
+            </button>
+          </div>
+        </section>
       </main>
     </div>
   );
@@ -75,6 +92,15 @@ function Stage({ label, detail, done, active }: { label: string; detail: string;
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{detail}</p>
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between border-b py-1.5 last:border-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }

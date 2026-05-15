@@ -70,7 +70,10 @@ function ExplorePage() {
               </div>
               <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
                 <div className="flex justify-between"><dt>Quantity</dt><dd className="text-foreground">{d.quantity}</dd></div>
-                <div className="flex justify-between"><dt>Pickup by</dt><dd className="text-foreground">{d.pickup}</dd></div>
+                <div className="flex justify-between"><dt>Pickup by</dt><dd className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900">
+    {d.pickup}
+  </dd>
+</div>
                 <div className="flex justify-between"><dt>Donor</dt><dd className="text-foreground">{d.donor}</dd></div>
                 <div className="flex justify-between"><dt>Distance</dt><dd className="text-foreground">{d.distance}</dd></div>
               </dl>
