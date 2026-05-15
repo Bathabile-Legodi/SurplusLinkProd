@@ -27,17 +27,17 @@ function DonorDashboard() {
         </div>
 
         <Link
-          to="/donor/donate/consent"
-          className="mb-8 flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-card py-12 text-center transition-colors hover:border-foreground/30 hover:bg-secondary/40"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg text-primary-foreground">
-            +
-          </div>
-          <span className="text-sm font-medium">Log New Donation</span>
-          <span className="text-xs text-muted-foreground">
-            Add a surplus food batch to share with nearby NGOs
-          </span>
-        </Link>
+  to="/donor/donate/consent"
+  className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
+>
+  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
+    +
+  </div>
+
+  <div className="text-left">
+    <p className="text-sm font-semibold">Log New Donation</p>
+  </div>
+</Link>
 
         <section>
           <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Donations</h2>
