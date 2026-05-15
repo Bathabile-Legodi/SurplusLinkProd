@@ -13,10 +13,16 @@ type Item = { name: string; category: string; quantity: string; unit: string; ex
 function CreateBatch() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Item[]>([
-    { name: "Loaves of Brown Bread", category: "Bakery", quantity: "18", unit: "Units", expiry: "Today, 10:00 PM" },
-    { name: "Assorted Seasonal Fruit", category: "Produce", quantity: "10", unit: "Kg", expiry: "Tomorrow" },
+    { name: "Loaves of Brown Bread", category: "Bakery", quantity: "18", unit: "Units", expiry: "2026-05-13T22:00" },
   ]);
-  const [draft, setDraft] = useState<Item>({ name: "", category: "", quantity: "", unit: "Kg", expiry: "" });
+  
+  const [draft, setDraft] = useState<Item>({ 
+    name: "", 
+    category: "Produce", 
+    quantity: "", 
+    unit: "Kg", 
+    expiry: "" 
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,28 +35,70 @@ function CreateBatch() {
 
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-4 text-sm font-semibold">Item Details</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Food Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="e.g. Whole grain bread" />
-            <Field label="Category" value={draft.category} onChange={(v) => setDraft({ ...draft, category: v })} placeholder="Bakery / Produce" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 md:col-span-1">
+              <Field label="Food Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="e.g. Whole grain bread" />
+            </div>
+
+            {/* 1. DROP DOWN MENU for Category */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Category</label>
+              <select 
+                value={draft.category}
+                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="Produce">Produce</option>
+                <option value="Bakery">Bakery</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Prepared Meals">Prepared Meals</option>
+                <option value="Canned Goods">Canned Goods</option>
+              </select>
+            </div>
+
             <Field label="Quantity" value={draft.quantity} onChange={(v) => setDraft({ ...draft, quantity: v })} placeholder="10" />
-            <Field label="Unit" value={draft.unit} onChange={(v) => setDraft({ ...draft, unit: v })} placeholder="Kg / Units" />
-            <div className="col-span-2">
-              <Field label="Expiry Date / Time" value={draft.expiry} onChange={(v) => setDraft({ ...draft, expiry: v })} placeholder="Today, 10:00 PM" />
+
+            {/* 2. DROP DOWN MENU for Unit */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Unit</label>
+              <select 
+                value={draft.unit}
+                onChange={(e) => setDraft({ ...draft, unit: e.target.value })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="Kg">Kg</option>
+                <option value="Units">Units</option>
+                <option value="Litres">Litres</option>
+                <option value="Trays">Trays</option>
+              </select>
+            </div>
+
+            {/* 3. DATE & TIME PICKER for Expiry/Deadline */}
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Collection Deadline / Expiry</label>
+              <input 
+                type="datetime-local"
+                value={draft.expiry}
+                onChange={(e) => setDraft({ ...draft, expiry: e.target.value })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
             </div>
           </div>
+
           <button
             type="button"
             onClick={() => {
-              if (!draft.name) return;
+              if (!draft.name || !draft.expiry) return;
               setItems([...items, draft]);
-              setDraft({ name: "", category: "", quantity: "", unit: "Kg", expiry: "" });
+              setDraft({ name: "", category: "Produce", quantity: "", unit: "Kg", expiry: "" });
             }}
-            className="mt-4 w-full rounded-md border border-dashed py-2 text-sm font-medium hover:bg-secondary/50"
+            className="mt-6 w-full rounded-md border border-dashed border-primary/50 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
           >
             + Add Item to Batch
           </button>
         </section>
 
+        {/* Display List Section */}
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-3 text-sm font-semibold">Items in this batch ({items.length})</h2>
           <ul className="divide-y">
@@ -61,21 +109,25 @@ function CreateBatch() {
                   <p className="text-xs text-muted-foreground">{it.category}</p>
                 </div>
                 <div className="text-right">
-                  <p>{it.quantity} {it.unit}</p>
-                  <p className="text-xs text-muted-foreground">Exp: {it.expiry}</p>
+                  <p className="font-semibold">{it.quantity} {it.unit}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Exp: {it.expiry.replace('T', ' ')}
+                  </p>
                 </div>
               </li>
             ))}
           </ul>
         </section>
 
-        <div className="mt-6 flex justify-between">
-          <Link to="/donor/dashboard" className="rounded-md border px-4 py-2 text-sm hover:bg-secondary">
+        {/* Navigation Buttons */}
+        <div className="mt-8 flex justify-between gap-4">
+          <Link to="/donor/dashboard" className="rounded-md border px-6 py-2 text-sm font-medium hover:bg-secondary transition-colors">
             Cancel
           </Link>
           <button
             onClick={() => navigate({ to: "/donor/donate/review" })}
-            className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            disabled={items.length === 0}
+            className="flex-1 rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             Finish & Review Batch
           </button>
