@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NgoNotVerifiedRouteImport } from './routes/ngo.not-verified'
@@ -30,6 +31,11 @@ import { Route as NgoDonationsIdClaimRouteImport } from './routes/ngo.donations.
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -117,6 +123,7 @@ const NgoDonationsIdClaimRoute = NgoDonationsIdClaimRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/donor/dashboard': typeof DonorDashboardRoute
   '/ngo/claims': typeof NgoClaimsRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/donor/dashboard': typeof DonorDashboardRoute
   '/ngo/claims': typeof NgoClaimsRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/donor/dashboard': typeof DonorDashboardRoute
   '/ngo/claims': typeof NgoClaimsRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/forgot-password'
+    | '/login'
     | '/register'
     | '/donor/dashboard'
     | '/ngo/claims'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/forgot-password'
+    | '/login'
     | '/register'
     | '/donor/dashboard'
     | '/ngo/claims'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/forgot-password'
+    | '/login'
     | '/register'
     | '/donor/dashboard'
     | '/ngo/claims'
@@ -235,6 +247,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
   NgoClaimsRoute: typeof NgoClaimsRoute
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -392,6 +412,7 @@ const NgoDonationsIdRouteWithChildren = NgoDonationsIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   DonorDashboardRoute: DonorDashboardRoute,
   NgoClaimsRoute: NgoClaimsRoute,
