@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { FormEvent } from "react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "./index";
@@ -19,7 +20,7 @@ function LoginPage() {
     password: "",
   });
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     setLoading(true);
@@ -102,7 +103,7 @@ function LoginPage() {
             label="Email Address"
             type="email"
             value={form.email}
-            onChange={(v) =>
+            onChange={(v: string) =>
             setForm({
                 ...form,
                 email: v,
@@ -116,7 +117,7 @@ function LoginPage() {
             label="Password"
             type="password"
             value={form.password}
-            onChange={(v) =>
+            onChange={(v: string) =>
                 setForm({
                 ...form,
                 password: v,

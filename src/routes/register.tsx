@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "./index";
@@ -39,7 +40,7 @@ function RegisterPage() {
     confirmPassword: "",
   });
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     setLoading(true);

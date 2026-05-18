@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { FormEvent } from "react";
 import { useState } from "react";
 import { Field } from "./index";
 import { supabase } from "@/lib/supabase";
