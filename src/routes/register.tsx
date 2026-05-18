@@ -168,6 +168,10 @@ type DonorProps = {
 };
 
 function DonorFields({ values, setValues }: DonorProps) {
+
+  const [showPassword, setShowPassword] = useState(false);         
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
+
   const set =
     (key: string) => (value: string) =>
       setValues((prev: any) => ({
@@ -215,22 +219,95 @@ function DonorFields({ values, setValues }: DonorProps) {
         placeholder="123 Main St"
       />
 
+      {/* Password fields with show/hide */}
       <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Password"
-          type="password"
-          value={values.password}
-          onChange={set("password")}
-          placeholder="••••••••"
-        />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
+          <div style={{ position: "relative" }}>
+            <input
+              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
+              type={showPassword ? "text" : "password"}
+              value={values.password}
+              onChange={(e) => set("password")(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              style={{
+                position: "absolute",
+                right: "0.5rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                zIndex: 10,
+                color: "black",
+              }}
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
 
-        <Field
-          label="Confirm Password"
-          type="password"
-          value={values.confirmPassword}
-          onChange={set("confirmPassword")}
-          placeholder="••••••••"
-        />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-foreground">Confirm Password</label>
+          <div style={{ position: "relative" }}>
+            <input
+              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
+              type={showConfirmPassword ? "text" : "password"}
+              value={values.confirmPassword}
+              onChange={(e) => set("confirmPassword")(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              style={{
+                position: "absolute",
+                right: "0.5rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                zIndex: 10,
+                color: "black",
+              }}
+            >
+              {showConfirmPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -242,6 +319,10 @@ type NgoProps = {
 };
 
 function NgoFields({ values, setValues }: NgoProps) {
+
+  const [showPassword, setShowPassword] = useState(false);         
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
+
   const set =
     (key: string) => (value: string) =>
       setValues((prev: any) => ({
@@ -287,22 +368,95 @@ function NgoFields({ values, setValues }: NgoProps) {
         placeholder="123 Main St"
       />
 
+      {/* Password fields with show/hide */}
       <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Password"
-          type="password"
-          value={values.password}
-          onChange={set("password")}
-          placeholder="••••••••"
-        />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
+          <div style={{ position: "relative" }}>
+            <input
+              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
+              type={showPassword ? "text" : "password"}
+              value={values.password}
+              onChange={(e) => set("password")(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              style={{
+                position: "absolute",
+                right: "0.5rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                zIndex: 10,
+                color: "black",
+              }}
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
 
-        <Field
-          label="Confirm Password"
-          type="password"
-          value={values.confirmPassword}
-          onChange={set("confirmPassword")}
-          placeholder="••••••••"
-        />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-foreground">Confirm Password</label>
+          <div style={{ position: "relative" }}>
+            <input
+              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
+              type={showConfirmPassword ? "text" : "password"}
+              value={values.confirmPassword}
+              onChange={(e) => set("confirmPassword")(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              style={{
+                position: "absolute",
+                right: "0.5rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                zIndex: 10,
+                color: "black",
+              }}
+            >
+              {showConfirmPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );
