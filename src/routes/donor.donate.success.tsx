@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
+import { getLastSubmittedBatchId } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/success")({
   head: () => ({ meta: [{ title: "Donation Submitted — SurplusLink" }] }),
@@ -7,6 +9,15 @@ export const Route = createFileRoute("/donor/donate/success")({
 });
 
 function SuccessPage() {
+  const [submittedBatchId, setSubmittedBatchId] = useState<string>("#DN-0000");
+
+  useEffect(() => {
+    const id = getLastSubmittedBatchId();
+    if (id) {
+      setSubmittedBatchId(id);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={donorNav} userLabel="FM" />
@@ -16,7 +27,7 @@ function SuccessPage() {
         </div>
         <h1 className="mt-6 text-xl font-semibold">Donation Successfully Submitted</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your batch <b>#DN-0022</b> has been added to our network. Verified NGOs nearby
+          Your batch <b>{submittedBatchId}</b> has been added to our network. Verified NGOs nearby
           have been notified and can claim it.
         </p>
         <Link

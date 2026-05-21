@@ -1,22 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { Field } from "./index";
+import { loadCurrentBatch, saveCurrentBatch, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/batch")({
   head: () => ({ meta: [{ title: "Create Donation Batch — SurplusLink" }] }),
   component: CreateBatch,
 });
 
-type Item = { name: string; category: string; quantity: string; unit: string; expiry: string };
-
 function CreateBatch() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<Item[]>([
-    { name: "Loaves of Brown Bread", category: "Bakery", quantity: "18", unit: "Units", expiry: "2026-05-13T22:00" },
-  ]);
-  
-  const [draft, setDraft] = useState<Item>({ 
+  const [items, setItems] = useState<DonationItem[]>(() => {
+    const stored = loadCurrentBatch();
+    return stored.length >= 0
+      ? stored
+      : [];
+  });
+
+  const [draft, setDraft] = useState<DonationItem>({ 
     name: "", 
     category: "Produce", 
     quantity: "", 
@@ -24,11 +26,14 @@ function CreateBatch() {
     expiry: "" 
   });
 
+  useEffect(() => {
+    saveCurrentBatch(items);
+  }, [items]);
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-3xl px-6 py-10">
-        <h1 className="text-xl font-semibold">Create Donation Batch</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Add individual items to your current batch before submitting.
         </p>

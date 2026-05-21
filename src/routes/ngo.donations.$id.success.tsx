@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { updateDonationStatus } from "@/lib/donations";
 
 export const Route = createFileRoute("/ngo/donations/$id/success")({
   head: () => ({ meta: [{ title: "Donation Claimed — SurplusLink" }] }),
@@ -8,6 +10,13 @@ export const Route = createFileRoute("/ngo/donations/$id/success")({
 
 function ClaimSuccess() {
   const { id } = Route.useParams();
+
+  useEffect(() => {
+    if (id) {
+      updateDonationStatus(id, "Claimed");
+    }
+  }, [id]);
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />

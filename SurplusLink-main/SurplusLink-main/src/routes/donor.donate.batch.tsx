@@ -12,9 +12,7 @@ type Item = { name: string; category: string; quantity: string; unit: string; ex
 
 function CreateBatch() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<Item[]>([
-    { name: "Loaves of Brown Bread", category: "Bakery", quantity: "18", unit: "Units", expiry: "2026-05-13T22:00" },
-  ]);
+  const [items, setItems] = useState<Item[]>([]);
   
   const [draft, setDraft] = useState<Item>({ 
     name: "", 

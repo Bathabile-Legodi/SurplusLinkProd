@@ -23,10 +23,9 @@ function ReviewPage() {
         </div>
 
         <section className="mt-6 rounded-xl border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold">Items in this batch (2)</h2>
+          <h2 className="mb-4 text-sm font-semibold">Items in this batch (0)</h2>
           <ul className="divide-y text-sm">
-            <Row name="Loaves of Brown Bread" qty="18 Units" expiry="Today, 10:00 PM" />
-            <Row name="Assorted Seasonal Fruit" qty="10 Kg" expiry="Tomorrow" />
+            <li className="py-3 text-sm text-muted-foreground">No items have been added to this batch yet.</li>
           </ul>
         </section>
 

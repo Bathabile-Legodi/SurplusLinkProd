@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
+import { loadCurrentBatch, submitDonationBatch, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/review")({
   head: () => ({ meta: [{ title: "Review Donation — SurplusLink" }] }),
@@ -8,6 +10,19 @@ export const Route = createFileRoute("/donor/donate/review")({
 
 function ReviewPage() {
   const navigate = useNavigate();
+  const [items, setItems] = useState<DonationItem[]>([]);
+
+  useEffect(() => {
+    const stored = loadCurrentBatch();
+    if (stored.length === 0) {
+      navigate({ to: "/donor/donate/batch" });
+      return;
+    }
+    setItems(stored);
+  }, [navigate]);
+
+  const batchType = items.length > 1 ? "Mixed Donation" : items[0]?.category ?? "Donation";
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={donorNav} userLabel="FM" />
@@ -18,15 +33,16 @@ function ReviewPage() {
         </p>
 
         <div className="mt-6 grid grid-cols-2 gap-4">
-          <Stat label="Mixed Donation" value="Today, 10:00 PM" />
-          <Stat label="Total Weight" value="25 Kg" />
+          <Stat label="Batch Type" value={batchType} />
+          <Stat label="Items in Batch" value={`${items.length}`} />
         </div>
 
         <section className="mt-6 rounded-xl border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold">Items in this batch (2)</h2>
+          <h2 className="mb-4 text-sm font-semibold">Items in this batch ({items.length})</h2>
           <ul className="divide-y text-sm">
-            <Row name="Loaves of Brown Bread" qty="18 Units" expiry="Today, 10:00 PM" />
-            <Row name="Assorted Seasonal Fruit" qty="10 Kg" expiry="Tomorrow" />
+            {items.map((item, index) => (
+              <Row key={index} name={item.name} qty={`${item.quantity} ${item.unit}`} expiry={item.expiry.replace("T", " ")} />
+            ))}
           </ul>
         </section>
 
@@ -35,7 +51,11 @@ function ReviewPage() {
             Edit Items
           </Link>
           <button
-            onClick={() => navigate({ to: "/donor/donate/success" })}
+            onClick={() => {
+              if (items.length === 0) return;
+              submitDonationBatch(items);
+              navigate({ to: "/donor/donate/success" });
+            }}
             className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Submit Donation Batch

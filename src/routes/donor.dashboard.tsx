@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
+import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/dashboard")({
   head: () => ({
@@ -8,13 +10,21 @@ export const Route = createFileRoute("/donor/dashboard")({
   component: DonorDashboard,
 });
 
-const recent = [
-  { id: "#DN-0021", category: "Mixed Produce", time: "Today, 09:14 AM", status: "Claimed" },
-  { id: "#DN-0020", category: "Bakery Items", time: "Yesterday, 06:30 PM", status: "Pending" },
-  { id: "#DN-0019", category: "Dairy", time: "Yesterday, 11:00 AM", status: "Delivered" },
+const defaultRecent: RecentDonation[] = [
+  { id: "DN-20260521-091400-1A2B", category: "Mixed Produce", time: "Today, 09:14 AM", status: "Claimed", submittedAt: new Date().toISOString(), items: [] },
+  { id: "DN-20260520-183000-3C4D", category: "Bakery Items", time: "Yesterday, 06:30 PM", status: "Pending", submittedAt: new Date().toISOString(), items: [] },
+  { id: "DN-20260520-110000-5E6F", category: "Dairy", time: "Yesterday, 11:00 AM", status: "Delivered", submittedAt: new Date().toISOString(), items: [] },
 ];
 
 function DonorDashboard() {
+  const [recent, setRecent] = useState<RecentDonation[]>(defaultRecent);
+
+  useEffect(() => {
+    const storedRecent = loadRecentDonations();
+    if (storedRecent.length > 0) {
+      setRecent(storedRecent);
+    }
+  }, []);
 
 
 
