@@ -10,20 +10,11 @@ export const Route = createFileRoute("/donor/dashboard")({
   component: DonorDashboard,
 });
 
-const defaultRecent: RecentDonation[] = [
-  { id: "DN-20260521-091400-1A2B", category: "Mixed Produce", time: "Today, 09:14 AM", status: "Claimed", submittedAt: new Date().toISOString(), items: [] },
-  { id: "DN-20260520-183000-3C4D", category: "Bakery Items", time: "Yesterday, 06:30 PM", status: "Pending", submittedAt: new Date().toISOString(), items: [] },
-  { id: "DN-20260520-110000-5E6F", category: "Dairy", time: "Yesterday, 11:00 AM", status: "Delivered", submittedAt: new Date().toISOString(), items: [] },
-];
-
 function DonorDashboard() {
-  const [recent, setRecent] = useState<RecentDonation[]>(defaultRecent);
+  const [recent, setRecent] = useState<RecentDonation[]>([]);
 
   useEffect(() => {
-    const storedRecent = loadRecentDonations();
-    if (storedRecent.length > 0) {
-      setRecent(storedRecent);
-    }
+    setRecent(loadRecentDonations());
   }, []);
 
 
@@ -68,16 +59,24 @@ function DonorDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {recent.map((r) => (
-                  <tr key={r.id}>
-                    <td className="px-4 py-3 font-medium">{r.id}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.category}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.time}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={r.status} />
+                {recent.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      No recent donations yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  recent.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-4 py-3 font-medium">{r.id}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.category}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.time}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={r.status} />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
