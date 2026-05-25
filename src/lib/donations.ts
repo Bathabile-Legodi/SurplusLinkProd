@@ -28,6 +28,30 @@ function safeParse<T>(value: string | null, fallback: T): T {
   }
 }
 
+function getEarliestExpiry(items: DonationItem[]): Date | null {
+  const expiries = items
+    .map((item) => new Date(item.expiry))
+    .filter((date) => !Number.isNaN(date.getTime()));
+
+  if (expiries.length === 0) return null;
+
+  return new Date(Math.min(...expiries.map((date) => date.getTime())));
+}
+
+function pruneExpiredRecentDonations(donations: RecentDonation[]): RecentDonation[] {
+  const now = new Date();
+
+  return donations.filter((donation) => {
+    const earliestExpiry = getEarliestExpiry(donation.items);
+
+    if (!earliestExpiry) {
+      return true;
+    }
+
+    return earliestExpiry.getTime() > now.getTime();
+  });
+}
+
 export function createDonationId() {
   const now = new Date();
   const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
@@ -83,7 +107,15 @@ export function clearCurrentBatch() {
 
 export function loadRecentDonations(): RecentDonation[] {
   if (typeof window === "undefined") return [];
-  return safeParse<RecentDonation[]>(window.localStorage.getItem(RECENT_DONATIONS_KEY), []);
+
+  const donations = safeParse<RecentDonation[]>(window.localStorage.getItem(RECENT_DONATIONS_KEY), []);
+  const prunedDonations = pruneExpiredRecentDonations(donations);
+
+  if (prunedDonations.length !== donations.length) {
+    window.localStorage.setItem(RECENT_DONATIONS_KEY, JSON.stringify(prunedDonations));
+  }
+
+  return prunedDonations;
 }
 
 export function saveRecentDonations(donations: RecentDonation[]) {
