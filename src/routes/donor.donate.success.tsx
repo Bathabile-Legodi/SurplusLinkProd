@@ -3,17 +3,21 @@ import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { getLastSubmittedBatchId } from "@/lib/donations";
 
+function formatBatchId(id: number) {
+  return `#${id.toString().padStart(3, "0")}`;
+}
+
 export const Route = createFileRoute("/donor/donate/success")({
   head: () => ({ meta: [{ title: "Donation Submitted — SurplusLink" }] }),
   component: SuccessPage,
 });
 
 function SuccessPage() {
-  const [submittedBatchId, setSubmittedBatchId] = useState<string>("#DN-0000");
+  const [submittedBatchId, setSubmittedBatchId] = useState<number>(1);
 
   useEffect(() => {
     const id = getLastSubmittedBatchId();
-    if (id) {
+    if (id !== null) {
       setSubmittedBatchId(id);
     }
   }, []);
@@ -27,7 +31,7 @@ function SuccessPage() {
         </div>
         <h1 className="mt-6 text-xl font-semibold">Donation Successfully Submitted</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your batch <b>{submittedBatchId}</b> has been added to our network. Verified NGOs nearby
+          Your batch <b>{formatBatchId(submittedBatchId)}</b> has been added to our network. Verified NGOs nearby
           have been notified and can claim it.
         </p>
         <Link
