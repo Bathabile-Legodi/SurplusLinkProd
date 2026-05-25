@@ -1,7 +1,33 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
 
 import appCss from "../styles.css?url";
+
+function isProtectedPath(pathname: string) {
+  return pathname.startsWith("/donor") || pathname.startsWith("/ngo");
+}
+
+async function enforceProtectedRoutes(pathname: string) {
+  if (typeof window === "undefined" || !isProtectedPath(pathname)) {
+    return;
+  }
+
+  const { data } = await supabase.auth.getSession();
+  const role = data.session?.user.user_metadata?.role;
+
+  if (!role) {
+    throw redirect({ to: "/" });
+  }
+
+  if (pathname.startsWith("/donor") && role !== "donor") {
+    throw redirect({ to: role === "ngo" ? "/ngo/dashboard" : "/" });
+  }
+
+  if (pathname.startsWith("/ngo") && role !== "ngo") {
+    throw redirect({ to: role === "donor" ? "/donor/dashboard" : "/" });
+  }
+}
 
 function NotFoundComponent() {
   return (
@@ -26,6 +52,9 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
+  beforeLoad: async ({ location }) => {
+    await enforceProtectedRoutes(location.pathname);
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
