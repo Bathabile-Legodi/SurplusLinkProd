@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { useNgoVerification } from "@/hooks/useNgoVerification";
 
 export const Route = createFileRoute("/ngo/dashboard")({
   head: () => ({ meta: [{ title: "NGO Dashboard — SurplusLink" }] }),
@@ -7,6 +8,18 @@ export const Route = createFileRoute("/ngo/dashboard")({
 });
 
 function NgoDashboard() {
+  const { isAuthorized, isChecking } = useNgoVerification();
+
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Verifying access...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />
