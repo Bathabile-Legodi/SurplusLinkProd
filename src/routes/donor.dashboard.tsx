@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
 
+function formatBatchId(id: number) {
+  return `#${id.toString().padStart(3, "0")}`;
+}
+
 export const Route = createFileRoute("/donor/dashboard")({
   head: () => ({
     meta: [{ title: "Donor Dashboard — SurplusLink" }],
@@ -68,7 +72,7 @@ function DonorDashboard() {
                 ) : (
                   recent.map((r) => (
                     <tr key={r.id}>
-                      <td className="px-4 py-3 font-medium">{r.id}</td>
+                      <td className="px-4 py-3 font-medium">{formatBatchId(r.id)}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.category}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.time}</td>
                       <td className="px-4 py-3">
