@@ -1,9 +1,37 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { useState } from "react";
+import type { FormEvent  } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "./index";
 
+interface AddressComponents {
+  streetNumber: string;
+  streetName: string;
+  suburb: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  formatted: string;
+}
+
+const BUSINESS_TYPES = [
+  "Grocery / Supermarket",
+  "Restaurant / Café",
+  "Bakery",
+  "Food Manufacturer",
+  "Wholesaler / Distributor",
+  "Hotel / Hospitality",
+  "Catering Company",
+  "Farm / Agricultural",
+  "Convenience Store",
+  "Other",
+];
+
+const emptyAddress = (): AddressComponents => ({
+  streetNumber: "", streetName: "", suburb: "",
+  city: "", province: "", postalCode: "", country: "", formatted: "",
+});
 
 
 export const Route = createFileRoute("/register")({
@@ -13,6 +41,244 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
+
+function useGoogleMaps() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if ((window as any).google?.maps?.places) {
+      setReady(true);
+      return;
+    }
+
+    const existing = document.getElementById("google-maps-script");
+    if (existing) {
+      existing.addEventListener("load", () => setReady(true));
+      return;
+    }
+
+    (window as any).initGoogleMaps = () => setReady(true);
+
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${
+      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    }&libraries=places&callback=initGoogleMaps`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+
+    return () => {
+      delete (window as any).initGoogleMaps;
+    };
+  }, []);
+
+  return ready;
+}
+
+function AddressAutocomplete({
+  value,
+  onChange,
+}: {
+  value: AddressComponents;
+  onChange: (addr: AddressComponents) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const elementRef = useRef<any>(null);
+  const mapsReady = useGoogleMaps();
+
+  useEffect(() => {
+    if (!mapsReady || !containerRef.current) return;
+    if (elementRef.current) return;
+
+    const gPlaces = (window as any).google.maps.places;
+
+    if (!gPlaces.PlaceAutocompleteElement) {
+      console.warn("PlaceAutocompleteElement not available.");
+      return;
+    }
+
+    const placeAutocomplete = new gPlaces.PlaceAutocompleteElement({
+      includedRegionCodes: ["za"],
+      types: ["address"],
+    });
+
+    elementRef.current = placeAutocomplete;
+    containerRef.current.appendChild(placeAutocomplete);
+
+    placeAutocomplete.addEventListener("gmp-placeselect", async (event: any) => {
+      const place = event.detail?.place ?? event.place;
+      if (!place) return;
+
+      await place.fetchFields({
+        fields: ["addressComponents", "formattedAddress"],
+      });
+
+      const get = (type: string) =>
+        place.addressComponents?.find((c: any) => c.types.includes(type))
+          ?.longText ?? "";
+
+      onChange({
+        streetNumber: get("street_number"),
+        streetName:   get("route"),
+        suburb:       get("sublocality") || get("neighborhood"),
+        city:         get("locality"),
+        province:     get("administrative_area_level_1"),
+        postalCode:   get("postal_code"),
+        country:      get("country"),
+        formatted:    place.formattedAddress ?? "",
+      });
+    });
+
+    return () => {
+      if (containerRef.current && elementRef.current) {
+        try {
+          containerRef.current.removeChild(elementRef.current);
+        } catch (_) {}
+        elementRef.current = null;
+      }
+    };
+  }, [mapsReady]);
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-foreground">
+        Address
+      </label>
+      {!mapsReady && (
+        <input
+          type="text"
+          disabled
+          placeholder="Loading…"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground disabled:opacity-50"
+        />
+      )}
+      <div ref={containerRef} className={!mapsReady ? "hidden" : ""} />
+    </div>
+  );
+}
+
+function ComboField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(query.toLowerCase())
+  );
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <label className="mb-1.5 block text-xs font-medium text-foreground">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          tabIndex={-1}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      </div>
+
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-input bg-card py-1 shadow-md">
+          {filtered.map((opt) => (
+            <li
+              key={opt}
+              onMouseDown={() => { setQuery(opt); onChange(opt); setOpen(false); }}
+              className="cursor-pointer px-3 py-2 text-sm hover:bg-secondary"
+            >
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-foreground">{label}</label>
+      <div className="relative">
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="••••••••"
+          autoComplete="new-password"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+        >
+          {show ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RegisterPage() {
   const navigate = useNavigate();
 
@@ -20,12 +286,14 @@ function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const [donorData, setDonorData] = useState({
     name: "",
     type: "",
     email: "",
     phone: "",
-    address: "",
+    address: emptyAddress(),
     password: "",
     confirmPassword: "",
   });
@@ -35,25 +303,39 @@ function RegisterPage() {
     reg: "",
     email: "",
     phone: "",
-    address: "",
+    address: emptyAddress(),
     password: "",
     confirmPassword: "",
   });
 
+
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
-    setLoading(true);
+    setError(null);
 
     const data = tab === "donor" ? donorData : ngoData;
 
     if (data.password !== data.confirmPassword) {
-      alert("Passwords do not match");
-      setLoading(false);
+      setError("Passwords do not match");
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+     if (data.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!data.address.formatted) {
+      setError("Please select an address from the suggestions.");
+      return;
+    }
+
+    setLoading(true);
+
+    const addressString = data.address.formatted;
+    
+    const { error: supabaseError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
@@ -64,32 +346,28 @@ function RegisterPage() {
                 business_name: donorData.name,
                 business_type: donorData.type,
                 phone: donorData.phone,
-                address: donorData.address,
+                address: addressString,
+                address_components: donorData.address,
               }
             : {
                 role: "ngo",
                 organization_name: ngoData.org,
                 registration_number: ngoData.reg,
                 phone: ngoData.phone,
-                address: ngoData.address,
+                address: addressString,
+                address_components: ngoData.address,
               },
       },
     });
 
     setLoading(false);
 
-    if (error) {
-      alert(error.message);
+    if (supabaseError) {
+      setError(supabaseError.message);
       return;
     }
 
-    alert("Account created successfully!");
-
-    if (tab === "donor") {
-      navigate({ to: "/donor/dashboard" });
-    } else {
-      navigate({ to: "/ngo/dashboard" });
-    }
+    navigate({ to: tab === "donor" ? "/donor/dashboard" : "/ngo/dashboard" });
   }
 
   return (
@@ -127,6 +405,12 @@ function RegisterPage() {
           </button>
         </div>
 
+        {error && (
+          <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {error}
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {tab === "donor" ? (
             <DonorFields
@@ -141,6 +425,7 @@ function RegisterPage() {
           )}
 
           <button
+            type="submit" 
             disabled={loading}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
@@ -169,9 +454,6 @@ type DonorProps = {
 
 function DonorFields({ values, setValues }: DonorProps) {
 
-  const [showPassword, setShowPassword] = useState(false);         
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
-
   const set =
     (key: string) => (value: string) =>
       setValues((prev: any) => ({
@@ -189,125 +471,26 @@ function DonorFields({ values, setValues }: DonorProps) {
           placeholder="Fresh Market"
         />
 
-        <Field
-          label="Business Type"
-          value={values.type}
-          onChange={set("type")}
-          placeholder="Grocery"
-        />
+        <ComboField
+        label="Business Type"
+        value={values.type}
+        onChange={set("type")}
+        options={BUSINESS_TYPES}
+        placeholder="Grocery, Bakery…"
+      />
       </div>
 
-      <Field
-        label="Email Address"
-        type="email"
-        value={values.email}
-        onChange={set("email")}
-        placeholder="contact@example.com"
-      />
+      <Field label="Email Address" type="email" value={values.email} onChange={set("email")} placeholder="contact@example.com" />
+      <Field label="Phone Number" value={values.phone} onChange={set("phone")} placeholder="+27 " />
 
-      <Field
-        label="Phone Number"
-        value={values.phone}
-        onChange={set("phone")}
-        placeholder="+27..."
-      />
-
-      <Field
-        label="Business Address"
+      <AddressAutocomplete
         value={values.address}
-        onChange={set("address")}
-        placeholder="123 Main St"
+        onChange={(addr) => setValues((prev: any) => ({ ...prev, address: addr }))}
       />
-
-      {/* Password fields with show/hide */}
+  
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
-          <div style={{ position: "relative" }}>
-            <input
-              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
-              type={showPassword ? "text" : "password"}
-              value={values.password}
-              onChange={(e) => set("password")(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              style={{
-                position: "absolute",
-                right: "0.5rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                zIndex: 10,
-                color: "black",
-              }}
-            >
-              {showPassword ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-foreground">Confirm Password</label>
-          <div style={{ position: "relative" }}>
-            <input
-              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
-              type={showConfirmPassword ? "text" : "password"}
-              value={values.confirmPassword}
-              onChange={(e) => set("confirmPassword")(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
-              style={{
-                position: "absolute",
-                right: "0.5rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                zIndex: 10,
-                color: "black",
-              }}
-            >
-              {showConfirmPassword ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
+        <PasswordField label="Password" value={values.password} onChange={set("password")} />
+        <PasswordField label="Confirm Password" value={values.confirmPassword} onChange={set("confirmPassword")} />
       </div>
     </>
   );
@@ -319,9 +502,6 @@ type NgoProps = {
 };
 
 function NgoFields({ values, setValues }: NgoProps) {
-
-  const [showPassword, setShowPassword] = useState(false);         
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
 
   const set =
     (key: string) => (value: string) =>
@@ -361,102 +541,14 @@ function NgoFields({ values, setValues }: NgoProps) {
         placeholder="+27..."
       />
 
-      <Field
-        label="Address"
+      <AddressAutocomplete
         value={values.address}
-        onChange={set("address")}
-        placeholder="123 Main St"
+        onChange={(addr) => setValues((prev: any) => ({ ...prev, address: addr }))}
       />
 
-      {/* Password fields with show/hide */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-foreground">Password</label>
-          <div style={{ position: "relative" }}>
-            <input
-              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
-              type={showPassword ? "text" : "password"}
-              value={values.password}
-              onChange={(e) => set("password")(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              style={{
-                position: "absolute",
-                right: "0.5rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                zIndex: 10,
-                color: "black",
-              }}
-            >
-              {showPassword ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-foreground">Confirm Password</label>
-          <div style={{ position: "relative" }}>
-            <input
-              style={{ paddingRight: "2.5rem", width: "100%", boxSizing: "border-box" }}
-              type={showConfirmPassword ? "text" : "password"}
-              value={values.confirmPassword}
-              onChange={(e) => set("confirmPassword")(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
-              style={{
-                position: "absolute",
-                right: "0.5rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                zIndex: 10,
-                color: "black",
-              }}
-            >
-              {showConfirmPassword ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
+        <PasswordField label="Password" value={values.password} onChange={set("password")} />
+        <PasswordField label="Confirm Password" value={values.confirmPassword} onChange={set("confirmPassword")} />
       </div>
     </>
   );
