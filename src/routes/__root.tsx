@@ -59,14 +59,10 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SurplusLink" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "SurplusLink members" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Cullinan Golf Club" },
+      { name: "description", content: "18-hole championship golf in Cullinan, Pretoria." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       {

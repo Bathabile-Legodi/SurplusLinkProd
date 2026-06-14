@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Field } from "./index";
+import { Field } from "@/components/Field";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
