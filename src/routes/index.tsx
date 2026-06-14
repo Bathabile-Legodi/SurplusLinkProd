@@ -38,12 +38,14 @@ const FAIRWAY_PHOTO =
   "https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&w=1600&q=80";
 
 const NAV = [
-  { href: "#home", label: "Home" },
-  { href: "#about", label: "About" },
-  { href: "#course", label: "Course" },
-  { href: "#specials", label: "Specials" },
-  { href: "#functions", label: "Functions" },
-  { href: "#contact", label: "Contact" },
+  { href: "/#home", label: "Home" },
+  { href: "/#about", label: "About" },
+  { href: "/#course", label: "Course" },
+  { href: "/#specials", label: "Specials" },
+  { href: "/membership", label: "Become a Member" },
+  { href: "/events", label: "Events" },
+  { href: "/#functions", label: "Functions" },
+  { href: "/#contact", label: "Contact" },
 ];
 
 function HomePage() {
