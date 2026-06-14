@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as MembershipRouteImport } from './routes/membership'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +33,11 @@ import { Route as NgoDonationsIdClaimRouteImport } from './routes/ngo.donations.
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembershipRoute = MembershipRouteImport.update({
+  id: '/membership',
+  path: '/membership',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/membership': typeof MembershipRoute
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/membership': typeof MembershipRoute
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/membership': typeof MembershipRoute
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/login'
+    | '/membership'
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/login'
+    | '/membership'
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/login'
+    | '/membership'
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
@@ -260,6 +272,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  MembershipRoute: typeof MembershipRoute
   RegisterRoute: typeof RegisterRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
@@ -282,6 +295,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/membership': {
+      id: '/membership'
+      path: '/membership'
+      fullPath: '/membership'
+      preLoaderRoute: typeof MembershipRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -433,6 +453,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  MembershipRoute: MembershipRoute,
   RegisterRoute: RegisterRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,
