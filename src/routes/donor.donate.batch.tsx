@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import { Field } from "./index";
+import { Field } from "@/components/Field";
 import { loadCurrentBatch, saveCurrentBatch, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/batch")({

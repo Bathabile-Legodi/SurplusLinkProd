@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { FormEvent  } from "react";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Field } from "./index";
+import { Field } from "@/components/Field";
 
 interface AddressComponents {
   streetNumber: string;

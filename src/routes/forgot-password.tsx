@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { Field } from "./index";
+import { Field } from "@/components/Field";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/forgot-password")({
