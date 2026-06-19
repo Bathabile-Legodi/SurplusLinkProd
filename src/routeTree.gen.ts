@@ -13,6 +13,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NgoVerifyRouteImport } from './routes/ngo.verify'
 import { Route as NgoNotVerifiedRouteImport } from './routes/ngo.not-verified'
 import { Route as NgoExploreRouteImport } from './routes/ngo.explore'
 import { Route as NgoDashboardRouteImport } from './routes/ngo.dashboard'
@@ -47,6 +48,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NgoVerifyRoute = NgoVerifyRouteImport.update({
+  id: '/ngo/verify',
+  path: '/ngo/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NgoNotVerifiedRoute = NgoNotVerifiedRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/ngo/verify': typeof NgoVerifyRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/ngo/verify': typeof NgoVerifyRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/ngo/verify': typeof NgoVerifyRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
+    | '/ngo/verify'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
+    | '/ngo/verify'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
+    | '/ngo/verify'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -267,6 +279,7 @@ export interface RootRouteChildren {
   NgoDashboardRoute: typeof NgoDashboardRoute
   NgoExploreRoute: typeof NgoExploreRoute
   NgoNotVerifiedRoute: typeof NgoNotVerifiedRoute
+  NgoVerifyRoute: typeof NgoVerifyRoute
   DonorDonateBatchRoute: typeof DonorDonateBatchRoute
   DonorDonateConsentRoute: typeof DonorDonateConsentRoute
   DonorDonateReviewRoute: typeof DonorDonateReviewRoute
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ngo/verify': {
+      id: '/ngo/verify'
+      path: '/ngo/verify'
+      fullPath: '/ngo/verify'
+      preLoaderRoute: typeof NgoVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ngo/not-verified': {
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   NgoDashboardRoute: NgoDashboardRoute,
   NgoExploreRoute: NgoExploreRoute,
   NgoNotVerifiedRoute: NgoNotVerifiedRoute,
+  NgoVerifyRoute: NgoVerifyRoute,
   DonorDonateBatchRoute: DonorDonateBatchRoute,
   DonorDonateConsentRoute: DonorDonateConsentRoute,
   DonorDonateReviewRoute: DonorDonateReviewRoute,
@@ -452,10 +473,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
