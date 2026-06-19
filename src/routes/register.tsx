@@ -106,9 +106,11 @@ function AddressAutocomplete({
     elementRef.current = placeAutocomplete;
     containerRef.current.appendChild(placeAutocomplete);
 
-    placeAutocomplete.addEventListener("gmp-placeselect", async (event: any) => {
-      const place = event.detail?.place ?? event.place;
-      if (!place) return;
+    placeAutocomplete.addEventListener("gmp-select", async (event: any) => {
+      const placePrediction = event.placePrediction;
+      if (!placePrediction) return;
+
+      const place = placePrediction.toPlace();
 
       await place.fetchFields({
         fields: ["addressComponents", "formattedAddress"],
