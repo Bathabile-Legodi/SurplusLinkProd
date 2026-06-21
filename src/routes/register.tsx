@@ -42,120 +42,31 @@ export const Route = createFileRoute("/register")({
 });
 
 
-function useGoogleMaps() {
-  const [ready, setReady] = useState(false);
+// Google Maps loader removed — registration now uses a plain text address input.
 
-  useEffect(() => {
-    if ((window as any).google?.maps?.places) {
-      setReady(true);
-      return;
-    }
-
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => setReady(true));
-      return;
-    }
-
-    (window as any).initGoogleMaps = () => setReady(true);
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=places&callback=initGoogleMaps`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {
-      delete (window as any).initGoogleMaps;
-    };
-  }, []);
-
-  return ready;
-}
-
-function AddressAutocomplete({
-  value,
-  onChange,
-}: {
-  value: AddressComponents;
-  onChange: (addr: AddressComponents) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const elementRef = useRef<any>(null);
-  const mapsReady = useGoogleMaps();
-
-  useEffect(() => {
-    if (!mapsReady || !containerRef.current) return;
-    if (elementRef.current) return;
-
-    const gPlaces = (window as any).google.maps.places;
-
-    if (!gPlaces.PlaceAutocompleteElement) {
-      console.warn("PlaceAutocompleteElement not available.");
-      return;
-    }
-
-    const placeAutocomplete = new gPlaces.PlaceAutocompleteElement({
-      includedRegionCodes: ["za"],
-      types: ["address"],
-    });
-
-    elementRef.current = placeAutocomplete;
-    containerRef.current.appendChild(placeAutocomplete);
-
-    placeAutocomplete.addEventListener("gmp-select", async (event: any) => {
-      const placePrediction = event.placePrediction;
-      if (!placePrediction) return;
-
-      const place = placePrediction.toPlace();
-
-      await place.fetchFields({
-        fields: ["addressComponents", "formattedAddress"],
-      });
-
-      const get = (type: string) =>
-        place.addressComponents?.find((c: any) => c.types.includes(type))
-          ?.longText ?? "";
-
-      onChange({
-        streetNumber: get("street_number"),
-        streetName:   get("route"),
-        suburb:       get("sublocality") || get("neighborhood"),
-        city:         get("locality"),
-        province:     get("administrative_area_level_1"),
-        postalCode:   get("postal_code"),
-        country:      get("country"),
-        formatted:    place.formattedAddress ?? "",
-      });
-    });
-
-    return () => {
-      if (containerRef.current && elementRef.current) {
-        try {
-          containerRef.current.removeChild(elementRef.current);
-        } catch (_) {}
-        elementRef.current = null;
-      }
-    };
-  }, [mapsReady]);
-
+function AddressAutocomplete({ value, onChange }: { value: AddressComponents; onChange: (addr: AddressComponents) => void; }) {
+  // Simple text input for address (no external autocomplete)
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-foreground">
-        Address
-      </label>
-      {!mapsReady && (
-        <input
-          type="text"
-          disabled
-          placeholder="Loading…"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground disabled:opacity-50"
-        />
-      )}
-      <div ref={containerRef} className={!mapsReady ? "hidden" : ""} />
+      <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
+      <input
+        type="text"
+        value={value.formatted}
+        onChange={(e) =>
+          onChange({
+            streetNumber: "",
+            streetName: "",
+            suburb: "",
+            city: "",
+            province: "",
+            postalCode: "",
+            country: "",
+            formatted: e.target.value,
+          })
+        }
+        placeholder="Street address, suburb, city"
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+      />
     </div>
   );
 }
@@ -385,7 +296,7 @@ function RegisterPage() {
           <button
             type="button"
             onClick={() => setTab("donor")}
-            className={`rounded py-1.5 transition ${
+            className={`rounded py-1.5 text-center transition ${
               tab === "donor"
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground"
@@ -397,7 +308,7 @@ function RegisterPage() {
           <button
             type="button"
             onClick={() => setTab("ngo")}
-            className={`rounded py-1.5 transition ${
+            className={`rounded py-1.5 text-center transition ${
               tab === "ngo"
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground"
@@ -429,7 +340,7 @@ function RegisterPage() {
           <button
             type="submit" 
             disabled={loading}
-            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground text-center hover:bg-primary/90 disabled:opacity-50"
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>

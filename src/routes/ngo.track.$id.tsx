@@ -61,10 +61,10 @@ function TrackDelivery() {
             <Row label="Vehicle" value="Foton Truck Mate - XP 56 VD GP" />
           </div>
           <div className="mt-4 flex gap-3">
-            <button className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            <button className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground text-center hover:bg-primary/90">
               Call Driver
             </button>
-            <button className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">
+            <button className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white text-center hover:bg-green-700">
               Message Driver
             </button>
           </div>

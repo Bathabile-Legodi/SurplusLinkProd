@@ -49,7 +49,6 @@ function Nav() {
     { id: "how", label: "How It Works" },
     { id: "donors", label: "For Donors" },
     { id: "ngos", label: "For NGOs" },
-    { id: "live", label: "Live Alerts" },
   ];
   return (
     <header className="sticky top-0 z-50 border-b border-black/10 bg-white/80 backdrop-blur-md">
@@ -72,15 +71,15 @@ function Nav() {
         <div className="hidden items-center gap-3 md:flex">
           <Link
             to="/login"
-            className="h-10 rounded-full border border-black bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-black bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
           >
             Sign In
           </Link>
           <Link
             to="/register"
-            className="group h-10 rounded-full border border-black bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+            className="group inline-flex h-10 items-center justify-center rounded-full border border-black bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
           >
-            Register as Donor / NGO
+            Register as Donor or NGO
           </Link>
         </div>
         <button
@@ -113,13 +112,13 @@ function Nav() {
             ))}
             <Link
               to="/login"
-              className="mt-2 h-10 rounded-full border border-black bg-white px-5 text-sm font-semibold text-black"
+              className="mt-2 inline-flex h-10 items-center justify-center rounded-full border border-black bg-white px-5 text-sm font-semibold text-black"
             >
               Sign In
             </Link>
             <Link
               to="/register"
-              className="h-10 rounded-full bg-black px-5 text-sm font-semibold text-white"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-black px-5 text-sm font-semibold text-white"
             >
               Register
             </Link>
@@ -133,7 +132,7 @@ function Nav() {
 function Hero() {
   return (
     <section id="top" className="relative overflow-hidden border-b border-black/10 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-24 md:py-36">
+      <div className="mx-auto max-w-7xl px-6 py-9 md:py-14">
         <div className="grid items-center gap-12 md:grid-cols-12">
           <div className="md:col-span-7">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-medium uppercase tracking-widest text-neutral-700">
@@ -168,37 +167,37 @@ function Hero() {
           </div>
 
           <div className="md:col-span-5">
-            <div className="relative">
-              <div className="absolute -inset-4 rounded-3xl border border-black/10" />
-              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-900 text-white">
-                <div className="absolute inset-0 grid place-items-center opacity-[0.08]">
-                  <div className="text-[20rem] font-black leading-none">SL</div>
-                </div>
-                <div className="relative flex h-full flex-col justify-between p-8">
-                  <div className="flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400">
-                    <span>Live Match</span>
-                    <span>00:42</span>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="text-xs uppercase tracking-widest text-neutral-400">
-                      Matched
-                    </div>
-                    <div className="text-3xl font-bold leading-tight">
-                      120kg fresh produce<br />
-                      <span className="text-neutral-400">→ Hope Kitchen NGO</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-neutral-300">
-                      <MapPin className="h-4 w-4" />
-                      Pickup in 18 min · 2.4km away
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ImageCarousel />
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function ImageCarousel() {
+  const images = [
+    "/images/hero1.jpg",
+    "/images/hero2.jpg",
+    "/images/hero3.jpg",
+  ];
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % images.length), 1500);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="relative">
+      <div className="absolute -inset-4 rounded-3xl border border-black/10" />
+      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-900 text-white">
+        <img src={images[idx]} alt={`hero-${idx}`} className="h-full w-full object-cover" />
+        <div className="absolute left-4 bottom-4 rounded-md bg-black/60 px-3 py-2 text-sm">
+          <span className="font-semibold">SurplusLink</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -322,105 +321,7 @@ type Alert = {
   dist?: string;
 };
 
-const ALERTS: Alert[] = [
-  { time: "12:04", item: "200kg Fresh Vegetables", loc: "Cape Town · CBD", status: "Claimed", by: "Hope Kitchen" },
-  { time: "11:51", item: "80 Bakery Loaves", loc: "Sea Point", status: "Available", dist: "5km away" },
-  { time: "11:32", item: "45L Dairy (Sealed)", loc: "Woodstock", status: "Claimed", by: "Sunrise Shelter" },
-  { time: "11:14", item: "12 Cases Canned Goods", loc: "Salt River", status: "Available", dist: "3km away" },
-  { time: "10:58", item: "30kg Cooked Meals", loc: "Observatory", status: "Claimed", by: "Open Table NGO" },
-  { time: "10:42", item: "150kg Mixed Produce", loc: "Bellville", status: "Available", dist: "11km away" },
-];
 
-function LiveFeed() {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 3000);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <section id="live" className="border-b border-black/10 bg-neutral-50">
-      <div className="mx-auto max-w-7xl px-6 py-24">
-        <div className="mb-10 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-xl">
-            <div className="text-xs font-medium uppercase tracking-widest text-neutral-500">
-              Live activity feed
-            </div>
-            <h2 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
-              Food available <span className="italic font-serif">now.</span>
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-black opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-black" />
-            </span>
-            <span className="text-xs font-medium uppercase tracking-widest text-neutral-700">
-              {6 + (tick % 4)} active alerts
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-black/10 bg-white">
-          <div className="grid gap-3 border-b border-black/10 p-4 md:grid-cols-[1fr_1fr_auto]">
-            <div className="flex items-center gap-2 rounded-full border border-black/15 bg-white px-4">
-              <Search className="h-4 w-4 text-neutral-500" />
-              <input
-                className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-neutral-500"
-                placeholder="Location (e.g. Cape Town)"
-              />
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-black/15 bg-white px-4">
-              <MapPin className="h-4 w-4 text-neutral-500" />
-              <input
-                className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-neutral-500"
-                placeholder="Food category (e.g. Produce, Bakery)"
-              />
-            </div>
-            <button className="h-10 rounded-full border border-black bg-black px-6 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black">
-              Filter
-            </button>
-          </div>
-
-          <div className="hidden grid-cols-[90px_1.5fr_1fr_1.2fr] gap-4 border-b border-black/10 px-6 py-3 text-xs font-semibold uppercase tracking-widest text-neutral-500 md:grid">
-            <div>Time</div>
-            <div>Item</div>
-            <div>Location</div>
-            <div>Status</div>
-          </div>
-
-          <ul className="divide-y divide-black/10">
-            {ALERTS.map((a, i) => (
-              <li
-                key={i}
-                className="grid grid-cols-1 gap-2 px-6 py-5 transition-colors hover:bg-neutral-50 md:grid-cols-[90px_1.5fr_1fr_1.2fr] md:items-center md:gap-4"
-              >
-                <div className="flex items-center gap-2 text-sm font-mono text-neutral-600">
-                  <Clock className="h-3.5 w-3.5" />
-                  {a.time}
-                </div>
-                <div className="font-semibold">{a.item}</div>
-                <div className="text-sm text-neutral-600">{a.loc}</div>
-                <div>
-                  {a.status === "Claimed" ? (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-black px-3 py-1 text-xs font-medium text-white">
-                      <BadgeCheck className="h-3 w-3" />
-                      Claimed by {a.by}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-black px-3 py-1 text-xs font-medium text-black">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-black" />
-                      Available · {a.dist}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function Trust() {
   const items = [
@@ -475,13 +376,13 @@ function CTA() {
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             to="/register"
-            className="h-14 rounded-full border border-white bg-white px-8 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white hover:border-white"
+            className="inline-flex h-14 items-center justify-center rounded-full border border-white bg-white px-8 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white hover:border-white"
           >
             I'm a Donor
           </Link>
           <Link
             to="/register"
-            className="h-14 rounded-full border border-white bg-transparent px-8 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+            className="inline-flex h-14 items-center justify-center rounded-full border border-white bg-transparent px-8 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
           >
             I'm an NGO
           </Link>
@@ -507,18 +408,18 @@ function Footer() {
               className="mt-8 flex max-w-sm items-center gap-2 rounded-full border border-black p-1"
             >
               <input
-                type="email"
-                placeholder="Your email"
-                className="h-10 w-full bg-transparent px-4 text-sm outline-none placeholder:text-neutral-500"
-              />
-              <button className="h-10 shrink-0 rounded-full bg-black px-5 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-black hover:ring-1 hover:ring-black">
-                Subscribe
-              </button>
+                  type="email"
+                  placeholder="Your email"
+                  className="h-10 w-full bg-transparent px-4 text-sm outline-none placeholder:text-neutral-500"
+                />
+                <button className="h-10 shrink-0 rounded-full bg-black px-5 text-xs font-semibold uppercase tracking-widest text-white text-center transition-colors hover:bg-white hover:text-black hover:ring-1 hover:ring-black">
+                  Subscribe
+                </button>
             </form>
           </div>
           <FooterCol
             title="Platform"
-            links={["How It Works", "For Donors", "For NGOs", "Live Alerts"]}
+            links={["How It Works", "For Donors", "For NGOs"]}
           />
           <FooterCol title="Company" links={["About", "Impact Report", "Press", "Careers"]} />
           <FooterCol title="Contact" links={["hello@surpluslink.org", "+27 21 000 0000", "Cape Town, ZA"]} />
@@ -561,7 +462,6 @@ function Landing() {
       <Hero />
       <Stats />
       <HowItWorks />
-      <LiveFeed />
       <Trust />
       <CTA />
       <Footer />
