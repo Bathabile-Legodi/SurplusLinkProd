@@ -210,11 +210,16 @@ function Stats() {
   ];
   return (
     <section className="border-b border-black/10 bg-black text-white">
-      <div className="mx-auto max-w-7xl px-6 py-20">
-        <div className="grid gap-12 md:grid-cols-4">
-          {items.map((s) => (
-            <div key={s.label} className="border-l border-white/15 pl-6">
-              <div className="text-4xl font-black tracking-tight md:text-5xl">{s.value}</div>
+      <div className="mx-auto max-w-7xl px-6 py-12 sm:py-16 md:py-20">
+        <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+          {items.map((s, i) => (
+            <div
+              key={s.label}
+              className={`${i !== 0 ? "md:border-l md:border-white/15 md:pl-6" : "md:pl-0"} flex flex-col justify-center text-center md:text-left py-6 sm:py-8`}
+            >
+              <div className="font-black tracking-tight leading-tight break-words" style={{ fontSize: "clamp(1.5rem, 5.5vw, 3.25rem)" }}>
+                {s.value}
+              </div>
               <div className="mt-3 text-xs uppercase tracking-widest text-neutral-400">
                 {s.label}
               </div>
