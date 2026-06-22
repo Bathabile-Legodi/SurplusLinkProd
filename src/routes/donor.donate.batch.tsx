@@ -20,7 +20,15 @@ const emptyDraft = (): DonationItem => ({
 
 function CreateBatch() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<DonationItem[]>(() => loadCurrentBatch());
+  const [items, setItems] = useState<DonationItem[]>([]);
+
+  // Load stored batch only on client to avoid SSR hydration mismatches
+  useEffect(() => {
+    const stored = loadCurrentBatch();
+    if (stored && stored.length > 0) {
+      setItems(stored);
+    }
+  }, []);
 
   const [draft, setDraft] = useState<DonationItem>(emptyDraft()); 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,10 +116,18 @@ function CreateBatch() {
                 <option value="Trays">Trays</option>
               </select>
             </div>
+<<<<<<< HEAD
       
             <div className="col-span-2 flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry Date</label>
               <input
+=======
+
+            {/* 3. Expiry (optional) - keep per-item expiry, collection deadline moved to review page */}
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry (optional)</label>
+              <input 
+>>>>>>> 02760936bc800240cdd0cbd5683c89c117c833c3
                 type="date"
                 value={draft.expiry}
                 onChange={(e) => setDraft({ ...draft, expiry: e.target.value })}
@@ -120,6 +136,7 @@ function CreateBatch() {
             </div>
           </div>
 
+<<<<<<< HEAD
           <div className="mt-6 flex gap-3">
             <button
               type="button"
@@ -138,6 +155,19 @@ function CreateBatch() {
               </button>
             )}
           </div>
+=======
+          <button
+            type="button"
+            onClick={() => {
+              if (!draft.name) return;
+              setItems([...items, draft]);
+              setDraft({ name: "", category: "Produce", quantity: "", unit: "Kg", expiry: "" });
+            }}
+            className="mt-6 w-full rounded-md border border-dashed border-primary/50 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+          >
+            + Add Item to Batch
+          </button>
+>>>>>>> 02760936bc800240cdd0cbd5683c89c117c833c3
         </section>
 
         <section className="mt-6 rounded-xl border bg-card p-6">
@@ -151,6 +181,7 @@ function CreateBatch() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{it.quantity} {it.unit}</p>
+<<<<<<< HEAD
                   <p className="text-[10px] text-muted-foreground">Exp: {it.expiry}</p> 
                 </div>
           
@@ -161,6 +192,13 @@ function CreateBatch() {
                   <button type="button" onClick={() => handleDelete(it.id)} className="text-xs font-medium text-destructive hover:underline">
                     Delete
                   </button>
+=======
+                  {it.expiry ? (
+                    <p className="text-[10px] text-muted-foreground">
+                      Exp: {it.expiry.replace?.('T', ' ') ?? it.expiry}
+                    </p>
+                  ) : null}
+>>>>>>> 02760936bc800240cdd0cbd5683c89c117c833c3
                 </div>
               </li>
             ))}
