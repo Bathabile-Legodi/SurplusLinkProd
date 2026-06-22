@@ -17,7 +17,6 @@ export type RecentDonation = {
   status: string;
   submittedAt: string;
   items: DonationItem[];
-  collectionDeadline?: string; // ISO timestamp for collection deadline
 };
 
 const CURRENT_BATCH_KEY = "surpluslink-current-donation-batch";
@@ -136,56 +135,9 @@ export function makeItemId() {
     return crypto.randomUUID();
   }
 
-<<<<<<< HEAD
   return (
     Date.now().toString(36) +
     Math.random().toString(36).substring(2, 9)
-=======
-  return prunedDonations;
-}
-
-export function saveRecentDonations(donations: RecentDonation[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(RECENT_DONATIONS_KEY, JSON.stringify(donations));
-}
-
-export function getLastSubmittedBatchId(): number | null {
-  if (typeof window === "undefined") return null;
-
-  const parsed = normalizeBatchId(window.localStorage.getItem(LAST_SUBMITTED_BATCH_KEY));
-  return parsed ?? null;
-}
-
-export function setLastSubmittedBatchId(id: number) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(LAST_SUBMITTED_BATCH_KEY, String(id));
-}
-
-export function submitDonationBatch(items: DonationItem[], collectionDeadline?: string) {
-  const submittedAt = new Date().toISOString();
-  const id = createDonationId();
-  const category = items.length === 1 ? items[0].category : "Mixed Donation";
-  const donation: RecentDonation = {
-    id,
-    category,
-    time: formatDonationTime(submittedAt),
-    status: "Pending",
-    submittedAt,
-    items,
-    collectionDeadline,
-  };
-  const allRecent = [donation, ...loadRecentDonations()].slice(0, 10);
-  saveRecentDonations(allRecent);
-  setLastSubmittedBatchId(id);
-  clearCurrentBatch();
-  return donation;
-}
-
-export function updateDonationStatus(id: number, status: string) {
-  const donations = loadRecentDonations();
-  const updated = donations.map((donation) =>
-    donation.id === id ? { ...donation, status } : donation,
->>>>>>> 02760936bc800240cdd0cbd5683c89c117c833c3
   );
 }
 

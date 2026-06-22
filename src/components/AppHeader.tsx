@@ -53,5 +53,4 @@ export const ngoNav: NavItem[] = [
   { to: "/ngo/dashboard", label: "Dashboard" },
   { to: "/ngo/explore", label: "Explore Donations" },
   { to: "/ngo/claims", label: "My Claims" },
-  { to: "/ngo/verify", label: "Verify Profiles" }, 
 ];

@@ -48,7 +48,7 @@ function ExplorePage() {
             placeholder="Search donations by category, donor or location..."
             className="flex-1 rounded-md border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <button className="rounded-md border bg-card px-4 py-2 text-sm text-center hover:bg-secondary">
+          <button className="rounded-md border bg-card px-4 py-2 text-sm hover:bg-secondary">
             Filters
           </button>
         </div>

@@ -18,7 +18,7 @@ function NotVerified() {
         <p className="mt-2 text-sm text-muted-foreground">
           Your NGO account is not verified yet. Please complete the verification process before claiming donations.
         </p>
-        <button className="mt-6 w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground text-center hover:bg-primary/90">
+        <button className="mt-6 w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
           Go to Verification
         </button>
         <Link to="/ngo/dashboard" className="mt-3 block text-xs text-muted-foreground hover:text-foreground">

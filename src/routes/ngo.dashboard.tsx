@@ -34,7 +34,7 @@ function NgoDashboard() {
             Once verified, your organization will receive a notification and full access to claim donations.
           </p>
           <div className="mt-3 flex gap-3">
-            <button className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground text-center hover:bg-primary/90">
+            <button className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
               View Status
             </button>
             <Link

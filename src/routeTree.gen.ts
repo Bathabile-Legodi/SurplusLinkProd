@@ -13,13 +13,10 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as NgoVerifyRouteImport } from './routes/ngo.verify'
-import { Route as NgoProfileRouteImport } from './routes/ngo.profile'
 import { Route as NgoNotVerifiedRouteImport } from './routes/ngo.not-verified'
 import { Route as NgoExploreRouteImport } from './routes/ngo.explore'
 import { Route as NgoDashboardRouteImport } from './routes/ngo.dashboard'
 import { Route as NgoClaimsRouteImport } from './routes/ngo.claims'
-import { Route as DonorProfileRouteImport } from './routes/donor.profile'
 import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
@@ -52,16 +49,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NgoVerifyRoute = NgoVerifyRouteImport.update({
-  id: '/ngo/verify',
-  path: '/ngo/verify',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NgoProfileRoute = NgoProfileRouteImport.update({
-  id: '/ngo/profile',
-  path: '/ngo/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NgoNotVerifiedRoute = NgoNotVerifiedRouteImport.update({
   id: '/ngo/not-verified',
   path: '/ngo/not-verified',
@@ -80,11 +67,6 @@ const NgoDashboardRoute = NgoDashboardRouteImport.update({
 const NgoClaimsRoute = NgoClaimsRouteImport.update({
   id: '/ngo/claims',
   path: '/ngo/claims',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DonorProfileRoute = DonorProfileRouteImport.update({
-  id: '/donor/profile',
-  path: '/donor/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DonorDashboardRoute = DonorDashboardRouteImport.update({
@@ -151,13 +133,10 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
-  '/donor/profile': typeof DonorProfileRoute
   '/ngo/claims': typeof NgoClaimsRoute
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
-  '/ngo/profile': typeof NgoProfileRoute
-  '/ngo/verify': typeof NgoVerifyRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -175,13 +154,10 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
-  '/donor/profile': typeof DonorProfileRoute
   '/ngo/claims': typeof NgoClaimsRoute
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
-  '/ngo/profile': typeof NgoProfileRoute
-  '/ngo/verify': typeof NgoVerifyRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -200,13 +176,10 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
-  '/donor/profile': typeof DonorProfileRoute
   '/ngo/claims': typeof NgoClaimsRoute
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
-  '/ngo/profile': typeof NgoProfileRoute
-  '/ngo/verify': typeof NgoVerifyRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -226,13 +199,10 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
-    | '/donor/profile'
     | '/ngo/claims'
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
-    | '/ngo/profile'
-    | '/ngo/verify'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -250,13 +220,10 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
-    | '/donor/profile'
     | '/ngo/claims'
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
-    | '/ngo/profile'
-    | '/ngo/verify'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -274,13 +241,10 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
-    | '/donor/profile'
     | '/ngo/claims'
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
-    | '/ngo/profile'
-    | '/ngo/verify'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -299,13 +263,10 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
-  DonorProfileRoute: typeof DonorProfileRoute
   NgoClaimsRoute: typeof NgoClaimsRoute
   NgoDashboardRoute: typeof NgoDashboardRoute
   NgoExploreRoute: typeof NgoExploreRoute
   NgoNotVerifiedRoute: typeof NgoNotVerifiedRoute
-  NgoProfileRoute: typeof NgoProfileRoute
-  NgoVerifyRoute: typeof NgoVerifyRoute
   DonorDonateBatchRoute: typeof DonorDonateBatchRoute
   DonorDonateConsentRoute: typeof DonorDonateConsentRoute
   DonorDonateReviewRoute: typeof DonorDonateReviewRoute
@@ -344,20 +305,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ngo/verify': {
-      id: '/ngo/verify'
-      path: '/ngo/verify'
-      fullPath: '/ngo/verify'
-      preLoaderRoute: typeof NgoVerifyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ngo/profile': {
-      id: '/ngo/profile'
-      path: '/ngo/profile'
-      fullPath: '/ngo/profile'
-      preLoaderRoute: typeof NgoProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/ngo/not-verified': {
       id: '/ngo/not-verified'
       path: '/ngo/not-verified'
@@ -384,13 +331,6 @@ declare module '@tanstack/react-router' {
       path: '/ngo/claims'
       fullPath: '/ngo/claims'
       preLoaderRoute: typeof NgoClaimsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/donor/profile': {
-      id: '/donor/profile'
-      path: '/donor/profile'
-      fullPath: '/donor/profile'
-      preLoaderRoute: typeof DonorProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/donor/dashboard': {
@@ -496,13 +436,10 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,
-  DonorProfileRoute: DonorProfileRoute,
   NgoClaimsRoute: NgoClaimsRoute,
   NgoDashboardRoute: NgoDashboardRoute,
   NgoExploreRoute: NgoExploreRoute,
   NgoNotVerifiedRoute: NgoNotVerifiedRoute,
-  NgoProfileRoute: NgoProfileRoute,
-  NgoVerifyRoute: NgoVerifyRoute,
   DonorDonateBatchRoute: DonorDonateBatchRoute,
   DonorDonateConsentRoute: DonorDonateConsentRoute,
   DonorDonateReviewRoute: DonorDonateReviewRoute,
