@@ -2,33 +2,64 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { Field } from "@/components/Field";
-import { loadCurrentBatch, saveCurrentBatch, type DonationItem } from "@/lib/donations";
+import { loadCurrentBatch, saveCurrentBatch, makeItemId, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/batch")({
   head: () => ({ meta: [{ title: "Create Donation Batch — SurplusLink" }] }),
   component: CreateBatch,
 });
 
+const emptyDraft = (): DonationItem => ({
+  id: "",
+  name: "",
+  category: "Produce",
+  quantity: "",
+  unit: "Kg",
+  expiry: ""
+});
+
 function CreateBatch() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<DonationItem[]>(() => {
-    const stored = loadCurrentBatch();
-    return stored.length >= 0
-      ? stored
-      : [];
-  });
+  const [items, setItems] = useState<DonationItem[]>(() => loadCurrentBatch());
 
-  const [draft, setDraft] = useState<DonationItem>({ 
-    name: "", 
-    category: "Produce", 
-    quantity: "", 
-    unit: "Kg", 
-    expiry: "" 
-  });
+  const [draft, setDraft] = useState<DonationItem>(emptyDraft()); 
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     saveCurrentBatch(items);
   }, [items]);
+
+  const isEditing = editingId !== null; 
+
+  function handleAddOrUpdate() {
+    if (!draft.name.trim() || !draft.expiry) return;
+
+    if (isEditing) {
+      setItems(items.map((it) => (it.id === editingId ? { ...draft, id: editingId } : it)));
+      setEditingId(null);
+    } else {
+      setItems([...items, { ...draft, id: makeItemId() }]);
+    }
+    setDraft(emptyDraft());
+  }
+
+  function handleEdit(item: DonationItem) {
+    setDraft(item);
+    setEditingId(item.id);
+  }
+
+  function handleDelete(id: string) {
+    setItems(items.filter((it) => it.id !== id));
+    if (editingId === id) {
+      setEditingId(null);
+      setDraft(emptyDraft());
+    }
+  }
+
+  function handleCancelEdit() {
+    setEditingId(null);
+    setDraft(emptyDraft());
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,16 +70,17 @@ function CreateBatch() {
         </p>
 
         <section className="mt-6 rounded-xl border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold">Item Details</h2>
+          <h2 className="mb-4 text-sm font-semibold">
+            {isEditing ? "Edit Item" : "Item Details"} 
+          </h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 md:col-span-1">
               <Field label="Food Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="e.g. Whole grain bread" />
             </div>
 
-            {/* 1. DROP DOWN MENU for Category */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Category</label>
-              <select 
+              <select
                 value={draft.category}
                 onChange={(e) => setDraft({ ...draft, category: e.target.value })}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -63,10 +95,9 @@ function CreateBatch() {
 
             <Field label="Quantity" value={draft.quantity} onChange={(v) => setDraft({ ...draft, quantity: v })} placeholder="10" />
 
-            {/* 2. DROP DOWN MENU for Unit */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Unit</label>
-              <select 
+              <select
                 value={draft.unit}
                 onChange={(e) => setDraft({ ...draft, unit: e.target.value })}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -77,12 +108,11 @@ function CreateBatch() {
                 <option value="Trays">Trays</option>
               </select>
             </div>
-
-            {/* 3. DATE & TIME PICKER for Expiry/Deadline */}
+      
             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Collection Deadline / Expiry</label>
-              <input 
-                type="datetime-local"
+              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry Date</label>
+              <input
+                type="date"
                 value={draft.expiry}
                 onChange={(e) => setDraft({ ...draft, expiry: e.target.value })}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -90,41 +120,53 @@ function CreateBatch() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (!draft.name || !draft.expiry) return;
-              setItems([...items, draft]);
-              setDraft({ name: "", category: "Produce", quantity: "", unit: "Kg", expiry: "" });
-            }}
-            className="mt-6 w-full rounded-md border border-dashed border-primary/50 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
-          >
-            + Add Item to Batch
-          </button>
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={handleAddOrUpdate}
+              className="flex-1 rounded-md border border-dashed border-primary/50 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+            >
+              {isEditing ? "Update Item" : "+ Add Item to Batch"}
+            </button>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="rounded-md border px-4 py-3 text-sm font-medium hover:bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </section>
 
-        {/* Display List Section */}
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-3 text-sm font-semibold">Items in this batch ({items.length})</h2>
           <ul className="divide-y">
-            {items.map((it, i) => (
-              <li key={i} className="grid grid-cols-2 gap-2 py-3 text-sm">
+            {items.map((it) => ( 
+              <li key={it.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <div>
                   <p className="font-medium">{it.name}</p>
                   <p className="text-xs text-muted-foreground">{it.category}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{it.quantity} {it.unit}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Exp: {it.expiry.replace('T', ' ')}
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">Exp: {it.expiry}</p> 
+                </div>
+          
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => handleEdit(it)} className="text-xs font-medium text-primary hover:underline">
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => handleDelete(it.id)} className="text-xs font-medium text-destructive hover:underline">
+                    Delete
+                  </button>
                 </div>
               </li>
             ))}
           </ul>
         </section>
 
-        {/* Navigation Buttons */}
         <div className="mt-8 flex justify-between gap-4">
           <Link to="/donor/dashboard" className="rounded-md border px-6 py-2 text-sm font-medium hover:bg-secondary transition-colors">
             Cancel

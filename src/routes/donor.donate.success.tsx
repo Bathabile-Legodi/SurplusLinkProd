@@ -1,38 +1,36 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import { getLastSubmittedBatchId } from "@/lib/donations";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
 }
 
 export const Route = createFileRoute("/donor/donate/success")({
+  validateSearch: (search: Record<string, unknown>): { batchId: number | null } => {
+    const parsed = Number(search.batchId);
+    return { batchId: Number.isFinite(parsed) ? parsed : null };
+  },
   head: () => ({ meta: [{ title: "Donation Submitted — SurplusLink" }] }),
   component: SuccessPage,
 });
 
 function SuccessPage() {
-  const [submittedBatchId, setSubmittedBatchId] = useState<number>(1);
-
-  useEffect(() => {
-    const id = getLastSubmittedBatchId();
-    if (id !== null) {
-      setSubmittedBatchId(id);
-    }
-  }, []);
+  const { batchId } = Route.useSearch();
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" />
+      <AppHeader nav={donorNav} userLabel="FM" /> 
       <main className="mx-auto max-w-md px-6 py-20 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/15">
           <span className="text-2xl text-[color:var(--success)]">✓</span>
         </div>
         <h1 className="mt-6 text-xl font-semibold">Donation Successfully Submitted</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your batch <b>{formatBatchId(submittedBatchId)}</b> has been added to our network. Verified NGOs nearby
-          have been notified and can claim it.
+          {batchId !== null ? (
+            <>Your batch <b>{formatBatchId(batchId)}</b> has been added to our network. Verified NGOs nearby have been notified and can claim it.</>
+          ) : (
+            <>Your donation has been added to our network. Verified NGOs nearby have been notified and can claim it.</>
+          )}
         </p>
         <Link
           to="/donor/dashboard"
