@@ -2,19 +2,19 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/ngo/profile')({
-  component: DonorProfile,
+  component: NgoProfile,
 })
 
-function DonorProfile() {
+function NgoProfile() {
   const navigate = useNavigate()
 
   const [editMode, setEditMode] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(null)
 
-  const donor = {
-    businessName: 'Wales Bakery',
-    businessType: 'Bakery',
-    email: 'walescake@gmail.com',
+  const ngo = {
+    businessName: 'Helping Hands NGO',
+    businessType: 'Food Relief Organisation',
+    email: 'helpinghands@gmail.com',
     phone: '+27 123 456 789',
     address: '897 Second St, Johannesburg',
     location: 'Johannesburg, South Africa',
@@ -22,9 +22,9 @@ function DonorProfile() {
   }
 
   const donations = [
-    { date: '12 June 2026', item: 'Bread' },
-    { date: '10 June 2026', item: 'Milk' },
-    { date: '8 June 2026', item: 'Flour Bags' },
+    { date: '12 June 2026', item: 'Bread received' },
+    { date: '10 June 2026', item: 'Milk received' },
+    { date: '8 June 2026', item: 'Flour Bags received' },
   ]
 
   const totalDonations = donations.length
@@ -40,13 +40,13 @@ function DonorProfile() {
       <div style={styles.card}>
 
         {/* TITLE */}
-        <h1 style={styles.pageTitle}>Donor Profile</h1>
+        <h1 style={styles.pageTitle}>NGO Profile</h1>
 
         {/* HEADER */}
         <div style={styles.header}>
           <h2 style={styles.title}>
-            {donor.businessName}
-            {donor.verified && <span style={styles.badge}>✔ Verified</span>}
+            {ngo.businessName}
+            {ngo.verified && <span style={styles.badge}>✔ Verified</span>}
           </h2>
 
           <button className="btn-edit">
@@ -54,7 +54,7 @@ function DonorProfile() {
           </button>
         </div>
 
-        <p style={styles.subtitle}>{donor.businessType}</p>
+        <p style={styles.subtitle}>{ngo.businessType}</p>
 
         {/* PROFILE IMAGE */}
         <div style={styles.profileSection}>
@@ -74,26 +74,26 @@ function DonorProfile() {
         {/* STATS */}
         <div style={styles.stats}>
           <div style={styles.statCard}>
-            <p>Total Donations</p>
+            <p>Total Donations Received</p>
             <h3>{totalDonations}</h3>
           </div>
 
           <div style={styles.statCard}>
-            <p>Last Donation</p>
+            <p>Last Donation Received</p>
             <h3>{lastDonation}</h3>
           </div>
         </div>
 
         {/* INFO */}
         <div style={styles.grid}>
-          <Field label="Email" value={donor.email} />
-          <Field label="Phone" value={donor.phone} />
-          <Field label="Address" value={donor.address} />
-          <Field label="Location" value={donor.location} />
+          <Field label="Email" value={ngo.email} />
+          <Field label="Phone" value={ngo.phone} />
+          <Field label="Address" value={ngo.address} />
+          <Field label="Location" value={ngo.location} />
         </div>
 
         {/* HISTORY */}
-        <h3 style={{ marginTop: 20 }}>Donation History</h3>
+        <h3 style={{ marginTop: 20 }}>Donation Received History</h3>
 
         <div style={styles.history}>
           {donations.map((d, i) => (
@@ -110,7 +110,7 @@ function DonorProfile() {
         <div style={styles.backContainer}>
           <button
             className="btn-primary"
-            onClick={() => navigate({ to: '/donor/dashboard' })}
+            onClick={() => navigate({ to: '/ngo/explore' })}
           >
             Back to Dashboard
           </button>
