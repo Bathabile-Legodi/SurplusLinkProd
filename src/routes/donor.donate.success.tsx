@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import { getLastSubmittedBatchId } from "@/lib/donations";
+import { getLastSubmittedBatchId, loadRecentDonations } from "@/lib/donations";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
@@ -14,11 +14,27 @@ export const Route = createFileRoute("/donor/donate/success")({
 
 function SuccessPage() {
   const [submittedBatchId, setSubmittedBatchId] = useState<number>(1);
+  const [deadline, setDeadline] = useState<string | null>(null);
 
   useEffect(() => {
     const id = getLastSubmittedBatchId();
     if (id !== null) {
       setSubmittedBatchId(id);
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = getLastSubmittedBatchId();
+    if (id === null) return;
+    const donations = loadRecentDonations();
+    const found = donations.find((d) => d.id === id);
+    if (found && found.collectionDeadline) {
+      try {
+        const dt = new Date(found.collectionDeadline);
+        setDeadline(dt.toLocaleString());
+      } catch {
+        setDeadline(found.collectionDeadline ?? null);
+      }
     }
   }, []);
 
@@ -34,6 +50,9 @@ function SuccessPage() {
           Your batch <b>{formatBatchId(submittedBatchId)}</b> has been added to our network. Verified NGOs nearby
           have been notified and can claim it.
         </p>
+        {deadline ? (
+          <p className="mt-2 text-sm text-muted-foreground">Collection Deadline: <b>{deadline}</b></p>
+        ) : null}
         <Link
           to="/donor/dashboard"
           className="mt-8 inline-block rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"

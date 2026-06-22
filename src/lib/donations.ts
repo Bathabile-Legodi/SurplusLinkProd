@@ -13,6 +13,7 @@ export type RecentDonation = {
   status: string;
   submittedAt: string;
   items: DonationItem[];
+  collectionDeadline?: string; // ISO timestamp for collection deadline
 };
 
 const CURRENT_BATCH_KEY = "surpluslink-current-donation-batch";
@@ -189,7 +190,7 @@ export function setLastSubmittedBatchId(id: number) {
   window.localStorage.setItem(LAST_SUBMITTED_BATCH_KEY, String(id));
 }
 
-export function submitDonationBatch(items: DonationItem[]) {
+export function submitDonationBatch(items: DonationItem[], collectionDeadline?: string) {
   const submittedAt = new Date().toISOString();
   const id = createDonationId();
   const category = items.length === 1 ? items[0].category : "Mixed Donation";
@@ -200,6 +201,7 @@ export function submitDonationBatch(items: DonationItem[]) {
     status: "Pending",
     submittedAt,
     items,
+    collectionDeadline,
   };
   const allRecent = [donation, ...loadRecentDonations()].slice(0, 10);
   saveRecentDonations(allRecent);

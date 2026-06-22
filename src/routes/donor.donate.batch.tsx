@@ -11,12 +11,15 @@ export const Route = createFileRoute("/donor/donate/batch")({
 
 function CreateBatch() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<DonationItem[]>(() => {
+  const [items, setItems] = useState<DonationItem[]>([]);
+
+  // Load stored batch only on client to avoid SSR hydration mismatches
+  useEffect(() => {
     const stored = loadCurrentBatch();
-    return stored.length >= 0
-      ? stored
-      : [];
-  });
+    if (stored && stored.length > 0) {
+      setItems(stored);
+    }
+  }, []);
 
   const [draft, setDraft] = useState<DonationItem>({ 
     name: "", 
@@ -78,11 +81,11 @@ function CreateBatch() {
               </select>
             </div>
 
-            {/* 3. DATE & TIME PICKER for Expiry/Deadline */}
+            {/* 3. Expiry (optional) - keep per-item expiry, collection deadline moved to review page */}
             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Collection Deadline / Expiry</label>
+              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry (optional)</label>
               <input 
-                type="datetime-local"
+                type="date"
                 value={draft.expiry}
                 onChange={(e) => setDraft({ ...draft, expiry: e.target.value })}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -93,7 +96,7 @@ function CreateBatch() {
           <button
             type="button"
             onClick={() => {
-              if (!draft.name || !draft.expiry) return;
+              if (!draft.name) return;
               setItems([...items, draft]);
               setDraft({ name: "", category: "Produce", quantity: "", unit: "Kg", expiry: "" });
             }}
@@ -115,9 +118,11 @@ function CreateBatch() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{it.quantity} {it.unit}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Exp: {it.expiry.replace('T', ' ')}
-                  </p>
+                  {it.expiry ? (
+                    <p className="text-[10px] text-muted-foreground">
+                      Exp: {it.expiry.replace?.('T', ' ') ?? it.expiry}
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}
