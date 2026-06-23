@@ -11,8 +11,8 @@ export const Route = createFileRoute("/donor/donate/review")({
 function ReviewPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<DonationItem[]>([]);
-  const [collectionDateTime, setCollectionDateTime] = useState(""); 
-  const [submitting, setSubmitting] = useState(false); 
+  const [collectionDateTime, setCollectionDateTime] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,27 +24,6 @@ function ReviewPage() {
     setItems(stored);
   }, [navigate]);
 
-  function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-base font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function Row({ name, qty, expiry }: { name: string; qty: string; expiry: string }) {
-  return (
-    <li className="flex justify-between py-3">
-      <div>
-        <p className="font-medium">{name}</p>
-        <p className="text-xs text-muted-foreground">Exp: {expiry}</p>
-      </div>
-      <p className="text-muted-foreground">{qty}</p>
-    </li>
-  );
-}
-
   const batchType = items.length > 1 ? "Mixed Donation" : items[0]?.category ?? "Donation";
 
   async function handleSubmit() {
@@ -52,10 +31,10 @@ function Row({ name, qty, expiry }: { name: string; qty: string; expiry: string 
     setSubmitting(true);
     setError(null);
     try {
-      const result = await submitDonationBatch(items, collectionDateTime); 
-      navigate({ to: "/donor/donate/success", search: { batchId: result.id } }); 
+      const result = await submitDonationBatch(items, collectionDateTime);
+      navigate({ to: "/donor/donate/success", search: { batchId: result.id } });
     } catch (err) {
-      setError(getErrorMessage(err)); 
+      setError(getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -114,3 +93,23 @@ function Row({ name, qty, expiry }: { name: string; qty: string; expiry: string 
   );
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function Row({ name, qty, expiry }: { name: string; qty: string; expiry: string }) {
+  return (
+    <li className="flex justify-between py-3">
+      <div>
+        <p className="font-medium">{name}</p>
+        <p className="text-xs text-muted-foreground">Exp: {expiry}</p>
+      </div>
+      <p className="text-muted-foreground">{qty}</p>
+    </li>
+  );
+}
