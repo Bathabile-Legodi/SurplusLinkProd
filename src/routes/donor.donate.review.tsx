@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import TimePicker from "@/components/TimePicker";
+import { DateTimePicker } from "@/components/ScrollPicker";
 import { loadCurrentBatch, submitDonationBatch, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/review")({
@@ -24,19 +24,8 @@ function ReviewPage() {
 
   const batchType = items.length > 1 ? "Mixed Donation" : items[0]?.category ?? "Donation";
 
-  // Collection deadline state (date + time separated)
-  const [collectionDate, setCollectionDate] = useState<string>("");
-  const [collectionTime, setCollectionTime] = useState<string>("");
-
-  // Helper to compute min/max for date input
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  const minDate = `${yyyy}-${mm}-${dd}`;
-  const maxDateObj = new Date(today);
-  maxDateObj.setDate(maxDateObj.getDate() + 7);
-  const maxDate = `${maxDateObj.getFullYear()}-${String(maxDateObj.getMonth() + 1).padStart(2, "0")}-${String(maxDateObj.getDate()).padStart(2, "0")}`;
+  // Collection deadline as a single ISO-like string from the DateTimePicker
+  const [collectionDeadline, setCollectionDeadline] = useState<string>("");
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,33 +45,18 @@ function ReviewPage() {
           <h2 className="mb-4 text-sm font-semibold">Items in this batch ({items.length})</h2>
           <ul className="divide-y text-sm">
             {items.map((item, index) => (
-              <Row key={index} name={item.name} qty={`${item.quantity} ${item.unit}`} expiry={item.expiry.replace("T", " ")} />
+              <Row key={index} name={item.name} category={item.category} qty={`${item.quantity} ${item.unit}`} expiry={item.expiry.replace("T", " ")} />
             ))}
           </ul>
         </section>
 
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-4 text-sm font-semibold">Collection Deadline</h2>
-          <p className="text-xs text-muted-foreground mb-3">Select the latest date and time when the donation can be collected (max 7 days from today).</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-medium">Date</label>
-              <input
-                type="date"
-                value={collectionDate}
-                onChange={(e) => setCollectionDate(e.target.value)}
-                min={minDate}
-                max={maxDate}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium">Time</label>
-              <div className="mt-1">
-                <TimePicker value={collectionTime} onChange={(v) => setCollectionTime(v)} />
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground mb-3">Select the latest date and time when the donation can be collected.</p>
+          <DateTimePicker
+            value={collectionDeadline}
+            onChange={setCollectionDeadline}
+          />
         </section>
 
         <div className="mt-6 flex justify-between">
@@ -92,13 +66,9 @@ function ReviewPage() {
           <button
             onClick={() => {
               if (items.length === 0) return;
-              // combine date + time into ISO timestamp if available
               let deadline: string | undefined = undefined;
-              if (collectionDate) {
-                const timePart = collectionTime || "00:00";
-                // construct in local timezone
-                const iso = new Date(`${collectionDate}T${timePart}`).toISOString();
-                deadline = iso;
+              if (collectionDeadline) {
+                deadline = new Date(collectionDeadline).toISOString();
               }
               submitDonationBatch(items, deadline);
               navigate({ to: "/donor/donate/success" });
@@ -122,12 +92,17 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Row({ name, qty, expiry }: { name: string; qty: string; expiry: string }) {
+function Row({ name, category, qty, expiry }: { name: string; category: string; qty: string; expiry: string }) {
   return (
     <li className="flex justify-between py-3">
       <div>
         <p className="font-medium">{name}</p>
-        <p className="text-xs text-muted-foreground">Exp: {expiry}</p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {category.split(", ").map(c => (
+            <span key={c} className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{c}</span>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">Exp: {expiry}</p>
       </div>
       <p className="text-muted-foreground">{qty}</p>
     </li>

@@ -2,18 +2,61 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { Field } from "@/components/Field";
+import { DatePicker } from "@/components/ScrollPicker";
 import { loadCurrentBatch, saveCurrentBatch, type DonationItem } from "@/lib/donations";
+import { X } from "lucide-react";
 
 export const Route = createFileRoute("/donor/donate/batch")({
   head: () => ({ meta: [{ title: "Create Donation Batch — SurplusLink" }] }),
   component: CreateBatch,
 });
 
+const CATEGORIES = ["Produce", "Bakery", "Dairy", "Prepared Meals", "Canned Goods", "Meat", "Beverages", "Snacks"];
+const UNITS = ["Kg", "Units", "Litres", "Trays"];
+
+/* ─── Category Pill Selector (multi-select) ─── */
+
+function CategorySelector({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (cat: string) => {
+    if (selected.includes(cat)) {
+      onChange(selected.filter(c => c !== cat));
+    } else {
+      onChange([...selected, cat]);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Category</label>
+      <div className="flex flex-wrap gap-2">
+        {CATEGORIES.map(cat => {
+          const isActive = selected.includes(cat);
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => toggle(cat)}
+              className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-medium border transition-all duration-200
+                ${isActive
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm scale-[1.03]"
+                  : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
+                }`}
+            >
+              {cat}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Page ─── */
+
 function CreateBatch() {
   const navigate = useNavigate();
   const [items, setItems] = useState<DonationItem[]>([]);
 
-  // Load stored batch only on client to avoid SSR hydration mismatches
   useEffect(() => {
     const stored = loadCurrentBatch();
     if (stored && stored.length > 0) {
@@ -21,9 +64,10 @@ function CreateBatch() {
     }
   }, []);
 
-  const [draft, setDraft] = useState<DonationItem>({ 
+  const [draft, setDraft] = useState<DonationItem & { categories: string[] }>({ 
     name: "", 
-    category: "Produce", 
+    category: "Produce",
+    categories: [],
     quantity: "", 
     unit: "Kg", 
     expiry: "" 
@@ -32,6 +76,23 @@ function CreateBatch() {
   useEffect(() => {
     saveCurrentBatch(items);
   }, [items]);
+
+  const addItem = () => {
+    if (!draft.name || draft.categories.length === 0) return;
+    const item: DonationItem = {
+      name: draft.name,
+      category: draft.categories.join(", "),
+      quantity: draft.quantity,
+      unit: draft.unit,
+      expiry: draft.expiry,
+    };
+    setItems([...items, item]);
+    setDraft({ name: "", category: "Produce", categories: [], quantity: "", unit: "Kg", expiry: "" });
+  };
+
+  const removeItem = (idx: number) => {
+    setItems(items.filter((_, i) => i !== idx));
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,64 +104,57 @@ function CreateBatch() {
 
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-4 text-sm font-semibold">Item Details</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 md:col-span-1">
-              <Field label="Food Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="e.g. Whole grain bread" />
+          <div className="space-y-5">
+            {/* Row 1: Name */}
+            <Field label="Food Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="e.g. Whole grain bread" />
+
+            {/* Row 2: Category Pills */}
+            <CategorySelector
+              selected={draft.categories}
+              onChange={(cats) => setDraft({ ...draft, categories: cats })}
+            />
+
+            {/* Row 3: Quantity + Unit side by side */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <Field label="Quantity" value={draft.quantity} onChange={(v) => setDraft({ ...draft, quantity: v })} placeholder="10" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Unit</label>
+                <div className="flex rounded-md border border-input overflow-hidden">
+                  {UNITS.map(u => (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => setDraft({ ...draft, unit: u })}
+                      className={`flex-1 py-2 text-xs font-medium transition-colors
+                        ${draft.unit === u
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* 1. DROP DOWN MENU for Category */}
+            {/* Row 4: Expiry Date Picker (date only) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Category</label>
-              <select 
-                value={draft.category}
-                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="Produce">Produce</option>
-                <option value="Bakery">Bakery</option>
-                <option value="Dairy">Dairy</option>
-                <option value="Prepared Meals">Prepared Meals</option>
-                <option value="Canned Goods">Canned Goods</option>
-              </select>
-            </div>
-
-            <Field label="Quantity" value={draft.quantity} onChange={(v) => setDraft({ ...draft, quantity: v })} placeholder="10" />
-
-            {/* 2. DROP DOWN MENU for Unit */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Unit</label>
-              <select 
-                value={draft.unit}
-                onChange={(e) => setDraft({ ...draft, unit: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="Kg">Kg</option>
-                <option value="Units">Units</option>
-                <option value="Litres">Litres</option>
-                <option value="Trays">Trays</option>
-              </select>
-            </div>
-
-            {/* 3. Expiry (optional) - keep per-item expiry, collection deadline moved to review page */}
-            <div className="col-span-2 flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry (optional)</label>
-              <input 
-                type="date"
+              <DatePicker
                 value={draft.expiry}
-                onChange={(e) => setDraft({ ...draft, expiry: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onChange={(v) => setDraft({ ...draft, expiry: v })}
               />
             </div>
           </div>
 
           <button
             type="button"
-            onClick={() => {
-              if (!draft.name) return;
-              setItems([...items, draft]);
-              setDraft({ name: "", category: "Produce", quantity: "", unit: "Kg", expiry: "" });
-            }}
-            className="mt-6 w-full rounded-md border border-dashed border-primary/50 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+            onClick={addItem}
+            disabled={!draft.name || draft.categories.length === 0}
+            className="mt-6 w-full rounded-md border border-dashed border-primary/50 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             + Add Item to Batch
           </button>
@@ -109,24 +163,40 @@ function CreateBatch() {
         {/* Display List Section */}
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-3 text-sm font-semibold">Items in this batch ({items.length})</h2>
-          <ul className="divide-y">
-            {items.map((it, i) => (
-              <li key={i} className="grid grid-cols-2 gap-2 py-3 text-sm">
-                <div>
-                  <p className="font-medium">{it.name}</p>
-                  <p className="text-xs text-muted-foreground">{it.category}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{it.quantity} {it.unit}</p>
-                  {it.expiry ? (
-                    <p className="text-[10px] text-muted-foreground">
-                      Exp: {it.expiry.replace?.('T', ' ') ?? it.expiry}
-                    </p>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+          {items.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No items added yet.</p>
+          ) : (
+            <ul className="divide-y">
+              {items.map((it, i) => (
+                <li key={i} className="flex items-center justify-between py-3 text-sm group">
+                  <div className="flex-1">
+                    <p className="font-medium">{it.name}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {it.category.split(", ").map(c => (
+                        <span key={c} className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="text-right mr-3">
+                    <p className="font-semibold">{it.quantity} {it.unit}</p>
+                    {it.expiry ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        Exp: {it.expiry.replace?.('T', ' ') ?? it.expiry}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(i)}
+                    className="rounded-full p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                    title="Remove item"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Navigation Buttons */}

@@ -37,6 +37,19 @@ function DonorDashboard() {
           </p>
         </div>
 
+        {/* Quick Impact Summary */}
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estimated People Fed</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-tight text-foreground">1,240</p>
+            <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-500">↑ 18% vs last month</p>
+          </div>
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kilos of Food Saved</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-tight text-foreground">1,750 kg</p>
+            <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-500">↑ 12% vs last month</p>
+          </div>
+        </div>
         <Link
   to="/donor/donate/consent"
   className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
