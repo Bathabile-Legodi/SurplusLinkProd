@@ -177,9 +177,10 @@ function Hero() {
 
 function ImageCarousel() {
   const images = [
-    "/images/hero1.jpg",
-    "/images/hero2.jpg",
-    "/images/hero3.jpg",
+    "/images/grocery_surplus_1.png",
+    "/images/food_market_2.png",
+    "/images/grocery_store_3.png",
+    "/images/fresh_produce_4.png",
   ];
   const [idx, setIdx] = useState(0);
 
@@ -203,9 +204,9 @@ function ImageCarousel() {
 
 function Stats() {
   const items = [
-    { value: "2,480,000", label: "Meals Rescued" },
+    { value: "2.48M", label: "Meals Rescued" },
     { value: "640+", label: "Vetted NGOs Connected" },
-    { value: "1,200 Tons", label: "CO₂ Emissions Prevented" },
+    { value: "1.2K Tons", label: "CO₂ Emissions Prevented" },
     { value: "Real-Time", label: "Average Match Speed" },
   ];
   return (
