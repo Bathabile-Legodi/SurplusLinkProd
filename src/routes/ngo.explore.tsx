@@ -1,39 +1,73 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
+// Import your configured Supabase client here
+import { supabase } from "@/lib/supabase"; 
 
 export const Route = createFileRoute("/ngo/explore")({
   head: () => ({ meta: [{ title: "Explore Donations — SurplusLink" }] }),
   component: ExplorePage,
 });
 
-const donations = [
-  {
-    id: "fresh-vegetables",
-    title: "Fresh Vegetables",
-    quantity: "20 Kg",
-    pickup: "Today, 8:00 PM",
-    donor: "Fresh Market",
-    distance: "1.2 km away",
-  },
-  {
-    id: "bakery-assortment",
-    title: "Bakery Assortment",
-    quantity: "12 Loaves",
-    pickup: "Today, 9:30 PM",
-    donor: "Sunrise Bakery",
-    distance: "2.4 km away",
-  },
-  {
-    id: "dairy-batch",
-    title: "Dairy Batch",
-    quantity: "8 L",
-    pickup: "Tomorrow, 10:00 AM",
-    donor: "Green Dairy",
-    distance: "3.1 km away",
-  },
-];
+// Define an interface for the formatted UI structure
+interface DonationUI {
+  id: string;
+  title: string;
+  quantity: string;
+  pickup: string;
+  donor: string;
+  distance: string;
+}
 
 function ExplorePage() {
+  const [donations, setDonations] = useState<DonationUI[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function fetchUnclaimedDonations() {
+      try {
+        setLoading(true);
+        
+        // Query donation_batches and grab the related donor organization name
+        const { data, error } = await supabase
+          .from("donation_batches")
+          .select(`
+            id,
+            title,
+            quantity,
+            pickup,
+            status,
+            donors (
+              organization_name
+            )
+          `)
+          .eq("status", "unclaimed");
+
+        if (error) throw error;
+
+        if (data) {
+          // Transform the database results into the exact format your UI expects
+          const formattedData: DonationUI[] = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            quantity: item.quantity || "N/A",
+            pickup: item.pickup || "Not specified",
+            donor: item.donors?.organization_name || "Anonymous Donor",
+            distance: "1.2 km away", // Placeholder unless you add coordinate tracking later
+          }));
+
+          setDonations(formattedData);
+        }
+      } catch (error) {
+        console.error("Error fetching donations:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUnclaimedDonations();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />
@@ -54,32 +88,50 @@ function ExplorePage() {
         </div>
 
         <h2 className="mt-8 mb-3 text-sm font-semibold">Available Donations Near You</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {donations.map((d) => (
-            <Link
-              key={d.id}
-              to="/ngo/donations/$id"
-              params={{ id: d.id }}
-              className="rounded-xl border bg-card p-5 transition hover:shadow-sm"
-            >
-              <div className="flex items-start justify-between">
-                <h3 className="font-semibold">{d.title}</h3>
-                <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-[color:var(--success)]">
-                  Available
-                </span>
-              </div>
-              <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                <div className="flex justify-between"><dt>Quantity</dt><dd className="text-foreground">{d.quantity}</dd></div>
-                <div className="flex justify-between"><dt>Pickup by</dt><dd className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900">
-    {d.pickup}
-  </dd>
-</div>
-                <div className="flex justify-between"><dt>Donor</dt><dd className="text-foreground">{d.donor}</dd></div>
-                <div className="flex justify-between"><dt>Distance</dt><dd className="text-foreground">{d.distance}</dd></div>
-              </dl>
-            </Link>
-          ))}
-        </div>
+
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Loading available donations...</div>
+        ) : donations.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No unclaimed donations available right now.</div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {donations.map((d) => (
+              <Link
+                key={d.id}
+                to="/ngo/donations/$id"
+                params={{ id: d.id }}
+                className="rounded-xl border bg-card p-5 transition hover:shadow-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <h3 className="font-semibold">{d.title}</h3>
+                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-[color:var(--success)]">
+                    Available
+                  </span>
+                </div>
+                <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <dt>Quantity</dt>
+                    <dd className="text-foreground">{d.quantity}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Pickup by</dt>
+                    <dd className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900">
+                      {d.pickup}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Donor</dt>
+                    <dd className="text-foreground">{d.donor}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Distance</dt>
+                    <dd className="text-foreground">{d.distance}</dd>
+                  </div>
+                </dl>
+              </Link>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
