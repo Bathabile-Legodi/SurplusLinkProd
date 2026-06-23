@@ -16,6 +16,7 @@ export type RecentDonation = {
   time: string;
   status: string;
   submittedAt: string;
+  collectionDateTime?: string;
   items: DonationItem[];
 };
 

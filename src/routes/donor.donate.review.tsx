@@ -34,7 +34,7 @@ function ReviewPage() {
     setSubmitting(true);
     setError(null);
     try {
-      let deadline: string | undefined = undefined;
+      let deadline = "";
       if (collectionDeadline) {
         deadline = new Date(collectionDeadline).toISOString();
       }

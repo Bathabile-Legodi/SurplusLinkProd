@@ -13,7 +13,7 @@ function ClaimSuccess() {
 
   useEffect(() => {
     if (id) {
-      updateDonationStatus(id, "Claimed");
+      updateDonationStatus(id as any as number, "Claimed");
     }
   }, [id]);
 

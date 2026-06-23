@@ -35,7 +35,7 @@ function DonorDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" profileTo="/donor/profile" />
+      <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">Welcome, Fresh Market</h1> 

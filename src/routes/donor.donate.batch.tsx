@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { Field } from "@/components/Field";
 import { DatePicker } from "@/components/ScrollPicker";
-import { loadCurrentBatch, saveCurrentBatch, type DonationItem } from "@/lib/donations";
+import { loadCurrentBatch, saveCurrentBatch, makeItemId, type DonationItem } from "@/lib/donations";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/donor/donate/batch")({
@@ -64,7 +64,7 @@ function CreateBatch() {
     }
   }, []);
 
-  const [draft, setDraft] = useState<DonationItem & { categories: string[] }>({
+  const [draft, setDraft] = useState<Omit<DonationItem, "id"> & { categories: string[] }>({
     name: "",
     category: "Produce",
     categories: [],
@@ -80,6 +80,7 @@ function CreateBatch() {
   const addItem = () => {
     if (!draft.name || draft.categories.length === 0) return;
     const item: DonationItem = {
+      id: makeItemId(),
       name: draft.name,
       category: draft.categories.join(", "),
       quantity: draft.quantity,
