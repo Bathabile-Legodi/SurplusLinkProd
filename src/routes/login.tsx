@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -25,6 +26,11 @@ function LoginPage() {
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    if (!form.email || !form.password) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+
     setLoading(true);
 
     const { data, error } =
@@ -36,7 +42,7 @@ function LoginPage() {
     setLoading(false);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -46,14 +52,13 @@ function LoginPage() {
     if (userRole !== tab) {
       await supabase.auth.signOut();
 
-      alert(
-        `This account belongs to a ${userRole.toUpperCase()}`
-      );
+      toast.error(`This account belongs to a ${userRole.toUpperCase()}`);
 
       return;
     }
 
     // redirect based on selected role
+    toast.success("Successfully logged in!");
     if (tab === "donor") {
       navigate({ to: "/donor/dashboard" });
     } else {

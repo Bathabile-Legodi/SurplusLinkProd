@@ -3,6 +3,7 @@ import type { FormEvent  } from "react";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
+import { toast } from "sonner";
 
 interface AddressComponents {
   streetNumber: string;
@@ -288,8 +289,6 @@ function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const [error, setError] = useState<string | null>(null);
-
   const [donorData, setDonorData] = useState({
     name: "",
     type: "",
@@ -314,22 +313,33 @@ function RegisterPage() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
 
     const data = tab === "donor" ? donorData : ngoData;
 
+    if (tab === "donor") {
+      if (!donorData.name || !donorData.type || !donorData.email || !donorData.phone || !donorData.password) {
+        toast.error("Please fill in all required fields.");
+        return;
+      }
+    } else {
+      if (!ngoData.org || !ngoData.reg || !ngoData.email || !ngoData.phone || !ngoData.password) {
+        toast.error("Please fill in all required fields.");
+        return;
+      }
+    }
+
     if (data.password !== data.confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
      if (data.password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      toast.error("Password must be at least 8 characters.");
       return;
     }
 
     if (!data.address.formatted) {
-      setError("Please select an address from the suggestions.");
+      toast.error("Please select an address from the suggestions.");
       return;
     }
 
@@ -365,10 +375,11 @@ function RegisterPage() {
     setLoading(false);
 
     if (supabaseError) {
-      setError(supabaseError.message);
+      toast.error(supabaseError.message);
       return;
     }
 
+    toast.success("Account created successfully!");
     navigate({ to: tab === "donor" ? "/donor/dashboard" : "/ngo/dashboard" });
   }
 
@@ -406,12 +417,6 @@ function RegisterPage() {
             NGO
           </button>
         </div>
-
-        {error && (
-          <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {error}
-          </p>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {tab === "donor" ? (
