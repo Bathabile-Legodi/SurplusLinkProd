@@ -17,23 +17,31 @@ export function useNgoVerification() {
           return;
         }
 
+        // 1. Point to 'ngos' and select 'is_verified' 
         const { data, error: dbError } = await supabase
-          .from('organizations')
-          .select('status, role')
+          .from('ngos')
+          .select('is_verified')
           .eq('id', user.id)
           .single();
 
         if (dbError) throw dbError;
 
-        if (data?.role === 'ngo') {
-          if (data.status === 'pending') {
+        // 2. Check the verification status
+        if (data) {
+          if (data.is_verified === false) {
+            // User is an NGO but not yet approved by an admin
             navigate({ to: '/ngo/not-verified' });
-          } else if (data.status === 'verified') {
+          } else if (data.is_verified === true) {
+            // User is approved, let them into the dashboard
             setIsAuthorized(true);
           }
+        } else {
+          // No NGO record found for this user ID (maybe they are a donor?)
+          navigate({ to: '/login' });
         }
       } catch (error) {
         console.error("Verification check failed:", error);
+        navigate({ to: '/login' });
       } finally {
         setIsChecking(false);
       }

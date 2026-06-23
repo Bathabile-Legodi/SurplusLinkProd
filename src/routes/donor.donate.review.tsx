@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { DateTimePicker } from "@/components/ScrollPicker";
-import { loadCurrentBatch, submitDonationBatch, type DonationItem } from "@/lib/donations";
+import { loadCurrentBatch, submitDonationBatch, getErrorMessage, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/review")({
   head: () => ({ meta: [{ title: "Review Donation — SurplusLink" }] }),
@@ -12,6 +12,8 @@ export const Route = createFileRoute("/donor/donate/review")({
 function ReviewPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<DonationItem[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = loadCurrentBatch();
@@ -26,6 +28,24 @@ function ReviewPage() {
 
   // Collection deadline as a single ISO-like string from the DateTimePicker
   const [collectionDeadline, setCollectionDeadline] = useState<string>("");
+
+  async function handleSubmit() {
+    if (items.length === 0) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      let deadline: string | undefined = undefined;
+      if (collectionDeadline) {
+        deadline = new Date(collectionDeadline).toISOString();
+      }
+      const result = await submitDonationBatch(items, deadline);
+      navigate({ to: "/donor/donate/success", search: { batchId: result.id } });
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,7 +65,7 @@ function ReviewPage() {
           <h2 className="mb-4 text-sm font-semibold">Items in this batch ({items.length})</h2>
           <ul className="divide-y text-sm">
             {items.map((item, index) => (
-              <Row key={index} name={item.name} category={item.category} qty={`${item.quantity} ${item.unit}`} expiry={item.expiry.replace("T", " ")} />
+              <Row key={item.id || index} name={item.name} category={item.category} qty={`${item.quantity} ${item.unit}`} expiry={item.expiry.replace("T", " ")} />
             ))}
           </ul>
         </section>
@@ -59,23 +79,18 @@ function ReviewPage() {
           />
         </section>
 
+        {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
+
         <div className="mt-6 flex justify-between">
           <Link to="/donor/donate/batch" className="rounded-md border px-4 py-2 text-sm hover:bg-secondary">
             Edit Items
           </Link>
           <button
-            onClick={() => {
-              if (items.length === 0) return;
-              let deadline: string | undefined = undefined;
-              if (collectionDeadline) {
-                deadline = new Date(collectionDeadline).toISOString();
-              }
-              submitDonationBatch(items, deadline);
-              navigate({ to: "/donor/donate/success" });
-            }}
-            className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            onClick={handleSubmit}
+            disabled={items.length === 0 || submitting}
+            className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            Submit Donation Batch
+            {submitting ? "Submitting…" : "Submit Donation Batch"}
           </button>
         </div>
       </main>

@@ -64,13 +64,13 @@ function CreateBatch() {
     }
   }, []);
 
-  const [draft, setDraft] = useState<DonationItem & { categories: string[] }>({ 
-    name: "", 
+  const [draft, setDraft] = useState<DonationItem & { categories: string[] }>({
+    name: "",
     category: "Produce",
     categories: [],
-    quantity: "", 
-    unit: "Kg", 
-    expiry: "" 
+    quantity: "",
+    unit: "Kg",
+    expiry: ""
   });
 
   useEffect(() => {
@@ -160,7 +160,6 @@ function CreateBatch() {
           </button>
         </section>
 
-        {/* Display List Section */}
         <section className="mt-6 rounded-xl border bg-card p-6">
           <h2 className="mb-3 text-sm font-semibold">Items in this batch ({items.length})</h2>
           {items.length === 0 ? (
@@ -199,7 +198,6 @@ function CreateBatch() {
           )}
         </section>
 
-        {/* Navigation Buttons */}
         <div className="mt-8 flex justify-between gap-4">
           <Link to="/donor/dashboard" className="rounded-md border px-6 py-2 text-sm font-medium hover:bg-secondary transition-colors">
             Cancel
