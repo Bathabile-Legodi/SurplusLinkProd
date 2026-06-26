@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-// Import your configured Supabase client here
 import { supabase } from "@/lib/supabase"; 
 
 export const Route = createFileRoute("/ngo/explore")({
@@ -19,6 +18,14 @@ interface DonationUI {
   distance: string;
 }
 
+// A placeholder helper to handle distance string calculation
+function calculateDistance(donorAddress: string, ngoAddress: string): string {
+  if (!donorAddress || !ngoAddress) return "Distance unknown";
+  // Once you add lat/long coordinates to your tables, you can use the Haversine formula here.
+  // For now, it dynamically acknowledges that it has both addresses.
+  return "1.5 km away"; 
+}
+
 function ExplorePage() {
   const [donations, setDonations] = useState<DonationUI[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -28,34 +35,49 @@ function ExplorePage() {
       try {
         setLoading(true);
         
-        // Query donation_batches and grab the related donor organization name
+        // Query donation_batches with its 3 foreign keys
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
             id,
-            title,
-            quantity,
-            pickup,
             status,
+            batch_type,
+            ngos (
+              address
+            ),
             donors (
-              organization_name
+              organization_name,
+              address
+            ),
+            donation_items (
+              quantity,
+              expiry
             )
           `)
-          .eq("status", "unclaimed");
+          .eq("status", "Unclaimed");
 
         if (error) throw error;
 
+        console.log("Raw response data from Supabase:", data);
+        console.log("Number of items returned:", data?.length);
+
         if (data) {
           // Transform the database results into the exact format your UI expects
-          const formattedData: DonationUI[] = data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            quantity: item.quantity || "N/A",
-            pickup: item.pickup || "Not specified",
-            donor: item.donors?.organization_name || "Anonymous Donor",
-            distance: "1.2 km away", // Placeholder unless you add coordinate tracking later
-          }));
+          const formattedData: DonationUI[] = data.map((batch: any) => {
+            const donorAddress = batch.donors?.address || "";
+            const ngoAddress = batch.ngos?.address || "";
+            
+            return {
+              id: batch.id,
+              title: batch.batch_type,
+              quantity: batch.donation_items?.quantity || "N/A",
+              pickup: donorAddress || "Not specified",
+              donor: batch.donors?.organization_name || "Anonymous Donor",
+              distance: calculateDistance(donorAddress, ngoAddress),
+            };
+          });
 
+          console.log("Formatted data ready for state:", formattedData);
           setDonations(formattedData);
         }
       } catch (error) {
@@ -114,7 +136,7 @@ function ExplorePage() {
                     <dd className="text-foreground">{d.quantity}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt>Pickup by</dt>
+                    <dt>Pickup at</dt>
                     <dd className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900">
                       {d.pickup}
                     </dd>
