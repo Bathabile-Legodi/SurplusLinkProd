@@ -8,7 +8,6 @@ export const Route = createFileRoute("/ngo/explore")({
   component: ExplorePage,
 });
 
-// Define an interface for the formatted UI structure
 interface DonationUI {
   id: string;
   title: string;
@@ -16,69 +15,64 @@ interface DonationUI {
   pickup: string;
   donor: string;
   distance: string;
+  status: string; // Stored to allow filter manipulation
 }
 
-// A placeholder helper to handle distance string calculation
 function calculateDistance(donorAddress: string, ngoAddress: string): string {
   if (!donorAddress || !ngoAddress) return "Distance unknown";
-  // Once you add lat/long coordinates to your tables, you can use the Haversine formula here.
-  // For now, it dynamically acknowledges that it has both addresses.
   return "1.5 km away"; 
 }
 
 function ExplorePage() {
-  const [donations, setDonations] = useState<DonationUI[]>([]);
+  const [rawDonations, setRawDonations] = useState<DonationUI[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>("Unclaimed");
   const [loading, setLoading] = useState<boolean>(true);
 
+  // 1. Fetch data on component load
   useEffect(() => {
-    async function fetchUnclaimedDonations() {
+    async function fetchDonations() {
       try {
         setLoading(true);
         
-        // Query donation_batches with its 3 foreign keys
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
             id,
-            status,
+            donor_id,
             batch_type,
-            ngos (
-              address
-            ),
+            collection_datetime,
+            status,
+            claimed_by,
             donors (
               organization_name,
               address
             ),
-            donation_items (
-              quantity,
-              expiry
+            ngos!donation_batches_claimed_by_fkey (
+              address
             )
-          `)
-          .eq("status", "Unclaimed");
+          `); 
 
         if (error) throw error;
 
-        console.log("Raw response data from Supabase:", data);
-        console.log("Number of items returned:", data?.length);
-
         if (data) {
-          // Transform the database results into the exact format your UI expects
           const formattedData: DonationUI[] = data.map((batch: any) => {
             const donorAddress = batch.donors?.address || "";
             const ngoAddress = batch.ngos?.address || "";
             
             return {
               id: batch.id,
-              title: batch.batch_type,
-              quantity: batch.donation_items?.quantity || "N/A",
+              title: batch.batch_type || "General Batch",
+              quantity: "0", 
               pickup: donorAddress || "Not specified",
               donor: batch.donors?.organization_name || "Anonymous Donor",
               distance: calculateDistance(donorAddress, ngoAddress),
+              status: batch.status || "Unclaimed"
             };
           });
 
-          console.log("Formatted data ready for state:", formattedData);
-          setDonations(formattedData);
+          setRawDonations(formattedData);
         }
       } catch (error) {
         console.error("Error fetching donations:", error);
@@ -87,8 +81,24 @@ function ExplorePage() {
       }
     }
 
-    fetchUnclaimedDonations();
+    fetchDonations();
   }, []);
+
+  // 2. Client-Side Computed Filtering Logic
+  const filteredDonations = rawDonations.filter((donation) => {
+    // Exact status mapping matching state selection
+    const matchesStatus = donation.status.toLowerCase() === selectedStatus.toLowerCase();
+
+    // Standardized global search across title, donor, and pickup location text fields
+    const cleanQuery = searchQuery.toLowerCase().trim();
+    const matchesSearch = 
+      cleanQuery === "" ||
+      donation.title.toLowerCase().includes(cleanQuery) ||
+      donation.donor.toLowerCase().includes(cleanQuery) ||
+      donation.pickup.toLowerCase().includes(cleanQuery);
+
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,25 +109,59 @@ function ExplorePage() {
           Here's surplus food from verified donors near you.
         </p>
 
-        <div className="mt-6 flex gap-3">
+        {/* Search Bar Row */}
+        <div className="relative mt-6 flex gap-3">
           <input
-            placeholder="Search donations by category, donor or location..."
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search donations by title, donor or pickup location..."
             className="flex-1 rounded-md border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <button className="rounded-md border bg-card px-4 py-2 text-sm hover:bg-secondary">
+          <button 
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters ? "bg-secondary border-primary/40" : "bg-card"}`}
+          >
             Filters
           </button>
+
+          {/* Collapsible Micro Dropdown Modal for Status Filters */}
+          {showFilters && (
+            <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-md border bg-popover p-2 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
+              <label className="block px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Batch Status</label>
+              <div className="mt-1 flex flex-col gap-1">
+                {["Unclaimed"].map((statusOption) => (
+                  <button
+                    key={statusOption}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStatus(statusOption);
+                      setShowFilters(false); // Autoclose panel on toggle selection
+                    }}
+                    className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedStatus === statusOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                  >
+                    {statusOption}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <h2 className="mt-8 mb-3 text-sm font-semibold">Available Donations Near You</h2>
+        <h2 className="mt-8 mb-3 text-sm font-semibold">
+          Available Donations Near You ({filteredDonations.length})
+        </h2>
 
         {loading ? (
           <div className="text-sm text-muted-foreground">Loading available donations...</div>
-        ) : donations.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No unclaimed donations available right now.</div>
+        ) : filteredDonations.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
+            No donations matching "{searchQuery || selectedStatus}" found.
+          </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {donations.map((d) => (
+            {filteredDonations.map((d) => (
               <Link
                 key={d.id}
                 to="/ngo/donations/$id"
@@ -126,8 +170,12 @@ function ExplorePage() {
               >
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold">{d.title}</h3>
-                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-[color:var(--success)]">
-                    Available
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium
+                    ${d.status === "Unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
+                    ${d.status === "Claimed" ? "bg-blue-500/10 text-blue-600" : ""}
+                    ${d.status === "Expired" ? "bg-destructive/10 text-destructive" : ""}
+                  `}>
+                    {d.status}
                   </span>
                 </div>
                 <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -135,9 +183,9 @@ function ExplorePage() {
                     <dt>Quantity</dt>
                     <dd className="text-foreground">{d.quantity}</dd>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <dt>Pickup at</dt>
-                    <dd className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900">
+                    <dd className="rounded-md border border-blue-100 bg-blue-50/50 px-2 py-0.5 font-medium text-blue-900 max-w-[70%] truncate">
                       {d.pickup}
                     </dd>
                   </div>
