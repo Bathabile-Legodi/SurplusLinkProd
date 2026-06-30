@@ -80,7 +80,6 @@ export function getRealDrivingDistance(
           } else {
             const elementStatus = response?.rows[0]?.elements[0]?.status;
             console.error("Distance Matrix failed:", status, elementStatus);
-            // Safely fall back to showing the error instead of hanging
             resolve(`Unavailable (${elementStatus || status})`);
           }
         }
@@ -232,7 +231,16 @@ function DonationDetail() {
                   <Row label="Expiry Time" value={batch?.collection_datetime || "N/A"} />
                   <Row label="Donor" value={batch?.donor || "Anonymous Donor"} />
                   <Row label="Distance" value={distance} />
-                  <Row label="Location" value={batch?.pickup || "Location not specified"} highlight />
+                  <Row 
+                    label="Location" 
+                    value={batch?.pickup || "Location not specified"} 
+                    highlight 
+                    href={
+                      batch?.pickup && batch.pickup !== "Location not specified"
+                        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(batch.pickup)}`
+                        : undefined
+                    }
+                  />
                 </dl>
               </div>
             </div>
@@ -259,12 +267,33 @@ function DonationDetail() {
   );
 }
 
-function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function Row({ 
+  label, 
+  value, 
+  highlight, 
+  href 
+}: { 
+  label: string; 
+  value: string; 
+  highlight?: boolean; 
+  href?: string; 
+}) {
   return (
     <div className="flex justify-between border-b py-1.5 gap-4">
       <dt className="text-muted-foreground shrink-0">{label}</dt>
       <dd className={highlight ? "rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900 truncate max-w-[70%]" : "font-medium text-right truncate max-w-[70%]"}>
-        {value}
+        {href ? (
+          <a 
+            href={href} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="hover:underline hover:text-blue-700 block truncate"
+          >
+            {value}
+          </a>
+        ) : (
+          value
+        )}
       </dd>
     </div>
   );
