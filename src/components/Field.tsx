@@ -3,6 +3,7 @@ export function Field({
   type = "text",
   value,
   onChange,
+  onBlur,
   placeholder,
   error,
 }: {
@@ -10,6 +11,7 @@ export function Field({
   type?: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   error?: string;
 }) {
@@ -20,6 +22,7 @@ export function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
           ${error

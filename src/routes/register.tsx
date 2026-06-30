@@ -165,6 +165,7 @@ function ComboField({
   label,
   value,
   onChange,
+  onBlur,
   options,
   placeholder,
   error,
@@ -172,6 +173,7 @@ function ComboField({
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   options: string[];
   placeholder?: string;
   error?: string;
@@ -206,6 +208,7 @@ function ComboField({
           value={query}
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          onBlur={onBlur}
           placeholder={placeholder}
           className={`w-full rounded-md border bg-background px-3 py-2 pr-8 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
             ${error
@@ -531,6 +534,7 @@ function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
           label="Business Name"
           value={values.name}
           onChange={(v) => onChange("name", v)}
+          onBlur={() => touch("name")}
           placeholder="Fresh Market"
           error={err("name")}
         />
@@ -538,6 +542,7 @@ function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
           label="Business Type"
           value={values.type}
           onChange={(v) => onChange("type", v)}
+          onBlur={() => touch("type")}
           options={BUSINESS_TYPES}
           placeholder="Grocery, Bakery…"
           error={err("type")}
@@ -549,6 +554,7 @@ function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
         type="email"
         value={values.email}
         onChange={(v) => onChange("email", v)}
+        onBlur={() => touch("email")}
         placeholder="contact@example.com"
         error={err("email")}
       />
@@ -556,6 +562,7 @@ function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
         label="Phone Number"
         value={values.phone}
         onChange={(v) => onChange("phone", v)}
+        onBlur={() => touch("phone")}
         placeholder="+27 "
         error={err("phone")}
       />
@@ -605,6 +612,7 @@ function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
         label="Organisation Name"
         value={values.org}
         onChange={(v) => onChange("org", v)}
+        onBlur={() => touch("org")}
         placeholder="Hope Shelter"
         error={err("org")}
       />
@@ -613,6 +621,7 @@ function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
         label="NGO Registration Number"
         value={values.reg}
         onChange={(v) => onChange("reg", v)}
+        onBlur={() => touch("reg")}
         placeholder="REG-12345"
         error={err("reg")}
       />
@@ -622,6 +631,7 @@ function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
         type="email"
         value={values.email}
         onChange={(v) => onChange("email", v)}
+        onBlur={() => touch("email")}
         placeholder="contact@ngo.org"
         error={err("email")}
       />
@@ -630,6 +640,7 @@ function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
         label="Phone Number"
         value={values.phone}
         onChange={(v) => onChange("phone", v)}
+        onBlur={() => touch("phone")}
         placeholder="+27..."
         error={err("phone")}
       />

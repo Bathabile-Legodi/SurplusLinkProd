@@ -124,6 +124,7 @@ function LoginPage() {
             type="email"
             value={form.email}
             onChange={(v) => handleChange("email", v)}
+            onBlur={() => handleBlur("email")}
             placeholder="you@example.com"
             error={touched.email ? errors.email : undefined}
           />
