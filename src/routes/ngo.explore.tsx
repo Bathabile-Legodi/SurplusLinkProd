@@ -15,7 +15,9 @@ interface DonationUI {
   pickup: string;
   donor: string;
   distance: string;
-  status: string; 
+  status: string;
+  created_at?: string;
+  collection_datetime: string | null;
 }
 
 // 1. Google Maps Script Loader Management Hook
@@ -107,7 +109,10 @@ function ExplorePage() {
   const [ngoName, setNgoName] = useState<string>("NGO");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>("Unclaimed");
+  const [showSort, setShowSort] = useState<boolean>(false);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Fetch base records from Supabase & user profile
@@ -162,7 +167,9 @@ function ExplorePage() {
               pickup: donorAddress || "Location not specified",
               donor: batch.donors?.organization_name || "Anonymous Donor",
               distance: "Calculating...",
-              status: batch.status || "Unclaimed"
+              status: batch.status || "Unclaimed",
+              created_at: batch.created_at,
+              collection_datetime: batch.collection_datetime
             };
           });
 
@@ -202,17 +209,58 @@ function ExplorePage() {
     appendDistances();
   }, [isMapsReady, rawDonations, ngoAddress]);
 
+  // Parse distance string "X km away" to a number for sorting
+  function parseDistance(dist: string) {
+    if (!dist || dist.includes("error") || dist.includes("unknown") || dist.includes("Calculating")) return Infinity;
+    const match = dist.match(/([\d.]+)/);
+    return match ? parseFloat(match[1]) : Infinity;
+  }
+
   // Client-Side Computed Filtering Logic
   const filteredDonations = rawDonations.filter((donation) => {
-    const matchesStatus = donation.status.toLowerCase() === selectedStatus.toLowerCase();
+    const matchesStatus = selectedStatus 
+      ? donation.status.toLowerCase() === selectedStatus.toLowerCase() 
+      : true;
+    
+    const matchesCategory = selectedCategory
+      ? donation.title.toLowerCase().includes(selectedCategory.toLowerCase())
+      : true;
+
     const cleanQuery = searchQuery.toLowerCase().trim();
+    const actualDistance = distancesMap[donation.id] || "Calculating...";
+    const dateStr = donation.collection_datetime 
+      ? new Date(donation.collection_datetime).toLocaleString() 
+      : "";
+
     const matchesSearch = 
       cleanQuery === "" ||
       donation.title.toLowerCase().includes(cleanQuery) ||
       donation.donor.toLowerCase().includes(cleanQuery) ||
-      donation.pickup.toLowerCase().includes(cleanQuery);
+      donation.pickup.toLowerCase().includes(cleanQuery) ||
+      donation.status.toLowerCase().includes(cleanQuery) ||
+      actualDistance.toLowerCase().includes(cleanQuery) ||
+      dateStr.toLowerCase().includes(cleanQuery);
 
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesCategory && matchesSearch;
+  }).sort((a, b) => {
+    const activeSort = sortBy || "Nearest"; // Automatically sort by nearest if nothing is selected
+
+    if (activeSort === "Nearest") {
+      const distA = parseDistance(distancesMap[a.id]);
+      const distB = parseDistance(distancesMap[b.id]);
+      return distA - distB;
+    }
+    if (activeSort === "Deadline (Soonest)") {
+      const dateA = a.collection_datetime ? new Date(a.collection_datetime).getTime() : Infinity;
+      const dateB = b.collection_datetime ? new Date(b.collection_datetime).getTime() : Infinity;
+      return dateA - dateB;
+    }
+    if (activeSort === "Recently Added") {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    }
+    return 0;
   });
 
   return (
@@ -233,34 +281,80 @@ function ExplorePage() {
             placeholder="Search donations by title, donor or pickup location..."
             className="flex-1 rounded-md border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <button 
-            type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters ? "bg-secondary border-primary/40" : "bg-card"}`}
-          >
-            Filters
-          </button>
+          <div className="flex gap-2">
+            <div className="relative">
+              <button 
+                type="button"
+                onClick={() => { setShowSort(!showSort); setShowFilters(false); }}
+                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showSort || sortBy ? "bg-secondary border-primary/40" : "bg-card"}`}
+              >
+                Sort {sortBy ? `(${sortBy})` : ""}
+              </button>
 
-          {showFilters && (
-            <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-md border bg-popover p-2 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-              <label className="block px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Batch Status</label>
-              <div className="mt-1 flex flex-col gap-1">
-                {["Unclaimed"].map((statusOption) => (
-                  <button
-                    key={statusOption}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStatus(statusOption);
-                      setShowFilters(false); 
-                    }}
-                    className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedStatus === statusOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
-                  >
-                    {statusOption}
-                  </button>
-                ))}
-              </div>
+              {showSort && (
+                <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Sort By</label>
+                  <div className="flex flex-col gap-1">
+                    {["Nearest", "Deadline (Soonest)", "Recently Added"].map((sortOption) => (
+                      <button
+                        key={sortOption}
+                        type="button"
+                        onClick={() => setSortBy(sortBy === sortOption ? null : sortOption)}
+                        className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${sortBy === sortOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                      >
+                        {sortOption}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="relative">
+              <button 
+                type="button"
+                onClick={() => { setShowFilters(!showFilters); setShowSort(false); }}
+                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedStatus || selectedCategory ? "bg-secondary border-primary/40" : "bg-card"}`}
+              >
+                Filters {(selectedStatus || selectedCategory) ? "(Active)" : ""}
+              </button>
+
+              {showFilters && (
+                <div className="absolute right-0 top-full z-10 mt-2 w-64 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
+                  
+                  {/* Status */}
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Status</label>
+                  <div className="flex flex-col gap-1 mb-4">
+                    {["Unclaimed", "Claimed"].map((statusOption) => (
+                      <button
+                        key={statusOption}
+                        type="button"
+                        onClick={() => setSelectedStatus(selectedStatus === statusOption ? null : statusOption)}
+                        className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedStatus === statusOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                      >
+                        {statusOption}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Category */}
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Category</label>
+                  <div className="flex flex-col gap-1">
+                    {["Produce", "Bakery", "Dairy", "Meat", "Prepared", "Beverages", "Snacks"].map((catOption) => (
+                      <button
+                        key={catOption}
+                        type="button"
+                        onClick={() => setSelectedCategory(selectedCategory === catOption ? null : catOption)}
+                        className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedCategory === catOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                      >
+                        {catOption}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <h2 className="mt-8 mb-3 text-sm font-semibold">
@@ -271,7 +365,9 @@ function ExplorePage() {
           <div className="text-sm text-muted-foreground">Loading available donations...</div>
         ) : filteredDonations.length === 0 ? (
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
-            No donations matching "{searchQuery || selectedStatus}" found.
+            {searchQuery || selectedStatus || selectedCategory
+              ? "No donations matching your filters found."
+              : "No available donations right now."}
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">

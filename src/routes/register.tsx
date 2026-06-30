@@ -167,12 +167,14 @@ function ComboField({
   onChange,
   options,
   placeholder,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder?: string;
+  error?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
@@ -205,7 +207,11 @@ function ComboField({
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+          className={`w-full rounded-md border bg-background px-3 py-2 pr-8 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
+            ${error
+              ? "border-destructive focus:ring-destructive"
+              : "border-input focus:border-ring focus:ring-ring"
+            }`}
         />
         <button
           type="button"
@@ -232,6 +238,7 @@ function ComboField({
           ))}
         </ul>
       )}
+      {error && <p className="mt-1 text-[11px] text-destructive leading-tight">{error}</p>}
     </div>
   );
 }
@@ -241,23 +248,32 @@ function PasswordField({
   label,
   value,
   onChange,
+  error,
+  onBlur,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  error?: string;
+  onBlur?: () => void;
 }) {
   const [show, setShow] = useState(false);
   return (
-    <div>
-      <label className="mb-1.5 block text-xs font-medium text-foreground">{label}</label>
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-foreground">{label}</label>
       <div className="relative">
         <input
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder="••••••••"
           autoComplete="new-password"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+          className={`w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
+            ${error
+              ? "border-destructive focus:ring-destructive"
+              : "border-input focus:border-ring focus:ring-ring"
+            }`}
         />
         <button
           type="button"
@@ -278,75 +294,114 @@ function PasswordField({
           )}
         </button>
       </div>
+      {error && <p className="text-[11px] text-destructive leading-tight">{error}</p>}
     </div>
   );
+}
+
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function isValidPhone(v: string) {
+  return /^[+\d][\d\s\-()]{6,}$/.test(v.trim());
 }
 
 function RegisterPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<"donor" | "ngo">("donor");
-
   const [loading, setLoading] = useState(false);
 
   const [donorData, setDonorData] = useState({
-    name: "",
-    type: "",
-    email: "",
-    phone: "",
-    address: emptyAddress(),
-    password: "",
-    confirmPassword: "",
+    name: "", type: "", email: "", phone: "",
+    address: emptyAddress(), password: "", confirmPassword: "",
   });
-
   const [ngoData, setNgoData] = useState({
-    org: "",
-    reg: "",
-    email: "",
-    phone: "",
-    address: emptyAddress(),
-    password: "",
-    confirmPassword: "",
+    org: "", reg: "", email: "", phone: "",
+    address: emptyAddress(), password: "", confirmPassword: "",
   });
 
+  // Per-field errors and touched flags (shared key space for both forms)
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  function validateDonor(d = donorData) {
+    const e: Record<string, string> = {};
+    if (!d.name.trim()) e.name = "Business name is required.";
+    if (!d.type.trim()) e.type = "Please select a business type.";
+    if (!d.email.trim()) e.email = "Email is required.";
+    else if (!isValidEmail(d.email)) e.email = "Enter a valid email address.";
+    if (!d.phone.trim()) e.phone = "Phone number is required.";
+    else if (!isValidPhone(d.phone)) e.phone = "Enter a valid phone number.";
+    if (!d.address.formatted) e.address = "Please select an address from the suggestions.";
+    if (!d.password) e.password = "Password is required.";
+    else if (d.password.length < 8) e.password = "Must be at least 8 characters.";
+    if (!d.confirmPassword) e.confirmPassword = "Please confirm your password.";
+    else if (d.password !== d.confirmPassword) e.confirmPassword = "Passwords do not match.";
+    return e;
+  }
+
+  function validateNgo(d = ngoData) {
+    const e: Record<string, string> = {};
+    if (!d.org.trim()) e.org = "Organisation name is required.";
+    if (!d.reg.trim()) e.reg = "Registration number is required.";
+    if (!d.email.trim()) e.email = "Email is required.";
+    else if (!isValidEmail(d.email)) e.email = "Enter a valid email address.";
+    if (!d.phone.trim()) e.phone = "Phone number is required.";
+    else if (!isValidPhone(d.phone)) e.phone = "Enter a valid phone number.";
+    if (!d.address.formatted) e.address = "Please select an address from the suggestions.";
+    if (!d.password) e.password = "Password is required.";
+    else if (d.password.length < 8) e.password = "Must be at least 8 characters.";
+    if (!d.confirmPassword) e.confirmPassword = "Please confirm your password.";
+    else if (d.password !== d.confirmPassword) e.confirmPassword = "Passwords do not match.";
+    return e;
+  }
+
+  function runValidation() {
+    return tab === "donor" ? validateDonor() : validateNgo();
+  }
+
+  function touch(field: string) {
+    setTouched((t) => ({ ...t, [field]: true }));
+    const errs = runValidation();
+    setErrors(errs);
+  }
+
+  function err(field: string) {
+    return touched[field] ? errors[field] : undefined;
+  }
+
+  // Live re-validate on data change for already-touched fields
+  function onDonorChange(key: string, value: string) {
+    const next = { ...donorData, [key]: value };
+    setDonorData(next);
+    if (touched[key]) setErrors(validateDonor(next));
+  }
+
+  function onNgoChange(key: string, value: string) {
+    const next = { ...ngoData, [key]: value };
+    setNgoData(next);
+    if (touched[key]) setErrors(validateNgo(next));
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const data = tab === "donor" ? donorData : ngoData;
-
-    if (tab === "donor") {
-      if (!donorData.name || !donorData.type || !donorData.email || !donorData.phone || !donorData.password) {
-        toast.error("Please fill in all required fields.");
-        return;
-      }
-    } else {
-      if (!ngoData.org || !ngoData.reg || !ngoData.email || !ngoData.phone || !ngoData.password) {
-        toast.error("Please fill in all required fields.");
-        return;
-      }
-    }
-
-    if (data.password !== data.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-     if (data.password.length < 8) {
-      toast.error("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (!data.address.formatted) {
-      toast.error("Please select an address from the suggestions.");
-      return;
-    }
+    // Touch everything and validate
+    const allDonorKeys = ["name", "type", "email", "phone", "address", "password", "confirmPassword"];
+    const allNgoKeys = ["org", "reg", "email", "phone", "address", "password", "confirmPassword"];
+    const keys = tab === "donor" ? allDonorKeys : allNgoKeys;
+    const allTouched = Object.fromEntries(keys.map((k) => [k, true]));
+    setTouched(allTouched);
+    const errs = runValidation();
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
-
+    const data = tab === "donor" ? donorData : ngoData;
     const addressString = data.address.formatted;
-    
+
     const { error: supabaseError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -375,7 +430,13 @@ function RegisterPage() {
     setLoading(false);
 
     if (supabaseError) {
-      toast.error(supabaseError.message);
+      const msg = supabaseError.message.toLowerCase();
+      if (msg.includes("email")) {
+        setErrors({ email: supabaseError.message });
+        setTouched((t) => ({ ...t, email: true }));
+      } else {
+        toast.error(supabaseError.message);
+      }
       return;
     }
 
@@ -387,65 +448,65 @@ function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">
-            SurplusLink
-          </h1>
+          <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
         </div>
 
         <div className="mb-6 grid grid-cols-2 rounded-md bg-secondary p-1 text-sm">
           <button
             type="button"
-            onClick={() => setTab("donor")}
-            className={`rounded py-1.5 transition ${
-              tab === "donor"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
-            }`}
+            onClick={() => { setTab("donor"); setErrors({}); setTouched({}); }}
+            className={`rounded py-1.5 transition ${tab === "donor" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
           >
             Donor
           </button>
-
           <button
             type="button"
-            onClick={() => setTab("ngo")}
-            className={`rounded py-1.5 transition ${
-              tab === "ngo"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
-            }`}
+            onClick={() => { setTab("ngo"); setErrors({}); setTouched({}); }}
+            className={`rounded py-1.5 transition ${tab === "ngo" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
           >
             NGO
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {tab === "donor" ? (
             <DonorFields
               values={donorData}
-              setValues={setDonorData}
+              onChange={onDonorChange}
+              setAddress={(addr) => {
+                const next = { ...donorData, address: addr };
+                setDonorData(next);
+                if (touched.address) setErrors(validateDonor(next));
+              }}
+              err={err}
+              touch={touch}
             />
           ) : (
             <NgoFields
               values={ngoData}
-              setValues={setNgoData}
+              onChange={onNgoChange}
+              setAddress={(addr) => {
+                const next = { ...ngoData, address: addr };
+                setNgoData(next);
+                if (touched.address) setErrors(validateNgo(next));
+              }}
+              err={err}
+              touch={touch}
             />
           )}
 
           <button
-            type="submit" 
+            type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? "Creating Account…" : "Create Account"}
           </button>
         </form>
 
         <p className="mt-5 text-center text-xs text-muted-foreground">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-foreground hover:underline"
-          >
+          <Link to="/login" className="text-foreground hover:underline">
             Log in
           </Link>
         </p>
@@ -456,48 +517,74 @@ function RegisterPage() {
 
 type DonorProps = {
   values: any;
-  setValues: React.Dispatch<React.SetStateAction<any>>;
+  onChange: (key: string, value: string) => void;
+  setAddress: (addr: AddressComponents) => void;
+  err: (field: string) => string | undefined;
+  touch: (field: string) => void;
 };
 
-function DonorFields({ values, setValues }: DonorProps) {
-
-  const set =
-    (key: string) => (value: string) =>
-      setValues((prev: any) => ({
-        ...prev,
-        [key]: value,
-      }));
-
+function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
         <Field
           label="Business Name"
           value={values.name}
-          onChange={set("name")}
+          onChange={(v) => onChange("name", v)}
           placeholder="Fresh Market"
+          error={err("name")}
         />
-
         <ComboField
-        label="Business Type"
-        value={values.type}
-        onChange={set("type")}
-        options={BUSINESS_TYPES}
-        placeholder="Grocery, Bakery…"
-      />
+          label="Business Type"
+          value={values.type}
+          onChange={(v) => onChange("type", v)}
+          options={BUSINESS_TYPES}
+          placeholder="Grocery, Bakery…"
+          error={err("type")}
+        />
       </div>
 
-      <Field label="Email Address" type="email" value={values.email} onChange={set("email")} placeholder="contact@example.com" />
-      <Field label="Phone Number" value={values.phone} onChange={set("phone")} placeholder="+27 " />
-
-      <AddressAutocomplete
-        value={values.address}
-        onChange={(addr) => setValues((prev: any) => ({ ...prev, address: addr }))}
+      <Field
+        label="Email Address"
+        type="email"
+        value={values.email}
+        onChange={(v) => onChange("email", v)}
+        placeholder="contact@example.com"
+        error={err("email")}
       />
-  
+      <Field
+        label="Phone Number"
+        value={values.phone}
+        onChange={(v) => onChange("phone", v)}
+        placeholder="+27 "
+        error={err("phone")}
+      />
+
+      <div>
+        <AddressAutocomplete
+          value={values.address}
+          onChange={(addr) => setAddress(addr)}
+        />
+        {err("address") && (
+          <p className="mt-1 text-[11px] text-destructive leading-tight">{err("address")}</p>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
-        <PasswordField label="Password" value={values.password} onChange={set("password")} />
-        <PasswordField label="Confirm Password" value={values.confirmPassword} onChange={set("confirmPassword")} />
+        <PasswordField
+          label="Password"
+          value={values.password}
+          onChange={(v) => onChange("password", v)}
+          onBlur={() => touch("password")}
+          error={err("password")}
+        />
+        <PasswordField
+          label="Confirm Password"
+          value={values.confirmPassword}
+          onChange={(v) => onChange("confirmPassword", v)}
+          onBlur={() => touch("confirmPassword")}
+          error={err("confirmPassword")}
+        />
       </div>
     </>
   );
@@ -505,57 +592,73 @@ function DonorFields({ values, setValues }: DonorProps) {
 
 type NgoProps = {
   values: any;
-  setValues: React.Dispatch<React.SetStateAction<any>>;
+  onChange: (key: string, value: string) => void;
+  setAddress: (addr: AddressComponents) => void;
+  err: (field: string) => string | undefined;
+  touch: (field: string) => void;
 };
 
-function NgoFields({ values, setValues }: NgoProps) {
-
-  const set =
-    (key: string) => (value: string) =>
-      setValues((prev: any) => ({
-        ...prev,
-        [key]: value,
-      }));
-
+function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
   return (
     <>
       <Field
-        label="Organization Name"
+        label="Organisation Name"
         value={values.org}
-        onChange={set("org")}
+        onChange={(v) => onChange("org", v)}
         placeholder="Hope Shelter"
+        error={err("org")}
       />
 
       <Field
         label="NGO Registration Number"
         value={values.reg}
-        onChange={set("reg")}
+        onChange={(v) => onChange("reg", v)}
         placeholder="REG-12345"
+        error={err("reg")}
       />
 
       <Field
         label="Email Address"
         type="email"
         value={values.email}
-        onChange={set("email")}
+        onChange={(v) => onChange("email", v)}
         placeholder="contact@ngo.org"
+        error={err("email")}
       />
 
       <Field
         label="Phone Number"
         value={values.phone}
-        onChange={set("phone")}
+        onChange={(v) => onChange("phone", v)}
         placeholder="+27..."
+        error={err("phone")}
       />
 
-      <AddressAutocomplete
-        value={values.address}
-        onChange={(addr) => setValues((prev: any) => ({ ...prev, address: addr }))}
-      />
+      <div>
+        <AddressAutocomplete
+          value={values.address}
+          onChange={(addr) => setAddress(addr)}
+        />
+        {err("address") && (
+          <p className="mt-1 text-[11px] text-destructive leading-tight">{err("address")}</p>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <PasswordField label="Password" value={values.password} onChange={set("password")} />
-        <PasswordField label="Confirm Password" value={values.confirmPassword} onChange={set("confirmPassword")} />
+        <PasswordField
+          label="Password"
+          value={values.password}
+          onChange={(v) => onChange("password", v)}
+          onBlur={() => touch("password")}
+          error={err("password")}
+        />
+        <PasswordField
+          label="Confirm Password"
+          value={values.confirmPassword}
+          onChange={(v) => onChange("confirmPassword", v)}
+          onBlur={() => touch("confirmPassword")}
+          error={err("confirmPassword")}
+        />
       </div>
     </>
   );

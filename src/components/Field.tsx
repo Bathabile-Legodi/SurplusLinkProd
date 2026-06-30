@@ -4,23 +4,32 @@ export function Field({
   value,
   onChange,
   placeholder,
+  error,
 }: {
   label: string;
   type?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  error?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-foreground">{label}</span>
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+        className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
+          ${error
+            ? "border-destructive focus:ring-destructive focus:border-destructive"
+            : "border-input focus:border-ring focus:ring-ring"
+          }`}
       />
-    </label>
+      {error && (
+        <p className="text-[11px] text-destructive leading-tight">{error}</p>
+      )}
+    </div>
   );
 }
