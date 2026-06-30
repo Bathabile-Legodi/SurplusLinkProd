@@ -201,6 +201,21 @@ export async function loadRecentDonations(): Promise<RecentDonation[]> {
   return pruneExpiredRecentDonations(data.map(mapBatchRow));
 }
 
+export async function loadAllDonations(): Promise<RecentDonation[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) return [];
+
+  const { data, error } = await supabase
+    .from("donation_batches")
+    .select("*, donation_items(*)")
+    .eq("donor_id", userData.user.id)
+    .order("submitted_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map(mapBatchRow);
+}
+
 export async function updateDonationStatus(displayId: number, status: string): Promise<RecentDonation | null> {
   const { data, error } = await supabase
     .from("donation_batches")

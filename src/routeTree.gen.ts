@@ -19,6 +19,7 @@ import { Route as NgoDashboardRouteImport } from './routes/ngo.dashboard'
 import { Route as NgoClaimsRouteImport } from './routes/ngo.claims'
 import { Route as DonorNetworkRouteImport } from './routes/donor.network'
 import { Route as DonorImpactRouteImport } from './routes/donor.impact'
+import { Route as DonorHistoryRouteImport } from './routes/donor.history'
 import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
@@ -79,6 +80,11 @@ const DonorNetworkRoute = DonorNetworkRouteImport.update({
 const DonorImpactRoute = DonorImpactRouteImport.update({
   id: '/donor/impact',
   path: '/donor/impact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorHistoryRoute = DonorHistoryRouteImport.update({
+  id: '/donor/history',
+  path: '/donor/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DonorDashboardRoute = DonorDashboardRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
   '/ngo/claims': typeof NgoClaimsRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
   '/ngo/claims': typeof NgoClaimsRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
   '/ngo/claims': typeof NgoClaimsRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
     | '/ngo/claims'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
     | '/ngo/claims'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
     | '/ngo/claims'
@@ -287,6 +299,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
+  DonorHistoryRoute: typeof DonorHistoryRoute
   DonorImpactRoute: typeof DonorImpactRoute
   DonorNetworkRoute: typeof DonorNetworkRoute
   NgoClaimsRoute: typeof NgoClaimsRoute
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       path: '/donor/impact'
       fullPath: '/donor/impact'
       preLoaderRoute: typeof DonorImpactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/history': {
+      id: '/donor/history'
+      path: '/donor/history'
+      fullPath: '/donor/history'
+      preLoaderRoute: typeof DonorHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/donor/dashboard': {
@@ -476,6 +496,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,
+  DonorHistoryRoute: DonorHistoryRoute,
   DonorImpactRoute: DonorImpactRoute,
   DonorNetworkRoute: DonorNetworkRoute,
   NgoClaimsRoute: NgoClaimsRoute,

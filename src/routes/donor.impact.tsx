@@ -48,8 +48,8 @@ function DonorImpact() {
         {/* Hero Metrics */}
         <div className="mb-10 grid gap-6 md:grid-cols-3">
           <MetricCard title="Total Meals Donated" value="42,500" trend="+12% this month" />
-          <MetricCard title="Pounds of Food Diverted" value="51,000 lbs" trend="+15% this month" />
-          <MetricCard title="Estimated CO2 Offset" value="18.5 tons" trend="+8% this month" />
+          <MetricCard title="Kilograms of Food Diverted" value="23,100 kg" trend="+15% this month" />
+          <MetricCard title="Estimated CO₂ Offset" value="16.8 tonnes" trend="+8% this month" />
         </div>
 
         {/* Visual Hook: Chart */}

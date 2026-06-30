@@ -206,7 +206,7 @@ function Stats() {
   const items = [
     { value: "2.48M", label: "Meals Rescued" },
     { value: "640+", label: "Vetted NGOs Connected" },
-    { value: "1.2K Tons", label: "CO₂ Emissions Prevented" },
+    { value: "1.2K Tonnes", label: "CO₂ Emissions Prevented" },
     { value: "Real-Time", label: "Average Match Speed" },
   ];
   return (

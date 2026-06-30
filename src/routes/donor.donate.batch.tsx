@@ -17,7 +17,6 @@ export const Route = createFileRoute("/donor/donate/batch")({
 });
 
 const CATEGORIES = ["Produce", "Bakery", "Dairy", "Prepared Meals", "Canned Goods", "Meat", "Beverages", "Snacks"];
-const UNITS = ["Kg", "Units", "Litres", "Trays"];
 
 /* ─── Category Pill Selector (multi-select) ─── */
 function CategorySelector({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
@@ -86,7 +85,7 @@ function CreateBatch() {
     category: "Produce",
     categories: [],
     quantity: "",
-    unit: "Kg",
+    unit: "",
     expiry: "",
     status: "Active"
   });
@@ -122,7 +121,7 @@ function CreateBatch() {
     };
 
     setItems([...items, item]);
-    setDraft({ name: "", category: "Produce", categories: [], quantity: "", unit: "Kg", expiry: "", status: "Active" });
+    setDraft({ name: "", category: "Produce", categories: [], quantity: "", unit: "", expiry: "", status: "Active" });
   };
 
   const removeItem = (idx: number) => {
@@ -147,30 +146,7 @@ function CreateBatch() {
               onChange={(cats) => setDraft({ ...draft, categories: cats })}
             />
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
-                <Field label="Quantity" value={draft.quantity} onChange={(v) => setDraft({ ...draft, quantity: v })} placeholder="10" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Unit</label>
-                <div className="flex rounded-md border border-input overflow-hidden">
-                  {UNITS.map(u => (
-                    <button
-                      key={u}
-                      type="button"
-                      onClick={() => setDraft({ ...draft, unit: u })}
-                      className={`flex-1 py-2 text-xs font-medium transition-colors
-                        ${draft.unit === u
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                    >
-                      {u}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <Field label="Quantity" value={draft.quantity} onChange={(v) => setDraft({ ...draft, quantity: v })} placeholder="e.g. 10" />
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry (optional)</label>
@@ -218,7 +194,7 @@ function CreateBatch() {
                     </div>
                   </div>
                   <div className="text-right mr-3">
-                    <p className="font-semibold">{it.quantity} {it.unit}</p>
+                    <p className="font-semibold">{it.quantity}</p>
                     {it.expiry ? (
                       <p className={`text-[10px] ${it.status === "Expired" ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                         Exp: {it.expiry.replace?.('T', ' ') ?? it.expiry}
