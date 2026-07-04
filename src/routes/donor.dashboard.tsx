@@ -1,3 +1,4 @@
+import CommunityMap from "@/components/CommunityMap";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
@@ -26,15 +27,12 @@ function DonorDashboard() {
     }
   }, []);
 
-
-
-
-
-  
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-5xl px-6 py-10">
+        
+        {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">Welcome, Fresh Market</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -42,20 +40,21 @@ function DonorDashboard() {
           </p>
         </div>
 
+        {/* Log Donation Button */}
         <Link
-  to="/donor/donate/consent"
-  className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
->
-  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
-    +
-  </div>
+          to="/donor/donate/consent"
+          className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
+            +
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold">Log New Donation</p>
+          </div>
+        </Link>
 
-  <div className="text-left">
-    <p className="text-sm font-semibold">Log New Donation</p>
-  </div>
-</Link>
-
-        <section>
+        {/* Recent Donations Table */}
+        <section className="mb-10"> {/* Added bottom margin here to space it from the map */}
           <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Donations</h2>
           <div className="overflow-hidden rounded-xl border bg-card">
             <table className="w-full text-sm">
@@ -82,6 +81,16 @@ function DonorDashboard() {
             </table>
           </div>
         </section>
+
+        {/* NEW SECTION: Community Network Map */}
+        <section>
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Community Network</h2>
+          {/* I wrapped your map in the same rounded border style as your table so it matches seamlessly */}
+          <div className="overflow-hidden rounded-xl border bg-card p-1">
+            <CommunityMap loggedInDonorId="PASTE_A_TEST_UUID_HERE" />
+          </div>
+        </section>
+
       </main>
     </div>
   );
