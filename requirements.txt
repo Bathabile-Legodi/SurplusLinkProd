@@ -1,0 +1,9 @@
+CAN ALSO BE FOUND IN package.json [dependencies] list.
+
+@supabase/supabase-js (Connecting backend views)
+
+leaflet & react-leaflet (Free map engine for retroactive data representation (such as impact tracking))
+
+@tanstack/react-router (Handling dashboard pages)
+
+react & react-dom (The core framework)
