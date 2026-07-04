@@ -20,6 +20,9 @@ function NgoDashboard() {
 
   if (!isAuthorized) return null;
 
+
+
+  
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />

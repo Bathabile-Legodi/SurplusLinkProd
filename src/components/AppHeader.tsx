@@ -45,8 +45,9 @@ export function AppHeader({ nav = [], userLabel = "JD" }: AppHeaderProps) {
 
 export const donorNav: NavItem[] = [
   { to: "/donor/dashboard", label: "Dashboard" },
-  { to: "/donor/dashboard", label: "New Donation" },
-  { to: "/donor/dashboard", label: "History" },
+  { to: "/donor/history", label: "History" },
+  { to: "/donor/impact", label: "Impact & Records" },
+  { to: "/donor/network", label: "Community Network" },
 ];
 
 export const ngoNav: NavItem[] = [

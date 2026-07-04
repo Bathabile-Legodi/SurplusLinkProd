@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
 
+function formatBatchId(id: number) {
+  return `#${id.toString().padStart(3, "0")}`;
+}
+
 export const Route = createFileRoute("/donor/dashboard")({
   head: () => ({
     meta: [{ title: "Donor Dashboard — SurplusLink" }],
@@ -11,20 +15,23 @@ export const Route = createFileRoute("/donor/dashboard")({
   component: DonorDashboard,
 });
 
-const defaultRecent: RecentDonation[] = [
-  { id: "DN-20260521-091400-1A2B", category: "Mixed Produce", time: "Today, 09:14 AM", status: "Claimed", submittedAt: new Date().toISOString(), items: [] },
-  { id: "DN-20260520-183000-3C4D", category: "Bakery Items", time: "Yesterday, 06:30 PM", status: "Pending", submittedAt: new Date().toISOString(), items: [] },
-  { id: "DN-20260520-110000-5E6F", category: "Dairy", time: "Yesterday, 11:00 AM", status: "Delivered", submittedAt: new Date().toISOString(), items: [] },
-];
-
 function DonorDashboard() {
-  const [recent, setRecent] = useState<RecentDonation[]>(defaultRecent);
+  const [recent, setRecent] = useState<RecentDonation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedRecent = loadRecentDonations();
-    if (storedRecent.length > 0) {
-      setRecent(storedRecent);
+    async function fetchData() {
+      try {
+        const donations = await loadRecentDonations();
+        setRecent(donations);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load your donations.");
+      } finally {
+        setIsLoading(false);
+      }
     }
+    fetchData();
   }, []);
 
   return (
@@ -34,13 +41,29 @@ function DonorDashboard() {
         
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome, Fresh Market</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome, Fresh Market</h1> 
           <p className="mt-1 text-sm text-muted-foreground">
             Thank you for helping fight food waste in your community.
           </p>
         </div>
 
+<<<<<<< HEAD
         {/* Log Donation Button */}
+=======
+        {/* Quick Impact Summary */}
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estimated People Fed</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-tight text-foreground">1,240</p>
+            <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-500">↑ 18% vs last month</p>
+          </div>
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kilos of Food Saved</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-tight text-foreground">1,750 kg</p>
+            <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-500">↑ 12% vs last month</p>
+          </div>
+        </div>
+>>>>>>> d83d093ea055220e59e232b4a115ca6170253207
         <Link
           to="/donor/donate/consent"
           className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
@@ -53,8 +76,12 @@ function DonorDashboard() {
           </div>
         </Link>
 
+<<<<<<< HEAD
         {/* Recent Donations Table */}
         <section className="mb-10"> {/* Added bottom margin here to space it from the map */}
+=======
+        <section>
+>>>>>>> d83d093ea055220e59e232b4a115ca6170253207
           <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Donations</h2>
           <div className="overflow-hidden rounded-xl border bg-card">
             <table className="w-full text-sm">
@@ -67,16 +94,36 @@ function DonorDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {recent.map((r) => (
-                  <tr key={r.id}>
-                    <td className="px-4 py-3 font-medium">{r.id}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.category}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.time}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={r.status} />
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      Loading your donations…
                     </td>
                   </tr>
-                ))}
+                ) : error ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-destructive">
+                      {error}
+                    </td>
+                  </tr>
+                ) : recent.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      No recent donations yet.
+                    </td>
+                  </tr>
+                ) : (
+                  recent.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-4 py-3 font-medium">{formatBatchId(r.id)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.category}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.time}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={r.status} />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
