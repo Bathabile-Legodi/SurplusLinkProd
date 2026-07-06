@@ -38,9 +38,11 @@ function ReviewPage() {
       if (collectionDeadline) {
         deadline = new Date(collectionDeadline).toISOString();
       }
-      const result = await submitDonationBatch(items, deadline);
+      const submittedAt = new Date().toISOString();
+      const result = await submitDonationBatch(items, batchType, deadline, submittedAt);
       navigate({ to: "/donor/donate/success", search: { batchId: result.id } });
     } catch (err) {
+      console.dir(err);
       setError(getErrorMessage(err));
     } finally {
       setSubmitting(false);

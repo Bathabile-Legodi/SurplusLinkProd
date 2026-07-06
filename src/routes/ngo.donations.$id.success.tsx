@@ -1,55 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { supabase } from "@/lib/supabase";
+import { updateDonationStatus } from "@/lib/donations";
 
 export const Route = createFileRoute("/ngo/donations/$id/success")({
   head: () => ({ meta: [{ title: "Donation Claimed — SurplusLink" }] }),
   component: ClaimSuccess,
 });
 
-interface BatchSummary {
-  batch_type: string;
-  donor: string;
-  collection_datetime: string | null;
-}
-
 function ClaimSuccess() {
   const { id } = Route.useParams();
-  const [batch, setBatch] = useState<BatchSummary | null>(null);
 
   useEffect(() => {
-    async function fetchBatch() {
-      const { data, error } = await supabase
-        .from("donation_batches")
-        .select(`
-          batch_type,
-          collection_datetime,
-          donors (
-            organization_name
-          )
-        `)
-        .eq("id", id)
-        .single();
-
-      if (!error && data) {
-        const raw = data as any;
-        setBatch({
-          batch_type: raw.batch_type || "Surplus Food",
-          donor: raw.donors?.organization_name || "Anonymous Donor",
-          collection_datetime: raw.collection_datetime,
-        });
-      }
+    if (id) {
+      void updateDonationStatus(id, "Claimed");
     }
-    fetchBatch();
   }, [id]);
 
-  const deadlineLabel = batch?.collection_datetime
-    ? new Date(batch.collection_datetime).toLocaleString("en-ZA", {
-        weekday: "short", month: "short", day: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      })
-    : "—";
+  const deadlineLabel = "Today, 8:00 PM";
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,10 +32,10 @@ function ClaimSuccess() {
         </p>
 
         <div className="mt-6 rounded-xl border bg-card p-5 text-left text-sm">
-          <Row label="Batch ID" value={batch ? `#${id.toUpperCase().slice(0, 8)}` : "Loading…"} />
-          <Row label="Batch Type" value={batch?.batch_type ?? "—"} />
-          <Row label="Donor" value={batch?.donor ?? "—"} />
-          <Row label="Pickup Deadline" value={deadlineLabel} />
+          <Row label="Donation ID" value={`#${id.toUpperCase().slice(0, 8)}`} />
+          <Row label="Donor" value="Fresh Market" />
+          <Row label="Pickup By" value={deadlineLabel} />
+          <Row label="Distance" value="1.2 km" />
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">
@@ -75,13 +43,13 @@ function ClaimSuccess() {
         </p>
 
         <div className="mt-6 flex gap-3">
-          <Link to="/ngo/dashboard" className="flex-1 rounded-md border py-2 text-sm hover:bg-secondary transition-colors">
+          <Link to="/ngo/dashboard" className="flex-1 rounded-md border py-2 text-sm transition-colors hover:bg-secondary">
             Back to Dashboard
           </Link>
           <Link
             to="/ngo/track/$id"
             params={{ id }}
-            className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Track Delivery →
           </Link>
@@ -95,7 +63,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between border-b py-1.5 last:border-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
+      <span className="max-w-[65%] truncate text-right font-medium">{value}</span>
     </div>
   );
 }

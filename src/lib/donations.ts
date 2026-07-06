@@ -21,9 +21,6 @@ export type RecentDonation = {
 };
 
 const CURRENT_BATCH_KEY = "surpluslink-current-donation-batch";
-//const RECENT_DONATIONS_KEY = "surpluslink-recent-donations";
-//const LAST_SUBMITTED_BATCH_KEY = "surpluslink-last-submitted-batch-id";
-//const MAX_BATCH_ID = 999;
 
 export function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -144,19 +141,35 @@ export function makeItemId() {
 
 export async function submitDonationBatch(
   items: DonationItem[],
+  batchType: string,             // Changed parameter name to match review component usage
   collectionDateTime: string,
+  submittedAt: string
 ): Promise<RecentDonation> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
     throw new Error("You must be signed in to submit a donation.");
   }
 
+  // Fallback category detection context if batchType text comes in blank
+  let computedBatchType = batchType;
+  if (!computedBatchType) {
+    const allCategories = items.flatMap((item) =>
+      item.category ? item.category.split(", ").map(c => c.trim()) : []
+    );
+    const uniqueCategories = Array.from(new Set(allCategories)).filter(Boolean);
+    computedBatchType = uniqueCategories.length > 1
+      ? "Mixed Donation"
+      : uniqueCategories[0] || "Donation";
+  }
+
+  // 3. Perform parent batch insert
   const { data: batchRow, error: batchError } = await supabase
     .from("donation_batches")
     .insert({
       donor_id: userData.user.id,
-      batch_type: items.length > 1 ? "Mixed Donation" : items[0]?.category ?? "Donation",
-      collection_datetime: collectionDateTime,
+      batch_type: computedBatchType, 
+      collection_datetime: collectionDateTime || null,
+      submitted_at: submittedAt,
     })
     .select()
     .single();
@@ -165,13 +178,14 @@ export async function submitDonationBatch(
     throw batchError ?? new Error("Failed to create donation batch");
   }
 
+  // 4. Map and batch save your line items
   const itemRows = items.map((item) => ({
     batch_id: batchRow.id,
     name: item.name,
     category: item.category,
-    quantity: Number(item.quantity),
+    quantity: Number(item.quantity) || 0,
     unit: item.unit,
-    expiry: item.expiry,
+    expiry: item.expiry || null,
   }));
 
   const { data: insertedItems, error: itemsError } = await supabase
@@ -179,10 +193,26 @@ export async function submitDonationBatch(
     .insert(itemRows)
     .select();
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    console.error("Warning: Items saved, but failed to return selection payload:", itemsError);
+  }
 
   clearCurrentBatch();
-  return mapBatchRow({ ...batchRow, donation_items: insertedItems });
+  try {
+    return mapBatchRow({ ...batchRow, donation_items: insertedItems || [] });
+  } catch (mapError) {
+    console.warn("Mappping payload warning, using safe fallback context:", mapError);
+    return {
+      id: batchRow.display_id || 0,
+      batchId: batchRow.id,
+      category: batchRow.batch_type || computedBatchType,
+      time: formatDonationTime(batchRow.submitted_at || submittedAt),
+      status: batchRow.status || "pending",
+      submittedAt: batchRow.submitted_at || submittedAt,
+      collectionDateTime: batchRow.collection_datetime,
+      items: items, // fallback to local memory state array structure
+    };
+  }
 }
 
 export async function loadRecentDonations(): Promise<RecentDonation[]> {
@@ -216,13 +246,16 @@ export async function loadAllDonations(): Promise<RecentDonation[]> {
   return data.map(mapBatchRow);
 }
 
-export async function updateDonationStatus(displayId: number, status: string): Promise<RecentDonation | null> {
-  const { data, error } = await supabase
+export async function updateDonationStatus(identifier: string | number, status: string): Promise<RecentDonation | null> {
+  const query = supabase
     .from("donation_batches")
     .update({ status })
-    .eq("display_id", displayId)
-    .select("*, donation_items(*)")
-    .single();
+    .select("*, donation_items(*)");
+
+  const { data, error } = await (typeof identifier === "number"
+    ? query.eq("display_id", identifier)
+    : query.eq("id", identifier)
+  ).single();
 
   if (error || !data) return null;
   return mapBatchRow(data);

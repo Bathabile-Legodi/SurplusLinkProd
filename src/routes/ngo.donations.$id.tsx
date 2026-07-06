@@ -36,7 +36,6 @@ interface DonationDetailState {
   batch_type: string;
 }
 
-// 1. Google Maps Script Injection Management Hook
 function useGoogleMaps() {
   const [ready, setReady] = useState(false);
 
@@ -46,13 +45,25 @@ function useGoogleMaps() {
       return;
     }
 
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => setReady(true));
-      return;
+    if (!(window as any)._mapsReadyCallbacks) {
+      (window as any)._mapsReadyCallbacks = [];
     }
 
-    (window as any).initGoogleMaps = () => setReady(true);
+    (window as any)._mapsReadyCallbacks.push(() => setReady(true));
+
+    (window as any).initGoogleMaps = () => {
+      if ((window as any)._mapsReadyCallbacks) {
+        (window as any)._mapsReadyCallbacks.forEach((cb: () => void) => cb());
+      }
+    };
+
+    const existing = document.getElementById("google-maps-script");
+    if (existing) {
+      existing.addEventListener("load", () => {
+        if ((window as any).google?.maps?.places) setReady(true);
+      });
+      return;
+    }
 
     const script = document.createElement("script");
     script.id = "google-maps-script";
@@ -63,15 +74,12 @@ function useGoogleMaps() {
     script.defer = true;
     document.head.appendChild(script);
 
-    return () => {
-      delete (window as any).initGoogleMaps;
-    };
+    return () => {};
   }, []);
 
   return ready;
 }
 
-// 2. Real-world distance background query calculation promise
 export function getRealDrivingDistance(
   origin: string, 
   destination: string
@@ -121,14 +129,18 @@ function DonationDetail() {
   const [ngoName, setNgoName] = useState<string>("NGO");
   const [loading, setLoading] = useState<boolean>(true);
   const [distance, setDistance] = useState<string>("Calculating distance...");
+  const [itemCategories, setItemCategories] = useState<string[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchBatchDetailAndProfile() {
       try {
         setLoading(true);
 
-        // A. Fetch current NGO details (Fixed to use organization_name with a 'z')
         const { data: { user } } = await supabase.auth.getUser();
+        if (!isMounted) return;
+
         if (user) {
           const { data: ngoProfile } = await supabase
             .from("ngos")
@@ -136,13 +148,12 @@ function DonationDetail() {
             .eq("id", user.id)
             .single();
 
-          if (ngoProfile) {
+          if (ngoProfile && isMounted) {
             setNgoAddress(ngoProfile.address || "");
             setNgoName(ngoProfile.organization_name || "Hope Shelter");
           }
         }
 
-        // B. Fetch detailed distribution parameters for the target batch
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
@@ -153,40 +164,67 @@ function DonationDetail() {
             donors (
               organization_name,
               address
+            ),
+            donation_items (
+              quantity,
+              unit,
+              category
             )
           `)
           .eq("id", id)
           .single();
         
-
         if (error) throw error;
 
-        if (data) {
+        if (data && isMounted) {
           const rawBatch = data as any;
           const donorInfo = Array.isArray(rawBatch.donors) 
             ? rawBatch.donors[0] 
             : rawBatch.donors;
 
+          // Compute exact aggregate breakdown details matching explore list format logic
+          const itemQuantities = (rawBatch.donation_items ?? [])
+            .map((item: any) => {
+              const quantity = Number(item.quantity);
+              const unit = item.unit ? String(item.unit).trim() : "items";
+              return Number.isFinite(quantity) && quantity > 0 ? `${quantity} ${unit}` : null;
+            })
+            .filter(Boolean) as string[];
+
+          const formattedQuantityText = itemQuantities.length > 0
+            ? itemQuantities.join(" • ")
+            : "1 Batch";
+
           setBatch({
             id: rawBatch.id,
-            quantity: "1 Batch", 
+            quantity: formattedQuantityText, 
             collection_datetime: rawBatch.collection_datetime ? new Date(rawBatch.collection_datetime).toLocaleString() : "N/A",
             donor: donorInfo?.organization_name || "Anonymous Donor",
             pickup: donorInfo?.address || "Location not specified", 
             batch_type: rawBatch.batch_type || "Surplus Food"
           });
+
+          // Compute distinct structure categories from related dataset fields safely
+          const extracted: string[] = (rawBatch.donation_items ?? []).flatMap((item: { category?: string | null }) =>
+            item.category ? item.category.split(", ").map((c: string) => c.trim()) : []
+          );
+          setItemCategories(Array.from(new Set(extracted)).filter((category): category is string => Boolean(category)));
         }
+
       } catch (err) {
-        console.error("Error fetching donation details:", err);
+        if (isMounted) console.error("Error fetching donation details:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchBatchDetailAndProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
-  // Handle real driving distance query execution after dependency addresses stabilize in state
   useEffect(() => {
     const pickupLocation = batch?.pickup;
     if (!isMapsReady || !pickupLocation || !ngoAddress || pickupLocation === "Location not specified") {
@@ -250,7 +288,7 @@ function DonationDetail() {
               <div>
                 <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
                 <dl className="mt-4 space-y-2 text-sm">
-                  <Row label="Quantity" value={batch?.quantity || "1 Batch"} />
+                  <Row label="Quantity" value={batch?.quantity} />
                   <Row label="Expiry Time" value={batch?.collection_datetime || "N/A"} />
                   <Row label="Donor" value={batch?.donor || "Anonymous Donor"} />
                   <Row label="Distance" value={distance} />
@@ -271,8 +309,19 @@ function DonationDetail() {
             <section className="mt-8 rounded-xl border bg-card p-5">
               <h2 className="text-sm font-semibold">About This Donation</h2>
               <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                This donation includes {batch?.batch_type}. Donation must be collected before {batch?.collection_datetime} - quality checked and ready for distribution.
+                This donation includes {batch?.batch_type} 
+                {itemCategories.length > 0 && ` (${itemCategories.join(", ")})`}. 
+                Donation must be collected before {batch?.collection_datetime} - quality checked and ready for distribution.
               </p>
+              {itemCategories.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {itemCategories.map((cat) => (
+                    <span key={cat} className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              )}
             </section>
 
             <button
@@ -300,7 +349,7 @@ function Row({
   value: string; 
   highlight?: boolean; 
   href?: string; 
-}) {
+ }) {
   return (
     <div className="flex justify-between border-b py-1.5 gap-4">
       <dt className="text-muted-foreground shrink-0">{label}</dt>
@@ -310,7 +359,7 @@ function Row({
             href={href} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="hover:underline hover:text-blue-700 block truncate"
+            className="hover:underline hover:text-blue-700 block truncate text-left"
           >
             {value}
           </a>

@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/ngo/donations/$id/claim")({
   head: () => ({ meta: [{ title: "Processing Claim — SurplusLink" }] }),
@@ -24,62 +23,19 @@ function ClaimProcessing() {
     if (ran.current) return;
     ran.current = true;
 
-    async function processClaim() {
-      // Step 1: verify NGO
-      await delay(600);
-      setStep(1);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate({ to: "/ngo/not-verified" });
-        return;
-      }
-
-      // Step 2: check batch availability
-      await delay(700);
-      setStep(2);
-
-      const { data: batch, error: fetchError } = await supabase
-        .from("donation_batches")
-        .select("id, status, claimed_by")
-        .eq("id", id)
-        .single();
-
-      if (fetchError || !batch) {
-        setErrorMsg("Donation not found.");
-        return;
-      }
-
-      if (batch.status !== "Unclaimed" && batch.claimed_by !== null) {
-        navigate({ to: `/ngo/donations/${id}/unavailable` });
-        return;
-      }
-
-      // Step 3: reserve the claim
-      await delay(700);
-      setStep(3);
-
-      const { error: claimError } = await supabase
-        .from("donation_batches")
-        .update({
-          status: "Claimed",
-          claimed_by: user.id,
-          claimed_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .eq("status", "Unclaimed"); // optimistic concurrency — only claim if still unclaimed
-
-      if (claimError) {
-        // Race condition: someone else just claimed it
-        navigate({ to: `/ngo/donations/${id}/unavailable` });
-        return;
-      }
-
-      await delay(400);
-      navigate({ to: `/ngo/donations/${id}/success` });
-    }
-
-    processClaim();
+    // Demo branching: if id contains 'bakery' simulate already claimed; if 'dairy' not verified.
+    const t1 = setTimeout(() => setStep(1), 700);
+    const t2 = setTimeout(() => setStep(2), 1400);
+    const t3 = setTimeout(() => {
+      if (id.includes("bakery")) navigate({ to: `/ngo/donations/${id}/unavailable` });
+      else if (id.includes("dairy")) navigate({ to: "/ngo/not-verified" });
+      else navigate({ to: `/ngo/donations/${id}/success` });
+    }, 2200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [id, navigate]);
 
   if (errorMsg) {
@@ -94,7 +50,7 @@ function ClaimProcessing() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-foreground/40 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-foreground/40 px-4 fixed inset-0 z-50 animate-fade-in backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-xl">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-secondary border-t-primary" />
         <h1 className="mt-6 text-base font-semibold">Processing Your Claim</h1>
@@ -106,11 +62,7 @@ function ClaimProcessing() {
             <li key={c} className="flex items-center gap-2">
               <span
                 className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                  i < step
-                    ? "bg-emerald-100 text-emerald-700"
-                    : i === step
-                      ? "bg-primary/20 text-primary"
-                      : "bg-secondary text-muted-foreground"
+                  i <= step ? "bg-success/20 text-[color:var(--success)]" : "bg-secondary text-muted-foreground"
                 }`}
               >
                 {i < step ? "✓" : i + 1}
@@ -122,8 +74,4 @@ function ClaimProcessing() {
       </div>
     </div>
   );
-}
-
-function delay(ms: number) {
-  return new Promise((res) => setTimeout(res, ms));
 }

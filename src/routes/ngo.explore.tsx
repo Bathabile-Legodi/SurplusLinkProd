@@ -20,7 +20,6 @@ interface DonationUI {
   collection_datetime: string | null;
 }
 
-// 1. Google Maps Script Loader Management Hook
 function useGoogleMaps() {
   const [ready, setReady] = useState(false);
 
@@ -30,13 +29,25 @@ function useGoogleMaps() {
       return;
     }
 
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => setReady(true));
-      return;
+    if (!(window as any)._mapsReadyCallbacks) {
+      (window as any)._mapsReadyCallbacks = [];
     }
 
-    (window as any).initGoogleMaps = () => setReady(true);
+    (window as any)._mapsReadyCallbacks.push(() => setReady(true));
+
+    (window as any).initGoogleMaps = () => {
+      if ((window as any)._mapsReadyCallbacks) {
+        (window as any)._mapsReadyCallbacks.forEach((cb: () => void) => cb());
+      }
+    };
+
+    const existing = document.getElementById("google-maps-script");
+    if (existing) {
+      existing.addEventListener("load", () => {
+        if ((window as any).google?.maps?.places) setReady(true);
+      });
+      return;
+    }
 
     const script = document.createElement("script");
     script.id = "google-maps-script";
@@ -47,15 +58,12 @@ function useGoogleMaps() {
     script.defer = true;
     document.head.appendChild(script);
 
-    return () => {
-      delete (window as any).initGoogleMaps;
-    };
+    return () => {};
   }, []);
 
   return ready;
 }
 
-// 2. Batch Matrix Driving Distance Resolution Engine
 export function getBatchDrivingDistances(
   origin: string,
   destinations: string[]
@@ -67,8 +75,6 @@ export function getBatchDrivingDistances(
     }
 
     const service = new (window as any).google.maps.DistanceMatrixService();
-
-    // Clean empty values to prevent API request crashes
     const validDestinations = destinations.map(d => d.trim() === "" ? "Unknown Location" : d);
 
     try {
@@ -115,30 +121,28 @@ function ExplorePage() {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Fetch base records from Supabase & user profile
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchDonationsAndProfile() {
       try {
         setLoading(true);
-        
-        // A. Get Authenticated User context
         const { data: { user } } = await supabase.auth.getUser();
+        if (!isMounted) return;
         
         if (user) {
-          // Fetch current NGO details dynamically matching auth user id
           const { data: ngoProfile } = await supabase
             .from("ngos")
-            .select("id, organization_name, address") // Fixed column spelling
+            .select("id, organization_name, address")
             .eq("id", user.id)
             .single();
 
-          if (ngoProfile) {
+          if (ngoProfile && isMounted) {
             setNgoAddress(ngoProfile.address || "");
             setNgoName(ngoProfile.organization_name || "Hope Shelter");
           }
         }
 
-        // B. Fetch batches from database
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
@@ -151,19 +155,35 @@ function ExplorePage() {
             donors (
               organization_name,
               address
+            ),
+            donation_items (
+              quantity,
+              unit
             )
           `)
           .limit(10); 
 
         if (error) throw error;
 
-        if (data) {
+        if (data && isMounted) {
           const formattedData: DonationUI[] = data.map((batch: any) => {
             const donorAddress = batch.donors?.address || "";
+            const itemQuantities = (batch.donation_items ?? [])
+              .map((item: any) => {
+                const quantity = Number(item.quantity);
+                const unit = item.unit ? String(item.unit).trim() : "items";
+                return Number.isFinite(quantity) && quantity > 0 ? `${quantity} ${unit}` : null;
+              })
+              .filter(Boolean) as string[];
+
+            const quantityText = itemQuantities.length > 0
+              ? itemQuantities.join(" • ")
+              : "1 Batch";
+
             return {
               id: batch.id,
               title: batch.batch_type || "General Batch",
-              quantity: "1 Batch", 
+              quantity: quantityText,
               pickup: donorAddress || "Location not specified",
               donor: batch.donors?.organization_name || "Anonymous Donor",
               distance: "Calculating...",
@@ -176,16 +196,19 @@ function ExplorePage() {
           setRawDonations(formattedData);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        if (isMounted) console.error("Error fetching data:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchDonationsAndProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Compute asynchronous distances collectively when Maps are ready
   useEffect(() => {
     if (!isMapsReady || rawDonations.length === 0 || !ngoAddress) return;
 
@@ -216,50 +239,44 @@ function ExplorePage() {
     return match ? parseFloat(match[1]) : Infinity;
   }
 
-  // Client-Side Computed Filtering Logic
   const filteredDonations = rawDonations.filter((donation) => {
-    const matchesStatus = selectedStatus 
-      ? donation.status.toLowerCase() === selectedStatus.toLowerCase() 
+    const matchesStatus = selectedStatus
+      ? donation.status.toLowerCase() === selectedStatus.toLowerCase()
       : true;
-    
+
     const matchesCategory = selectedCategory
       ? donation.title.toLowerCase().includes(selectedCategory.toLowerCase())
       : true;
 
     const cleanQuery = searchQuery.toLowerCase().trim();
-    const actualDistance = distancesMap[donation.id] || "Calculating...";
-    const dateStr = donation.collection_datetime 
-      ? new Date(donation.collection_datetime).toLocaleString() 
-      : "";
-
-    const matchesSearch = 
+    const matchesSearch =
       cleanQuery === "" ||
       donation.title.toLowerCase().includes(cleanQuery) ||
       donation.donor.toLowerCase().includes(cleanQuery) ||
-      donation.pickup.toLowerCase().includes(cleanQuery) ||
-      donation.status.toLowerCase().includes(cleanQuery) ||
-      actualDistance.toLowerCase().includes(cleanQuery) ||
-      dateStr.toLowerCase().includes(cleanQuery);
+      donation.pickup.toLowerCase().includes(cleanQuery);
 
     return matchesStatus && matchesCategory && matchesSearch;
-  }).sort((a, b) => {
-    const activeSort = sortBy || "Nearest"; // Automatically sort by nearest if nothing is selected
+  });
 
-    if (activeSort === "Nearest") {
-      const distA = parseDistance(distancesMap[a.id]);
-      const distB = parseDistance(distancesMap[b.id]);
+  const sortedDonations = [...filteredDonations].sort((a, b) => {
+    if (!sortBy || sortBy === "Nearest") {
+      const distA = parseDistance(distancesMap[a.id] || "");
+      const distB = parseDistance(distancesMap[b.id] || "");
       return distA - distB;
     }
-    if (activeSort === "Deadline (Soonest)") {
+
+    if (sortBy === "Deadline (Soonest)") {
       const dateA = a.collection_datetime ? new Date(a.collection_datetime).getTime() : Infinity;
       const dateB = b.collection_datetime ? new Date(b.collection_datetime).getTime() : Infinity;
       return dateA - dateB;
     }
-    if (activeSort === "Recently Added") {
+
+    if (sortBy === "Recently Added") {
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return dateB - dateA;
     }
+
     return 0;
   });
 
@@ -272,7 +289,6 @@ function ExplorePage() {
           Here's surplus food from verified donors near you.
         </p>
 
-        {/* Search Bar Row */}
         <div className="relative mt-6 flex gap-3">
           <input
             type="text"
@@ -283,9 +299,12 @@ function ExplorePage() {
           />
           <div className="flex gap-2">
             <div className="relative">
-              <button 
+              <button
                 type="button"
-                onClick={() => { setShowSort(!showSort); setShowFilters(false); }}
+                onClick={() => {
+                  setShowSort(!showSort);
+                  setShowFilters(false);
+                }}
                 className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showSort || sortBy ? "bg-secondary border-primary/40" : "bg-card"}`}
               >
                 Sort {sortBy ? `(${sortBy})` : ""}
@@ -293,7 +312,7 @@ function ExplorePage() {
 
               {showSort && (
                 <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Sort By</label>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sort By</label>
                   <div className="flex flex-col gap-1">
                     {["Nearest", "Deadline (Soonest)", "Recently Added"].map((sortOption) => (
                       <button
@@ -311,25 +330,28 @@ function ExplorePage() {
             </div>
 
             <div className="relative">
-              <button 
+              <button
                 type="button"
-                onClick={() => { setShowFilters(!showFilters); setShowSort(false); }}
+                onClick={() => {
+                  setShowFilters(!showFilters);
+                  setShowSort(false);
+                }}
                 className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedStatus || selectedCategory ? "bg-secondary border-primary/40" : "bg-card"}`}
               >
                 Filters {(selectedStatus || selectedCategory) ? "(Active)" : ""}
               </button>
 
               {showFilters && (
-                <div className="absolute right-0 top-full z-10 mt-2 w-64 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                  
-                  {/* Status */}
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Status</label>
-                  <div className="flex flex-col gap-1 mb-4">
-                    {["Unclaimed", "Claimed"].map((statusOption) => (
+                <div className="absolute right-0 top-full z-10 mt-2 w-56 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Batch Status</label>
+                  <div className="mb-4 flex flex-col gap-1">
+                    {['Unclaimed', 'Claimed'].map((statusOption) => (
                       <button
                         key={statusOption}
                         type="button"
-                        onClick={() => setSelectedStatus(selectedStatus === statusOption ? null : statusOption)}
+                        onClick={() => {
+                          setSelectedStatus(selectedStatus === statusOption ? null : statusOption);
+                        }}
                         className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedStatus === statusOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
                       >
                         {statusOption}
@@ -337,10 +359,9 @@ function ExplorePage() {
                     ))}
                   </div>
 
-                  {/* Category */}
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Category</label>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</label>
                   <div className="flex flex-col gap-1">
-                    {["Produce", "Bakery", "Dairy", "Meat", "Prepared", "Beverages", "Snacks"].map((catOption) => (
+                    {['Produce', 'Bakery', 'Dairy', 'Meat', 'Prepared', 'Beverages', 'Snacks'].map((catOption) => (
                       <button
                         key={catOption}
                         type="button"
@@ -358,12 +379,12 @@ function ExplorePage() {
         </div>
 
         <h2 className="mt-8 mb-3 text-sm font-semibold">
-          Available Donations Near You ({filteredDonations.length})
+          Available Donations Near You ({sortedDonations.length})
         </h2>
 
         {loading ? (
           <div className="text-sm text-muted-foreground">Loading available donations...</div>
-        ) : filteredDonations.length === 0 ? (
+        ) : sortedDonations.length === 0 ? (
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
             {searchQuery || selectedStatus || selectedCategory
               ? "No donations matching your filters found."
@@ -371,15 +392,15 @@ function ExplorePage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {filteredDonations.map((d) => (
+            {sortedDonations.map((d) => (
               <Link
                 key={d.id}
                 to="/ngo/donations/$id"
                 params={{ id: d.id }}
-                className="rounded-xl border bg-card p-5 transition hover:shadow-sm"
+                className="rounded-xl border bg-card p-5 transition hover:shadow-sm block"
               >
                 <div className="flex items-start justify-between">
-                  <h3 className="font-semibold capitalize">{d.title}</h3>
+                  <h3 className="font-semibold capitalize text-foreground">{d.title}</h3>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium
                     ${d.status === "Unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
                     ${d.status === "Claimed" ? "bg-blue-500/10 text-blue-600" : ""}
@@ -388,28 +409,29 @@ function ExplorePage() {
                     {d.status}
                   </span>
                 </div>
-                <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
+                
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                   <div className="flex justify-between">
-                    <dt>Quantity</dt>
-                    <dd className="text-foreground">{d.quantity}</dd>
+                    <span>Quantity</span>
+                    <span className="text-foreground font-medium">{d.quantity}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <dt>Pickup at</dt>
-                    <dd className="rounded-md border border-blue-100 bg-blue-50/50 px-2 py-0.5 font-medium text-blue-900 max-w-[70%] truncate">
+                  <div className="flex justify-between items-center py-0.5">
+                    <span>Pickup at</span>
+                    <span className="rounded-md border border-blue-100 bg-blue-50/50 px-2 py-0.5 font-semibold text-blue-900 max-w-[70%] truncate block">
                       {d.pickup}
-                    </dd>
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <dt>Donor</dt>
-                    <dd className="text-foreground">{d.donor}</dd>
+                    <span>Donor</span>
+                    <span className="text-foreground font-medium">{d.donor}</span>
                   </div>
                   <div className="flex justify-between">
-                    <dt>Distance</dt>
-                    <dd className="font-semibold text-foreground">
+                    <span>Distance</span>
+                    <span className="font-semibold text-foreground">
                       {distancesMap[d.id] || "Calculating..."}
-                    </dd>
+                    </span>
                   </div>
-                </dl>
+                </div>
               </Link>
             ))}
           </div>
