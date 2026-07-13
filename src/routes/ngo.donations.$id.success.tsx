@@ -1,25 +1,30 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import {
+  CheckCircle2,
+  Package,
+  Calendar,
+  Building2,
+  Truck,
+  MapPin,
+  Check,
+} from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { updateDonationStatus } from "@/lib/donations";
 import { supabase } from "@/lib/supabase";
 import { getRealDrivingDistance } from "./ngo.donations.$id"; // Reuses your distance calculation engine
 
 export const Route = createFileRoute("/ngo/donations/$id/success")({
-  head: () => ({ meta: [{ title: "Donation Claimed — SurplusLink" }] }),
+  head: () => ({
+    meta: [{ title: "Donation Claimed — SurplusLink" }],
+  }),
   component: ClaimSuccess,
 });
 
 function ClaimSuccess() {
   const { id } = Route.useParams();
-  
-  // Real-time calculated state variables mirroring the parent details pattern
-  const [donorName, setDonorName] = useState<string>("Loading...");
-  const [pickupBefore, setPickupBefore] = useState<string>("Loading...");
-  const [distanceText, setDistanceText] = useState<string>("Calculating...");
-  const [ngoInitials, setNgoInitials] = useState<string>("HS");
+  const [batch, setBatch] = useState<BatchSummary | null>(null);
 
-  // Effect to handle both changing database status and pulling fresh summary data
   useEffect(() => {
     let isMounted = true;
 
@@ -70,43 +75,28 @@ function ClaimSuccess() {
           .eq("id", id)
           .single();
 
-        if (error) throw error;
-
-        if (data && isMounted) {
-          const rawBatch = data as any;
-          const donorInfo = Array.isArray(rawBatch.donors) ? rawBatch.donors[0] : rawBatch.donors;
-          
-          const formattedDonor = donorInfo?.organization_name || "Anonymous Donor";
-          const formattedDeadline = rawBatch.collection_datetime 
-            ? new Date(rawBatch.collection_datetime).toLocaleString() 
-            : "N/A";
-          
-          setDonorName(formattedDonor);
-          setPickupBefore(formattedDeadline);
-
-          // Re-evaluate your distance matrix matching parent profile strings
-          const pickupLocation = donorInfo?.address;
-          if (ngoAddress && pickupLocation && pickupLocation !== "Location not specified") {
-            const calculatedDistance = await getRealDrivingDistance(ngoAddress, pickupLocation);
-            setDistanceText(calculatedDistance);
-          } else {
-            setDistanceText("Distance unknown");
-          }
-        }
-      } catch (err) {
-        console.error("Error loading success summary context:", err);
+      if (!error && data) {
+        const raw = data as any;
+        setBatch({
+          batch_type: raw.batch_type || "Surplus Food",
+          donor: raw.donors?.organization_name || "Anonymous Donor",
+          collection_datetime: raw.collection_datetime,
+        });
       }
     }
-
-    processClaimAndFetchData();
-    return () => {
-      isMounted = false;
-    };
+    fetchBatch();
   }, [id]);
+
+  const deadlineLabel = batch?.collection_datetime
+    ? new Date(batch.collection_datetime).toLocaleString("en-ZA", {
+        weekday: "short", month: "short", day: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      })
+    : "—";
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={ngoInitials} />
+      <AppHeader nav={ngoNav} userLabel="HS" />
       <main className="mx-auto max-w-md px-6 py-16 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
           <span className="text-2xl text-emerald-600">✓</span>
@@ -117,10 +107,10 @@ function ClaimSuccess() {
         </p>
 
         <div className="mt-6 rounded-xl border bg-card p-5 text-left text-sm">
-          <Row label="Donation ID" value={`#${id.toUpperCase().slice(0, 8)}`} />
-          <Row label="Donor" value={donorName} />
-          <Row label="Pickup Before" value={pickupBefore} />
-          <Row label="Distance" value={distanceText} />
+          <Row label="Batch ID" value={batch ? `#${id.toUpperCase().slice(0, 8)}` : "Loading…"} />
+          <Row label="Batch Type" value={batch?.batch_type ?? "—"} />
+          <Row label="Donor" value={batch?.donor ?? "—"} />
+          <Row label="Pickup Deadline" value={deadlineLabel} />
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">
@@ -128,27 +118,50 @@ function ClaimSuccess() {
         </p>
 
         <div className="mt-6 flex gap-3">
-          <Link to="/ngo/dashboard" className="flex-1 rounded-md border py-2 text-sm transition-colors hover:bg-secondary text-center block">
+          <Link to="/ngo/dashboard" className="flex-1 rounded-md border py-2 text-sm hover:bg-secondary transition-colors">
             Back to Dashboard
           </Link>
           <Link
             to="/ngo/track/$id"
             params={{ id }}
-            className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 text-center block"
+            className="flex-1 rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            Track Delivery →
+            ← Back to Dashboard
           </Link>
+
+          <button
+            type="button"
+            disabled={!method}
+            onClick={handleConfirm}
+            className={`flex-1 rounded-lg py-3 font-semibold transition-all ${
+              method
+                ? "cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg"
+                : "cursor-not-allowed bg-muted text-muted-foreground"
+            }`}
+          >
+            Confirm →
+          </button>
+
         </div>
+
       </main>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="flex justify-between border-b py-1.5 last:border-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="max-w-[65%] truncate text-right font-medium text-foreground">{value}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }
