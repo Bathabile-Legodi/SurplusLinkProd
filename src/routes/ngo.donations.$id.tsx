@@ -34,6 +34,7 @@ interface DonationDetailState {
   donor: string;
   pickup: string;             
   batch_type: string;
+  status: string;
 }
 
 function useGoogleMaps() {
@@ -68,7 +69,6 @@ function useGoogleMaps() {
 
     const script = document.createElement("script");
     script.id = "google-maps-script";
-    // UPDATED: Added &loading=async to the query parameters
     script.src = `https://maps.googleapis.com/maps/api/js?key=${
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY
     }&libraries=routes&callback=initGoogleMaps&loading=async`;
@@ -92,7 +92,6 @@ export async function getRealDrivingDistance(
   }
 
   try {
-    // FIXED: Pass plain strings directly in the arrays without any wrapper properties
     const request = {
       origins: [origin],
       destinations: [destination],
@@ -101,8 +100,6 @@ export async function getRealDrivingDistance(
     };
 
     const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
-    
-    // Safely parse the matrix response grid layers
     const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
 
     if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
@@ -180,7 +177,37 @@ function DonationDetail() {
         if (error) throw error;
 
         if (data && isMounted) {
-          const rawBatch = data as any;
+          let rawBatch = data as any;
+
+          // REAL-TIME EXPIRY CONTROL WITH RLS FALLBACK
+          if (rawBatch.collection_datetime && rawBatch.status?.toLowerCase() !== "expired") {
+            const expiryTime = new Date(rawBatch.collection_datetime).getTime();
+            const now = Date.now();
+
+            if (now > expiryTime) {
+              // 1. Force state locally first so UI behaves correctly regardless of DB permissions
+              rawBatch.status = "Expired";
+
+              // 2. Safely attempt database sync
+              try {
+                const { error: updateError } = await supabase
+                  .from("donation_batches")
+                  .update({ status: "Expired" })
+                  .eq("id", id);
+
+                if (updateError) {
+                  // Handled gracefully: RLS restriction warning in the background
+                  console.warn(
+                    "Note: Status updated locally to Expired. Database update bypassed due to RLS write restrictions:",
+                    updateError.message
+                  );
+                }
+              } catch (writeErr) {
+                console.warn("Could not sync expired status to remote database:", writeErr);
+              }
+            }
+          }
+
           const donorInfo = Array.isArray(rawBatch.donors) 
             ? rawBatch.donors[0] 
             : rawBatch.donors;
@@ -203,7 +230,8 @@ function DonationDetail() {
             collection_datetime: rawBatch.collection_datetime ? new Date(rawBatch.collection_datetime).toLocaleString() : "N/A",
             donor: donorInfo?.organization_name || "Anonymous Donor",
             pickup: donorInfo?.address || "Location not specified", 
-            batch_type: rawBatch.batch_type || "Surplus Food"
+            batch_type: rawBatch.batch_type || "Surplus Food",
+            status: rawBatch.status || "Unclaimed"
           });
 
           const extracted: string[] = (rawBatch.donation_items ?? []).flatMap((item: { category?: string | null }) =>
@@ -287,7 +315,16 @@ function DonationDetail() {
                 />
               </div>
               <div>
-                <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
+                <div className="flex items-center justify-between gap-4">
+                  <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0
+                    ${batch.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
+                    ${batch.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
+                    ${batch.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}
+                  `}>
+                    {batch.status}
+                  </span>
+                </div>
                 <dl className="mt-4 space-y-2 text-sm">
                   <Row label="Quantity" value={batch?.quantity} />
                   <Row label="Expiry Time" value={batch?.collection_datetime || "N/A"} />
@@ -310,8 +347,7 @@ function DonationDetail() {
             <section className="mt-8 rounded-xl border bg-card p-5">
               <h2 className="text-sm font-semibold">About This Donation</h2>
               <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                This donation includes {batch?.batch_type} 
-                {itemCategories.length > 0 && ` (${itemCategories.join(", ")})`}. 
+                This donation includes {itemCategories.length > 0 ? itemCategories.join(", ") : batch?.batch_type}. 
                 Donation must be collected before {batch?.collection_datetime} - quality checked and ready for distribution.
               </p>
               {itemCategories.length > 0 && (
@@ -327,10 +363,15 @@ function DonationDetail() {
 
             <button
               type="button"
+              disabled={batch.status.toLowerCase() === "expired"}
               onClick={() => navigate({ to: `/ngo/donations/${id}/claim` })}
-              className="mt-6 w-full rounded-md bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              className={`mt-6 w-full rounded-md py-3 text-sm font-medium transition-colors ${
+                batch.status.toLowerCase() === "expired" 
+                  ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              }`}
             >
-              Claim Donation
+              {batch.status.toLowerCase() === "expired" ? "Donation Expired" : "Claim Donation"}
             </button>
           </main>
         </div>

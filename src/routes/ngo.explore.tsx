@@ -64,7 +64,6 @@ function useGoogleMaps() {
   return ready;
 }
 
-// FIXED: Adjusted structure to comply with client-side JavaScript SDK specifications
 export async function getBatchDrivingDistances(
   origin: string,
   destinations: string[]
@@ -77,7 +76,6 @@ export async function getBatchDrivingDistances(
   const validDestinations = destinations.map(d => d.trim() === "" ? "Unknown Location" : d);
 
   try {
-    // FIX 1: Pass pure string inputs directly without any structural object layer wrappers
     const request = {
       origins: [origin],
       destinations: validDestinations,
@@ -85,10 +83,8 @@ export async function getBatchDrivingDistances(
       fields: ["distanceMeters", "condition"],
     };
 
-    // FIX 2: Correct standard modern Promise execution pattern
     const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
     
-    // FIX 3: Safe access array matching the matrix structure layer paths
     const matrixItems = response?.matrix?.rows?.[0]?.items || response?.[0]?.elements;
 
     if (Array.isArray(matrixItems)) {
@@ -120,7 +116,6 @@ function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showSort, setShowSort] = useState<boolean>(false);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -147,6 +142,7 @@ function ExplorePage() {
           }
         }
 
+        // UPDATED: Fetches only "unclaimed" or "Unclaimed" donation batches
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
@@ -165,7 +161,7 @@ function ExplorePage() {
               unit
             )
           `)
-          .or("status.eq.unclaimed,status.eq.pending,status.eq.Unclaimed,status.eq.Pending") 
+          .or("status.eq.unclaimed,status.eq.Unclaimed") 
           .limit(25);
 
         if (error) throw error;
@@ -247,10 +243,6 @@ function ExplorePage() {
   }
 
   const filteredDonations = rawDonations.filter((donation) => {
-    const matchesStatus = selectedStatus
-      ? donation.status.toLowerCase() === selectedStatus.toLowerCase()
-      : true;
-
     const matchesCategory = selectedCategory
       ? donation.title.toLowerCase().includes(selectedCategory.toLowerCase())
       : true;
@@ -262,7 +254,7 @@ function ExplorePage() {
       donation.donor.toLowerCase().includes(cleanQuery) ||
       donation.pickup.toLowerCase().includes(cleanQuery);
 
-    return matchesStatus && matchesCategory && matchesSearch;
+    return matchesCategory && matchesSearch;
   });
 
   const sortedDonations = [...filteredDonations].sort((a, b) => {
@@ -343,29 +335,13 @@ function ExplorePage() {
                   setShowFilters(!showFilters);
                   setShowSort(false);
                 }}
-                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedStatus || selectedCategory ? "bg-secondary border-primary/40" : "bg-card"}`}
+                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedCategory ? "bg-secondary border-primary/40" : "bg-card"}`}
               >
-                Filters {(selectedStatus || selectedCategory) ? "(Active)" : ""}
+                Filters {selectedCategory ? "(Active)" : ""}
               </button>
 
               {showFilters && (
                 <div className="absolute right-0 top-full z-10 mt-2 w-56 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Batch Status</label>
-                  <div className="mb-4 flex flex-col gap-1">
-                    {['Unclaimed', 'Claimed'].map((statusOption) => (
-                      <button
-                        key={statusOption}
-                        type="button"
-                        onClick={() => {
-                          setSelectedStatus(selectedStatus === statusOption ? null : statusOption);
-                        }}
-                        className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedStatus === statusOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
-                      >
-                        {statusOption}
-                      </button>
-                    ))}
-                  </div>
-
                   <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</label>
                   <div className="flex flex-col gap-1">
                     {['Produce', 'Bakery', 'Dairy', 'Meat', 'Prepared', 'Beverages', 'Snacks'].map((catOption) => (
@@ -393,7 +369,7 @@ function ExplorePage() {
           <div className="text-sm text-muted-foreground">Loading available donations...</div>
         ) : sortedDonations.length === 0 ? (
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
-            {searchQuery || selectedStatus || selectedCategory
+            {searchQuery || selectedCategory
               ? "No donations matching your filters found."
               : "No available donations right now."}
           </div>
@@ -408,11 +384,7 @@ function ExplorePage() {
               >
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold capitalize text-foreground">{d.title}</h3>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium
-                    ${d.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
-                    ${d.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
-                    ${d.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}
-                  `}>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600">
                     {d.status}
                   </span>
                 </div>
