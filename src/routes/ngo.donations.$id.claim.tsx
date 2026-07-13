@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase"; // Import your configured supabase instance
 
 export const Route = createFileRoute("/ngo/donations/$id/claim")({
   head: () => ({ meta: [{ title: "Processing Claim — SurplusLink" }] }),
@@ -23,19 +24,66 @@ function ClaimProcessing() {
     if (ran.current) return;
     ran.current = true;
 
-    // Demo branching: if id contains 'bakery' simulate already claimed; if 'dairy' not verified.
-    const t1 = setTimeout(() => setStep(1), 700);
-    const t2 = setTimeout(() => setStep(2), 1400);
-    const t3 = setTimeout(() => {
-      if (id.includes("bakery")) navigate({ to: `/ngo/donations/${id}/unavailable` });
-      else if (id.includes("dairy")) navigate({ to: "/ngo/not-verified" });
-      else navigate({ to: `/ngo/donations/${id}/success` });
-    }, 2200);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
+    async function processClaimTransaction() {
+      try {
+        // Step 1: Verify user account session
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          throw new Error("You must be logged in to claim a donation batch.");
+        }
+        setStep(1);
+
+        // Step 2: Query real-time status from donation_batches table
+        const { data: batch, error: fetchError } = await supabase
+          .from("donation_batches")
+          .select("status")
+          .eq("id", id)
+          .single();
+
+        if (fetchError || !batch) {
+          throw new Error("This donation batch could not be found.");
+        }
+
+        // Check if the current status is what we expect ('unclaimed' or 'pending')
+        // Adjust strings if your db literally uses 'unclaimed' vs 'pending'
+        if (batch.status === "claimed") {
+          navigate({ 
+            to: "/ngo/donations/$id/unavailable", 
+            params: { id } 
+          });
+          return;
+        }
+        setStep(2);
+
+        // Step 3: Perform atomic transaction update setting status to 'claimed'
+        const { error: updateError } = await supabase
+          .from("donation_batches")
+          .update({
+            status: "claimed",
+            claimed_by: user.id, // Records which authenticated NGO user took the batch
+            claimed_at: new Date().toISOString()
+          })
+          .eq("id", id)
+          .or("status.eq.unclaimed,status.eq.pending"); // Ensures safe racing conditions
+
+        if (updateError) {
+          throw new Error("Could not lock claim. Please try again.");
+        }
+
+        // Short timeout for clean UI transition state confirmation
+        setTimeout(() => {
+          navigate({ 
+            to: "/ngo/donations/$id/success", 
+            params: { id } 
+          });
+        }, 600);
+
+      } catch (err: any) {
+        setErrorMsg(err.message || "An unexpected error occurred processing your request.");
+      }
+    }
+
+    processClaimTransaction();
   }, [id, navigate]);
 
   if (errorMsg) {

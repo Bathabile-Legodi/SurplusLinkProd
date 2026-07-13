@@ -193,26 +193,10 @@ export async function submitDonationBatch(
     .insert(itemRows)
     .select();
 
-  if (itemsError) {
-    console.error("Warning: Items saved, but failed to return selection payload:", itemsError);
-  }
+  if (itemsError) throw itemsError;
 
   clearCurrentBatch();
-  try {
-    return mapBatchRow({ ...batchRow, donation_items: insertedItems || [] });
-  } catch (mapError) {
-    console.warn("Mappping payload warning, using safe fallback context:", mapError);
-    return {
-      id: batchRow.display_id || 0,
-      batchId: batchRow.id,
-      category: batchRow.batch_type || computedBatchType,
-      time: formatDonationTime(batchRow.submitted_at || submittedAt),
-      status: batchRow.status || "pending",
-      submittedAt: batchRow.submitted_at || submittedAt,
-      collectionDateTime: batchRow.collection_datetime,
-      items: items, // fallback to local memory state array structure
-    };
-  }
+  return mapBatchRow({ ...batchRow, donation_items: insertedItems });
 }
 
 export async function loadRecentDonations(): Promise<RecentDonation[]> {
@@ -229,21 +213,6 @@ export async function loadRecentDonations(): Promise<RecentDonation[]> {
   if (error || !data) return [];
 
   return pruneExpiredRecentDonations(data.map(mapBatchRow));
-}
-
-export async function loadAllDonations(): Promise<RecentDonation[]> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) return [];
-
-  const { data, error } = await supabase
-    .from("donation_batches")
-    .select("*, donation_items(*)")
-    .eq("donor_id", userData.user.id)
-    .order("submitted_at", { ascending: false });
-
-  if (error || !data) return [];
-
-  return data.map(mapBatchRow);
 }
 
 export async function updateDonationStatus(identifier: string | number, status: string): Promise<RecentDonation | null> {

@@ -15,6 +15,15 @@ import {
   Clock,
 } from "lucide-react";
 
+// this is a temporarily at the very top of main.tsx to ignore extension noise
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", (event) => {
+    if (event.reason?.message?.includes("A listener indicated an asynchronous response")) {
+      event.preventDefault();
+    }
+  });
+}
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [

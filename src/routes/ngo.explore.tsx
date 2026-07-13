@@ -24,7 +24,7 @@ function useGoogleMaps() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if ((window as any).google?.maps?.places) {
+    if ((window as any).google?.maps?.routes) {
       setReady(true);
       return;
     }
@@ -44,7 +44,7 @@ function useGoogleMaps() {
     const existing = document.getElementById("google-maps-script");
     if (existing) {
       existing.addEventListener("load", () => {
-        if ((window as any).google?.maps?.places) setReady(true);
+        if ((window as any).google?.maps?.routes) setReady(true);
       });
       return;
     }
@@ -53,7 +53,7 @@ function useGoogleMaps() {
     script.id = "google-maps-script";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=places&callback=initGoogleMaps`;
+    }&callback=initGoogleMaps&loading=async&libraries=routes`;
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
@@ -64,47 +64,51 @@ function useGoogleMaps() {
   return ready;
 }
 
-export function getBatchDrivingDistances(
+// FIXED: Adjusted structure to comply with client-side JavaScript SDK specifications
+export async function getBatchDrivingDistances(
   origin: string,
   destinations: string[]
 ): Promise<string[]> {
-  return new Promise((resolve) => {
-    if (!(window as any).google?.maps || !origin || destinations.length === 0) {
-      resolve(destinations.map(() => "Distance unavailable"));
-      return;
-    }
+  const globalWin = window as any;
+  if (!globalWin.google?.maps?.routes || !origin || destinations.length === 0) {
+    return destinations.map(() => "Distance unavailable");
+  }
 
-    const service = new (window as any).google.maps.DistanceMatrixService();
-    const validDestinations = destinations.map(d => d.trim() === "" ? "Unknown Location" : d);
+  const validDestinations = destinations.map(d => d.trim() === "" ? "Unknown Location" : d);
 
-    try {
-      service.getDistanceMatrix(
-        {
-          origins: [origin],
-          destinations: validDestinations,
-          travelMode: (window as any).google.maps.TravelMode.DRIVING,
-          unitSystem: (window as any).google.maps.UnitSystem.METRIC,
-        },
-        (response: any, status: string) => {
-          if (status === "OK" && response.rows[0]?.elements) {
-            const distances = response.rows[0].elements.map((element: any) => {
-              if (element.status === "OK") {
-                return `${element.distance.text} away`;
-              }
-              return "Distance unknown";
-            });
-            resolve(distances);
-          } else {
-            console.error("Distance Matrix batch collection failed:", status);
-            resolve(destinations.map(() => "Distance error"));
+  try {
+    // FIX 1: Pass pure string inputs directly without any structural object layer wrappers
+    const request = {
+      origins: [origin],
+      destinations: validDestinations,
+      travelMode: "DRIVING",
+      fields: ["distanceMeters", "condition"],
+    };
+
+    // FIX 2: Correct standard modern Promise execution pattern
+    const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
+    
+    // FIX 3: Safe access array matching the matrix structure layer paths
+    const matrixItems = response?.matrix?.rows?.[0]?.items || response?.[0]?.elements;
+
+    if (Array.isArray(matrixItems)) {
+      return matrixItems.map((element: any) => {
+        if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
+          const meters = element.distanceMeters;
+          if (typeof meters === "number") {
+            return `${(meters / 1000).toFixed(1)} km away`;
           }
         }
-      );
-    } catch (e) {
-      console.error("Failed executing distance matrix operation", e);
-      resolve(destinations.map(() => "Distance error"));
+        return "Distance unknown";
+      });
     }
-  });
+
+    console.error("Route Matrix execution did not produce an array structure inside output container:", response);
+    return destinations.map(() => "Distance error");
+  } catch (e) {
+    console.error("Failed executing modern route matrix operation:", e);
+    return destinations.map(() => "Distance error");
+  }
 }
 
 function ExplorePage() {
@@ -161,13 +165,17 @@ function ExplorePage() {
               unit
             )
           `)
-          .limit(10); 
+          .or("status.eq.unclaimed,status.eq.pending,status.eq.Unclaimed,status.eq.Pending") 
+          .limit(25);
 
         if (error) throw error;
 
         if (data && isMounted) {
           const formattedData: DonationUI[] = data.map((batch: any) => {
-            const donorAddress = batch.donors?.address || "";
+            const donorInfo = Array.isArray(batch.donors) ? batch.donors[0] : batch.donors;
+            const donorAddress = donorInfo?.address || "";
+            const donorName = donorInfo?.organization_name || "Anonymous Donor";
+
             const itemQuantities = (batch.donation_items ?? [])
               .map((item: any) => {
                 const quantity = Number(item.quantity);
@@ -185,7 +193,7 @@ function ExplorePage() {
               title: batch.batch_type || "General Batch",
               quantity: quantityText,
               pickup: donorAddress || "Location not specified",
-              donor: batch.donors?.organization_name || "Anonymous Donor",
+              donor: donorName,
               distance: "Calculating...",
               status: batch.status || "Unclaimed",
               created_at: batch.created_at,
@@ -232,7 +240,6 @@ function ExplorePage() {
     appendDistances();
   }, [isMapsReady, rawDonations, ngoAddress]);
 
-  // Parse distance string "X km away" to a number for sorting
   function parseDistance(dist: string) {
     if (!dist || dist.includes("error") || dist.includes("unknown") || dist.includes("Calculating")) return Infinity;
     const match = dist.match(/([\d.]+)/);
@@ -402,9 +409,9 @@ function ExplorePage() {
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold capitalize text-foreground">{d.title}</h3>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium
-                    ${d.status === "Unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
-                    ${d.status === "Claimed" ? "bg-blue-500/10 text-blue-600" : ""}
-                    ${d.status === "Expired" ? "bg-destructive/10 text-destructive" : ""}
+                    ${d.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
+                    ${d.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
+                    ${d.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}
                   `}>
                     {d.status}
                   </span>

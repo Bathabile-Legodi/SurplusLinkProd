@@ -40,36 +40,38 @@ function useGoogleMaps() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if ((window as any).google?.maps?.places) {
+    const globalWin = window as any;
+    if (globalWin.google?.maps?.routes) {
       setReady(true);
       return;
     }
 
-    if (!(window as any)._mapsReadyCallbacks) {
-      (window as any)._mapsReadyCallbacks = [];
+    if (!globalWin._mapsReadyCallbacks) {
+      globalWin._mapsReadyCallbacks = [];
     }
 
-    (window as any)._mapsReadyCallbacks.push(() => setReady(true));
+    globalWin._mapsReadyCallbacks.push(() => setReady(true));
 
-    (window as any).initGoogleMaps = () => {
-      if ((window as any)._mapsReadyCallbacks) {
-        (window as any)._mapsReadyCallbacks.forEach((cb: () => void) => cb());
+    globalWin.initGoogleMaps = () => {
+      if (globalWin._mapsReadyCallbacks) {
+        globalWin._mapsReadyCallbacks.forEach((cb: () => void) => cb());
       }
     };
 
     const existing = document.getElementById("google-maps-script");
     if (existing) {
       existing.addEventListener("load", () => {
-        if ((window as any).google?.maps?.places) setReady(true);
+        if (globalWin.google?.maps?.routes) setReady(true);
       });
       return;
     }
 
     const script = document.createElement("script");
     script.id = "google-maps-script";
+    // UPDATED: Added &loading=async to the query parameters
     script.src = `https://maps.googleapis.com/maps/api/js?key=${
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=places&callback=initGoogleMaps`;
+    }&libraries=routes&callback=initGoogleMaps&loading=async`;
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
@@ -80,42 +82,43 @@ function useGoogleMaps() {
   return ready;
 }
 
-export function getRealDrivingDistance(
+export async function getRealDrivingDistance(
   origin: string, 
   destination: string
 ): Promise<string> {
-  return new Promise((resolve) => {
-    if (!(window as any).google?.maps || !origin || !destination) {
-      resolve("Distance unavailable");
-      return;
-    }
+  const globalWin = window as any;
+  if (!globalWin.google?.maps?.routes || !origin || !destination) {
+    return "Distance unavailable";
+  }
 
-    const service = new (window as any).google.maps.DistanceMatrixService();
+  try {
+    // FIXED: Pass plain strings directly in the arrays without any wrapper properties
+    const request = {
+      origins: [origin],
+      destinations: [destination],
+      travelMode: "DRIVING",
+      fields: ["distanceMeters", "condition"], 
+    };
+
+    const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
     
-    try {
-      service.getDistanceMatrix(
-        {
-          origins: [origin],
-          destinations: [destination],
-          travelMode: (window as any).google.maps.TravelMode.DRIVING,
-          unitSystem: (window as any).google.maps.UnitSystem.METRIC, 
-        },
-        (response: any, status: string) => {
-          if (status === "OK" && response.rows[0]?.elements[0]?.status === "OK") {
-            const distanceText = response.rows[0].elements[0].distance.text; 
-            resolve(`${distanceText} away`);
-          } else {
-            const elementStatus = response?.rows[0]?.elements[0]?.status;
-            console.error("Distance Matrix failed:", status, elementStatus);
-            resolve(`Unavailable (${elementStatus || status})`);
-          }
-        }
-      );
-    } catch (e) {
-      console.error("Distance calculation error:", e);
-      resolve("Calculation error");
+    // Safely parse the matrix response grid layers
+    const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
+
+    if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
+      const meters = element.distanceMeters;
+      if (typeof meters === "number") {
+        const km = (meters / 1000).toFixed(1);
+        return `${km} km away`;
+      }
     }
-  });
+    
+    console.error("Route Matrix calculation fallback triggered or route missing:", element);
+    return "Unavailable";
+  } catch (e) {
+    console.error("Distance calculation error via modern SDK:", e);
+    return "Calculation error";
+  }
 }
 
 function DonationDetail() {
@@ -182,7 +185,6 @@ function DonationDetail() {
             ? rawBatch.donors[0] 
             : rawBatch.donors;
 
-          // Compute exact aggregate breakdown details matching explore list format logic
           const itemQuantities = (rawBatch.donation_items ?? [])
             .map((item: any) => {
               const quantity = Number(item.quantity);
@@ -204,7 +206,6 @@ function DonationDetail() {
             batch_type: rawBatch.batch_type || "Surplus Food"
           });
 
-          // Compute distinct structure categories from related dataset fields safely
           const extracted: string[] = (rawBatch.donation_items ?? []).flatMap((item: { category?: string | null }) =>
             item.category ? item.category.split(", ").map((c: string) => c.trim()) : []
           );
@@ -349,7 +350,7 @@ function Row({
   value: string; 
   highlight?: boolean; 
   href?: string; 
- }) {
+}) {
   return (
     <div className="flex justify-between border-b py-1.5 gap-4">
       <dt className="text-muted-foreground shrink-0">{label}</dt>
