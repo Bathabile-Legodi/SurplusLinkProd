@@ -25,6 +25,7 @@ import { Route as AdminVerificationRouteImport } from './routes/admin.verificati
 import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
 import { Route as NgoDonationsIdRouteImport } from './routes/ngo.donations.$id'
 import { Route as DonorDonateSuccessRouteImport } from './routes/donor.donate.success'
+import { Route as DonorDonateReviewRouteImport } from './routes/donor.donate.review'
 import { Route as DonorDonateConsentRouteImport } from './routes/donor.donate.consent'
 import { Route as DonorDonateBatchRouteImport } from './routes/donor.donate.batch'
 import { Route as NgoDonationsIdUnavailableRouteImport } from './routes/ngo.donations.$id.unavailable'
@@ -112,6 +113,11 @@ const DonorDonateSuccessRoute = DonorDonateSuccessRouteImport.update({
   path: '/donor/donate/success',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DonorDonateReviewRoute = DonorDonateReviewRouteImport.update({
+  id: '/donor/donate/review',
+  path: '/donor/donate/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DonorDonateConsentRoute = DonorDonateConsentRouteImport.update({
   id: '/donor/donate/consent',
   path: '/donor/donate/consent',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
   '/donor/donate/success': typeof DonorDonateSuccessRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
   '/donor/donate/success': typeof DonorDonateSuccessRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
+  '/donor/donate/review': typeof DonorDonateReviewRoute
   '/donor/donate/success': typeof DonorDonateSuccessRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/ngo/not-verified'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
+    | '/donor/donate/review'
     | '/donor/donate/success'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/ngo/not-verified'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
+    | '/donor/donate/review'
     | '/donor/donate/success'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/ngo/not-verified'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
+    | '/donor/donate/review'
     | '/donor/donate/success'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   NgoNotVerifiedRoute: typeof NgoNotVerifiedRoute
   DonorDonateBatchRoute: typeof DonorDonateBatchRoute
   DonorDonateConsentRoute: typeof DonorDonateConsentRoute
+  DonorDonateReviewRoute: typeof DonorDonateReviewRoute
   DonorDonateSuccessRoute: typeof DonorDonateSuccessRoute
   NgoDonationsIdRoute: typeof NgoDonationsIdRouteWithChildren
   NgoTrackIdRoute: typeof NgoTrackIdRoute
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DonorDonateSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/donor/donate/review': {
+      id: '/donor/donate/review'
+      path: '/donor/donate/review'
+      fullPath: '/donor/donate/review'
+      preLoaderRoute: typeof DonorDonateReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/donor/donate/consent': {
       id: '/donor/donate/consent'
       path: '/donor/donate/consent'
@@ -506,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   NgoNotVerifiedRoute: NgoNotVerifiedRoute,
   DonorDonateBatchRoute: DonorDonateBatchRoute,
   DonorDonateConsentRoute: DonorDonateConsentRoute,
+  DonorDonateReviewRoute: DonorDonateReviewRoute,
   DonorDonateSuccessRoute: DonorDonateSuccessRoute,
   NgoDonationsIdRoute: NgoDonationsIdRouteWithChildren,
   NgoTrackIdRoute: NgoTrackIdRoute,

@@ -132,40 +132,257 @@ function ScrollColumn({ items, selected, onChange, renderItem }: {
   );
 }
 
-/* ─── Date-Only Picker ─── */
+/* ─── Calendar Date Picker ─── */
+
+const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function getCalendarDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = Array(firstDay).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
 
 export function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const dates = useMemo(() => generateDates(), []);
-  const todayIdx = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  const parsed = useMemo(() => {
+  const initDate = useMemo(() => {
     if (value) {
-      const d = new Date(value);
-      if (!isNaN(d.getTime())) {
-        const idx = dates.findIndex(dd => dd.toDateString() === d.toDateString());
-        if (idx >= 0) return idx;
-      }
+      const d = new Date(value + "T00:00:00");
+      if (!isNaN(d.getTime())) return d;
     }
-    return todayIdx;
+    return null;
   }, []);
 
-  const [dateIdx, setDateIdx] = useState(parsed);
+  // "day" = main calendar, "month-year" = month/year picker, "closed" = locked-in pill
+  const [view, setView] = useState<"day" | "month-year" | "closed">(initDate ? "closed" : "day");
+  const [viewYear, setViewYear] = useState(initDate?.getFullYear() ?? today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initDate?.getMonth() ?? today.getMonth());
+  const [pickYear, setPickYear] = useState(initDate?.getFullYear() ?? today.getFullYear());
+  const [selected, setSelected] = useState<Date | null>(initDate);
 
-  useEffect(() => {
-    onChange(toISODate(dates[dateIdx]));
-  }, [dateIdx]);
+  const cells = useMemo(() => getCalendarDays(viewYear, viewMonth), [viewYear, viewMonth]);
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const openMonthYearPicker = () => { setPickYear(viewYear); setView("month-year"); };
+  const selectMonthYear = (month: number) => { setViewYear(pickYear); setViewMonth(month); setView("day"); };
+
+  const handleDayClick = (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    d.setHours(0, 0, 0, 0);
+    if (d < today) return;
+    setSelected(d);
+  };
+
+  const handleApply = () => {
+    if (!selected) return;
+    setView("closed");
+    onChange(toISODate(selected));
+  };
+
+  const handleClear = () => {
+    setSelected(null);
+    setView("day");
+    onChange("");
+  };
+
+  const handleEdit = () => { setView("day"); };
+
+  const monthName = new Date(viewYear, viewMonth, 1).toLocaleString("en-US", { month: "long" });
+  const lockedLabel = selected
+    ? selected.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    : "";
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-3 flex justify-center">
-      <ScrollColumn
-        items={dates}
-        selected={dateIdx}
-        onChange={setDateIdx}
-        renderItem={(d: Date) => formatDateLabel(d)}
-      />
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden w-full max-w-xs transition-all duration-300">
+
+      {/* ── CLOSED: locked-in pill ── */}
+      {view === "closed" && selected && (
+        <div className="flex items-center gap-3 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Checkmark badge */}
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-[color:var(--success)]">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+            </svg>
+          </div>
+          {/* Date label */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Expiry locked in</p>
+            <p className="text-sm font-semibold text-foreground truncate">{lockedLabel}</p>
+          </div>
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              title="Change date"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              title="Clear date"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── MONTH-YEAR PICKER view ── */}
+      {view === "month-year" && (
+        <div className="animate-in fade-in zoom-in-95 duration-150">
+          {/* Year navigation */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+            <button type="button" onClick={() => setPickYear(y => y - 1)}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              aria-label="Previous year">‹</button>
+            <span className="text-sm font-bold text-foreground tabular-nums">{pickYear}</span>
+            <button type="button" onClick={() => setPickYear(y => y + 1)}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              aria-label="Next year">›</button>
+          </div>
+          {/* 3×4 month grid */}
+          <div className="grid grid-cols-3 gap-1.5 px-3 pb-4">
+            {MONTH_NAMES.map((m, idx) => {
+              const isCurrent = idx === viewMonth && pickYear === viewYear;
+              const isThisMonth = idx === today.getMonth() && pickYear === today.getFullYear();
+              return (
+                <button key={m} type="button" onClick={() => selectMonthYear(idx)}
+                  className={[
+                    "rounded-lg py-2 text-sm font-medium transition-all duration-150",
+                    isCurrent
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : isThisMonth
+                      ? "border border-primary/40 text-foreground hover:bg-secondary"
+                      : "text-foreground hover:bg-secondary",
+                  ].join(" ")}>
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+          {/* Back link */}
+          <div className="border-t px-3 py-2.5">
+            <button type="button" onClick={() => setView("day")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+                <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+              </svg>
+              Back to calendar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── DAY GRID view ── */}
+      {view === "day" && (
+        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Month navigation */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <button type="button" onClick={prevMonth}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              aria-label="Previous month">‹</button>
+            {/* Clickable month+year heading */}
+            <button type="button" onClick={openMonthYearPicker}
+              className="group flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
+              title="Jump to month & year">
+              {monthName} {viewYear}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-hover:translate-y-0.5">
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button type="button" onClick={nextMonth}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              aria-label="Next month">›</button>
+          </div>
+
+          {/* Day-of-week headers */}
+          <div className="grid grid-cols-7 px-3 pb-1">
+            {DAY_LABELS.map((d, i) => (
+              <div key={i} className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground py-1">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-y-0.5 px-3 pb-3">
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} />;
+              const cellDate = new Date(viewYear, viewMonth, day);
+              cellDate.setHours(0, 0, 0, 0);
+              const isPast = cellDate < today;
+              const isToday = cellDate.getTime() === today.getTime();
+              const isSelected = selected && cellDate.getTime() === selected.getTime();
+
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={isPast}
+                  onClick={() => handleDayClick(day)}
+                  className={[
+                    "mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all duration-150",
+                    isPast
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : isSelected
+                      ? "bg-primary text-primary-foreground shadow-sm scale-110"
+                      : isToday
+                      ? "border border-primary/40 text-foreground hover:bg-primary hover:text-primary-foreground"
+                      : "text-foreground hover:bg-secondary",
+                  ].join(" ")}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer: hint + Apply */}
+          <div className="border-t px-3 py-3 flex items-center gap-2">
+            {selected ? (
+              <span className="flex-1 text-xs text-muted-foreground">
+                {selected.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            ) : (
+              <span className="flex-1 text-xs text-muted-foreground italic">Pick a day above</span>
+            )}
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={!selected}
+              className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /* ─── Engaged Wrapper (pop-out + scroll lock for custom columns) ─── */
 

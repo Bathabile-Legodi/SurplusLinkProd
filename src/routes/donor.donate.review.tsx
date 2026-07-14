@@ -1,231 +1,174 @@
-import { supabase } from "@/lib/supabase";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { AppHeader, donorNav } from "@/components/AppHeader";
+import {
+  loadCurrentBatch,
+  submitDonationBatch,
+  getErrorMessage,
+  type DonationItem,
+} from "@/lib/donations";
+import { DateTimePicker } from "@/components/ScrollPicker";
 
-export type DonationItem = {
-  id: string;
-  name: string;
-  category: string;
-  quantity: string;
-  unit: string;
-  expiry: string;
-};
+export const Route = createFileRoute("/donor/donate/review")({
+  head: () => ({ meta: [{ title: "Review Batch — SurplusLink" }] }),
+  component: ReviewBatch,
+});
 
-export type RecentDonation = {
-  id: number;
-  batchId: string;
-  category: string;
-  time: string;
-  status: string;
-  submittedAt: string;
-  collectionDateTime?: string;
-  items: DonationItem[];
-};
+function ReviewBatch() {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<DonationItem[]>([]);
+  const [collectionDateTime, setCollectionDateTime] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const CURRENT_BATCH_KEY = "surpluslink-current-donation-batch";
+  useEffect(() => {
+    setItems(loadCurrentBatch());
+  }, []);
 
-export function getErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "object" && err !== null && "message" in err) {
-    return String((err as { message: unknown }).message);
-  }
-  return "An unexpected error occurred.";
-}
+  // Derive a human-readable batch type from the items
+  const batchType = (() => {
+    const cats = Array.from(
+      new Set(
+        items.flatMap((item) =>
+          item.category ? item.category.split(", ").map((c) => c.trim()) : []
+        )
+      )
+    ).filter(Boolean);
+    if (cats.length === 0) return "Donation";
+    if (cats.length === 1) return cats[0];
+    return "Mixed Donation";
+  })();
 
-function safeParse<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-export function formatDonationTime(timestamp: string) {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const isYesterday = date.toDateString() === yesterday.toDateString();
-  const clock = new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  }).format(date);
-  if (sameDay) return `Today, ${clock}`;
-  if (isYesterday) return `Yesterday, ${clock}`;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  }).format(date);
-}
-
-function getEarliestExpiry(items: DonationItem[]): Date | null {
-  const expiries = items
-    .map((item) => new Date(item.expiry))
-    .filter((date) => !Number.isNaN(date.getTime()));
-
-  if (expiries.length === 0) return null;
-
-  return new Date(Math.min(...expiries.map((date) => date.getTime())));
-}
-
-function pruneExpiredRecentDonations(donations: RecentDonation[]): RecentDonation[] {
-  const now = new Date();
-
-  return donations.filter((donation) => {
-    const earliestExpiry = getEarliestExpiry(donation.items);
-    if (!earliestExpiry) {
-      return true;
+  const handleSubmit = async () => {
+    if (items.length === 0) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = await submitDonationBatch(
+        items,
+        batchType,
+        collectionDateTime,
+        new Date().toISOString()
+      );
+      navigate({
+        to: "/donor/donate/success",
+        search: { batchId: result.id },
+      });
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setIsSubmitting(false);
     }
-    return earliestExpiry.getTime() > now.getTime();
-  });
-}
-
-function mapItemRow(row: any): DonationItem {
-  return {
-    id: row.id,
-    name: row.name,
-    category: row.category,
-    quantity: String(row.quantity),
-    unit: row.unit,
-    expiry: row.expiry,
   };
-}
-
-function mapBatchRow(row: any): RecentDonation {
-  return {
-    id: row.display_id,
-    batchId: row.id,
-    category: row.batch_type,
-    time: formatDonationTime(row.submitted_at),
-    status: row.status,
-    submittedAt: row.submitted_at,
-    collectionDateTime: row.collection_datetime,
-    items: (row.donation_items ?? []).map(mapItemRow),
-  };
-}
-
-export function loadCurrentBatch(): DonationItem[] {
-  if (typeof window === "undefined") return [];
-  return safeParse<DonationItem[]>(window.localStorage.getItem(CURRENT_BATCH_KEY), []);
-}
-
-export function saveCurrentBatch(items: DonationItem[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(CURRENT_BATCH_KEY, JSON.stringify(items));
-}
-
-export function clearCurrentBatch() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(CURRENT_BATCH_KEY);
-}
-
-export function makeItemId() {
-  if (
-    typeof crypto !== "undefined" &&
-    crypto.randomUUID
-  ) {
-    return crypto.randomUUID();
-  }
 
   return (
-    Date.now().toString(36) +
-    Math.random().toString(36).substring(2, 9)
+    <div className="min-h-screen bg-background">
+      <AppHeader nav={donorNav} userLabel="FM" />
+      <main className="mx-auto max-w-3xl px-6 py-10">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">Review Your Batch</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Confirm the items below and set a collection window before submitting.
+          </p>
+        </div>
+
+        {/* Items summary */}
+        <section className="mb-6 rounded-xl border bg-card">
+          <div className="border-b px-5 py-4">
+            <h2 className="text-sm font-semibold">
+              Items in Batch ({items.length})
+            </h2>
+          </div>
+          {items.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+              No items in your batch. Go back and add some items first.
+            </p>
+          ) : (
+            <div className="overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Item</th>
+                    <th className="px-4 py-3 text-left font-medium">Category</th>
+                    <th className="px-4 py-3 text-left font-medium">Qty</th>
+                    <th className="px-4 py-3 text-left font-medium">Expiry</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {items.map((item) => (
+                    <tr key={item.id} className="hover:bg-secondary/40">
+                      <td className="px-4 py-3 font-medium">{item.name}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {item.category.split(", ").map((c) => (
+                            <span
+                              key={c}
+                              className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {item.quantity} {item.unit}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {item.expiry ? item.expiry.replace("T", " ") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* Batch type display */}
+        <section className="mb-6 rounded-xl border bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Batch Type
+          </p>
+          <p className="mt-1 text-sm font-medium">{batchType}</p>
+        </section>
+
+        {/* Collection window */}
+        <section className="mb-8 rounded-xl border bg-card p-5">
+          <h2 className="mb-1 text-sm font-semibold">Collection Deadline (optional)</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Set a date by which NGOs should collect this batch.
+          </p>
+          <DateTimePicker
+            value={collectionDateTime}
+            onChange={setCollectionDateTime}
+          />
+        </section>
+
+        {/* Error message */}
+        {error && (
+          <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-between gap-4">
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/donor/donate/batch" })}
+            className="rounded-md border px-6 py-2 text-sm font-medium hover:bg-secondary transition-colors"
+          >
+            ← Back
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={items.length === 0 || isSubmitting}
+            className="flex-1 rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {isSubmitting ? "Submitting…" : "Submit Donation"}
+          </button>
+        </div>
+      </main>
+    </div>
   );
-}
-
-export async function submitDonationBatch(
-  items: DonationItem[],
-  batchType: string,             // Changed parameter name to match review component usage
-  collectionDateTime: string,
-  submittedAt: string
-): Promise<RecentDonation> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    throw new Error("You must be signed in to submit a donation.");
-  }
-
-  // Fallback category detection context if batchType text comes in blank
-  let computedBatchType = batchType;
-  if (!computedBatchType) {
-    const allCategories = items.flatMap((item) =>
-      item.category ? item.category.split(", ").map(c => c.trim()) : []
-    );
-    const uniqueCategories = Array.from(new Set(allCategories)).filter(Boolean);
-    computedBatchType = uniqueCategories.length > 1
-      ? "Mixed Donation"
-      : uniqueCategories[0] || "Donation";
-  }
-
-  // 3. Perform parent batch insert
-  const { data: batchRow, error: batchError } = await supabase
-    .from("donation_batches")
-    .insert({
-      donor_id: userData.user.id,
-      batch_type: computedBatchType, 
-      collection_datetime: collectionDateTime || null,
-      submitted_at: submittedAt,
-    })
-    .select()
-    .single();
-
-  if (batchError || !batchRow) {
-    throw batchError ?? new Error("Failed to create donation batch");
-  }
-
-  // 4. Map and batch save your line items
-  const itemRows = items.map((item) => ({
-    batch_id: batchRow.id,
-    name: item.name,
-    category: item.category,
-    quantity: Number(item.quantity) || 0,
-    unit: item.unit,
-    expiry: item.expiry || null,
-  }));
-
-  const { data: insertedItems, error: itemsError } = await supabase
-    .from("donation_items")
-    .insert(itemRows)
-    .select();
-
-  if (itemsError) throw itemsError;
-
-  clearCurrentBatch();
-  return mapBatchRow({ ...batchRow, donation_items: insertedItems });
-}
-
-export async function loadRecentDonations(): Promise<RecentDonation[]> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) return [];
-
-  const { data, error } = await supabase
-    .from("donation_batches")
-    .select("*, donation_items(*)")
-    .eq("donor_id", userData.user.id)
-    .order("submitted_at", { ascending: false })
-    .limit(10);
-
-  if (error || !data) return [];
-
-  return pruneExpiredRecentDonations(data.map(mapBatchRow));
-}
-
-export async function updateDonationStatus(identifier: string | number, status: string): Promise<RecentDonation | null> {
-  const query = supabase
-    .from("donation_batches")
-    .update({ status })
-    .select("*, donation_items(*)");
-
-  const { data, error } = await (typeof identifier === "number"
-    ? query.eq("display_id", identifier)
-    : query.eq("id", identifier)
-  ).single();
-
-  if (error || !data) return null;
-  return mapBatchRow(data);
 }

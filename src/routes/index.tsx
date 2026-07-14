@@ -144,10 +144,6 @@ function Hero() {
       <div className="mx-auto max-w-7xl px-6 py-9 md:py-14">
         <div className="grid items-center gap-12 md:grid-cols-12">
           <div className="md:col-span-7">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-medium uppercase tracking-widest text-neutral-700">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-black" />
-              Live network · responding now
-            </div>
             <h1 className="text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
               Connecting<br />
               Excess to<br />

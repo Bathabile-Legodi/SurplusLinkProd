@@ -118,6 +118,7 @@ function ExplorePage() {
   const [showSort, setShowSort] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string | null>(null);
+  const [showExpired, setShowExpired] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -242,6 +243,8 @@ function ExplorePage() {
     return match ? parseFloat(match[1]) : Infinity;
   }
 
+  const now = new Date();
+
   const filteredDonations = rawDonations.filter((donation) => {
     const matchesCategory = selectedCategory
       ? donation.title.toLowerCase().includes(selectedCategory.toLowerCase())
@@ -254,7 +257,14 @@ function ExplorePage() {
       donation.donor.toLowerCase().includes(cleanQuery) ||
       donation.pickup.toLowerCase().includes(cleanQuery);
 
-    return matchesCategory && matchesSearch;
+    // A batch is "expired" if its collection deadline has passed
+    const isExpired = donation.collection_datetime
+      ? new Date(donation.collection_datetime) < now
+      : false;
+
+    const matchesExpiry = showExpired ? true : !isExpired;
+
+    return matchesCategory && matchesSearch && matchesExpiry;
   });
 
   const sortedDonations = [...filteredDonations].sort((a, b) => {
@@ -335,9 +345,9 @@ function ExplorePage() {
                   setShowFilters(!showFilters);
                   setShowSort(false);
                 }}
-                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedCategory ? "bg-secondary border-primary/40" : "bg-card"}`}
+                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedCategory || showExpired ? "bg-secondary border-primary/40" : "bg-card"}`}
               >
-                Filters {selectedCategory ? "(Active)" : ""}
+                Filters {selectedCategory || showExpired ? "(Active)" : ""}
               </button>
 
               {showFilters && (
@@ -355,6 +365,16 @@ function ExplorePage() {
                       </button>
                     ))}
                   </div>
+                  <div className="mt-3 border-t pt-3">
+                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Availability</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowExpired(v => !v)}
+                      className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${showExpired ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                    >
+                      {showExpired ? "✓ " : ""}Show expired listings
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -362,7 +382,7 @@ function ExplorePage() {
         </div>
 
         <h2 className="mt-8 mb-3 text-sm font-semibold">
-          Available Donations Near You ({sortedDonations.length})
+          {showExpired ? "All Donations" : "Active Donations Near You"} ({sortedDonations.length})
         </h2>
 
         {loading ? (
@@ -371,7 +391,9 @@ function ExplorePage() {
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
             {searchQuery || selectedCategory
               ? "No donations matching your filters found."
-              : "No available donations right now."}
+              : showExpired
+              ? "No donations found."
+              : "No active donations right now. Enable \"Show expired\" in Filters to see past listings."}
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -384,9 +406,20 @@ function ExplorePage() {
               >
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold capitalize text-foreground">{d.title}</h3>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600">
-                    {d.status}
-                  </span>
+                  {(() => {
+                    const isExpired = d.collection_datetime
+                      ? new Date(d.collection_datetime) < now
+                      : false;
+                    return isExpired ? (
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200">
+                        Expired
+                      </span>
+                    ) : (
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600">
+                        {d.status}
+                      </span>
+                    );
+                  })()}
                 </div>
                 
                 <div className="mt-3 space-y-1 text-xs text-muted-foreground">

@@ -21,456 +21,298 @@ function CollectionInstructions() {
   const { id } = Route.useParams();
 
   const batchId = `#${id.toUpperCase().slice(0, 8)}`;
-
   const contactName = "David M.";
   const contactRole = "Logistics Supervisor";
   const phone = "+27 82 123 4567";
-
   const gateCode = "#8842-B";
+  const loadingBay = "Enter Gate 3, proceed to Bay 4 (Cold Storage)";
+  const pickupWindow = "Today · 13:00 – 14:30";
+  const verificationPin = "4829";
 
-  const loadingBay =
-    "Enter Gate 3, proceed to Bay 4 (Cold Storage)";
+  const [copied, setCopied] = useState("");
 
-  const pickupWindow =
-    "Pickup strictly between 13:00 - 14:30 Today";
-
- const verificationPin = "4829";
-
- const [copied, setCopied] = useState("");
-
-function copy(text: string, message: string) {
-  const textArea = document.createElement("textarea");
-
-  textArea.value = text;
-  document.body.appendChild(textArea);
-
-  textArea.select();
-  document.execCommand("copy");
-
-  document.body.removeChild(textArea);
-
-  setCopied(message);
-  setTimeout(() => {
-  setCopied("");
-}, 2000);
-}
-
-  
+  function copy(text: string, label: string) {
+    navigator.clipboard.writeText(text).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    });
+    setCopied(label);
+    setTimeout(() => setCopied(""), 2000);
+  }
 
   function openMaps() {
-    window.open(
-      "https://maps.google.com",
-      "_blank"
-    );
+    window.open("https://maps.google.com", "_blank");
   }
 
   function sendDriver() {
-    const message = `
-Collection Instructions
-
-Batch: ${batchId}
-
-Contact: ${contactName}
-Phone: ${phone}
-
-Gate Code: ${gateCode}
-
-Loading Bay:
-${loadingBay}
-
-Pickup Window:
-${pickupWindow}
-
-Verification PIN:
-${verificationPin}
-`;
-
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(message)}`,
-      "_blank"
-    );
+    const message = `Collection Instructions\n\nBatch: ${batchId}\nContact: ${contactName}\nPhone: ${phone}\n\nGate Code: ${gateCode}\nLoading Bay: ${loadingBay}\nPickup Window: ${pickupWindow}\nVerification PIN: ${verificationPin}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   }
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto max-w-5xl px-6 py-10">
 
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-
+        {/* Page header */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-
-            <h1 className="text-4xl font-bold">
-              Collection Instructions — Batch {batchId}
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Collection Instructions
             </h1>
-
-
+            <p className="mt-1 text-sm text-muted-foreground">
+              Batch <span className="font-medium text-foreground">{batchId}</span>
+            </p>
           </div>
-
-          <div className="flex flex-wrap gap-3">
-
+          <div className="flex flex-wrap gap-2">
             <button
+              type="button"
               onClick={sendDriver}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border bg-background px-5 py-3 transition hover:bg-muted"
+              className="inline-flex h-9 items-center gap-2 rounded-md border bg-card px-4 text-sm font-medium hover:bg-secondary transition-colors"
             >
-              <MessageSquare className="h-5 w-5" />
-              Send to Driver (WhatsApp/SMS)
+              <MessageSquare className="h-4 w-4" />
+              Send to Driver
             </button>
-
             <button
+              type="button"
               onClick={openMaps}
-              className="flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-5 py-3 text-primary-foreground transition hover:opacity-90"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              <MapPin className="h-5 w-5" />
-              Open in Google Maps
-
-              <ExternalLink className="h-4 w-4" />
+              <MapPin className="h-4 w-4" />
+              Open in Maps
+              <ExternalLink className="h-3.5 w-3.5 opacity-70" />
             </button>
-
           </div>
-
         </div>
 
-        {/* Donation Summary */}
+        {/* Summary strip */}
+        <section className="mb-6 rounded-xl border bg-card">
+          <div className="grid divide-y sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+            {[
+              { label: "Batch ID", value: batchId },
+              { label: "Donor", value: "FreshMart Fourways" },
+              { label: "Food Type", value: "Fresh Produce" },
+              { label: "Pickup Window", value: pickupWindow },
+            ].map(({ label, value }) => (
+              <div key={label} className="px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {label}
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-<div className="mt-8 rounded-2xl border bg-card p-6 shadow-sm">
+        {/* Main grid */}
+        <div className="grid gap-6 lg:grid-cols-2">
 
-  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {/* Loading Bay & Site Access */}
+          <section className="rounded-xl border bg-card">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold">Loading Bay &amp; Site Access</h2>
+            </div>
+            <div className="space-y-3 p-5">
 
-    <div>
-
-      <p className="text-sm text-muted-foreground">
-        Batch ID
-      </p>
-
-      <p className="mt-1 text-lg font-semibold">
-        {batchId}
-      </p>
-
-    </div>
-
-    <div>
-
-      <p className="text-sm text-muted-foreground">
-        Donor
-      </p>
-
-      <p className="mt-1 text-lg font-semibold">
-        FreshMart Fourways
-      </p>
-
-    </div>
-
-    <div>
-
-      <p className="text-sm text-muted-foreground">
-        Food Type
-      </p>
-
-      <p className="mt-1 text-lg font-semibold">
-        Fresh Produce
-      </p>
-
-    </div>
-
-    <div>
-
-      <p className="text-sm text-muted-foreground">
-        Pickup Time
-      </p>
-
-      <p className="mt-1 text-lg font-semibold">
-        Today • 13:00–14:30
-      </p>
-
-    </div>
-
-  </div>
-
-</div>
-
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
-                  {/* Loading Bay & Site Access */}
-
-          <div className="rounded-2xl border bg-card p-8 shadow-sm">
-
-            <h2 className="mb-6 text-2xl font-semibold">
-              Loading Bay & Site Access
-            </h2>
-
-            <div className="space-y-5">
-
-              <div className="rounded-xl border p-5">
-
-                <p className="text-sm text-muted-foreground">
+              {/* Contact */}
+              <div className="rounded-lg bg-secondary/60 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Contact
                 </p>
-
                 <div className="mt-2 flex items-center justify-between">
-
                   <div>
-
-                    <p className="font-semibold">
-                      {contactName}
-                    </p>
-
-                    <p className="text-sm text-muted-foreground">
-                      {contactRole}
-                    </p>
-
+                    <p className="text-sm font-semibold">{contactName}</p>
+                    <p className="text-xs text-muted-foreground">{contactRole}</p>
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 text-primary" />
+                      {phone}
+                    </div>
                   </div>
-
-              <div className="flex items-center gap-2">
-  {copied === "Phone copied!" && (
-    <span className="text-sm font-medium text-emerald-600">
-      ✓ Copied!
-    </span>
-  )}
-
-  <button
-    onClick={() => copy(phone, "Phone copied!")}
-    className="cursor-pointer rounded-lg border p-2 transition hover:bg-muted"
-  >
-    <Copy className="h-4 w-4" />
-  </button>
-</div>
+                  <div className="flex items-center gap-2">
+                    {copied === "Phone copied!" && (
+                      <span className="text-xs font-medium text-[color:var(--success)]">✓ Copied</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => copy(phone, "Phone copied!")}
+                      className="rounded-md border p-1.5 hover:bg-secondary transition-colors"
+                      title="Copy phone number"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-
-                <div className="mt-4 flex items-center gap-2 text-sm">
-
-                  <Phone className="h-4 w-4 text-primary" />
-
-                  {phone}
-
-                </div>
-
               </div>
 
-              
-
-              <div className="rounded-xl border p-5">
-
-                <div className="flex items-center justify-between">
-
-                  <div>
-
-                    <p className="text-sm text-muted-foreground">
-                      Loading Bay
-                    </p>
-
-                    <p className="mt-1 font-semibold">
-                      {loadingBay}
-                    </p>
-
+              {/* Gate code */}
+              <div className="rounded-lg bg-secondary/60 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Gate Code
+                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-sm font-semibold">{gateCode}</p>
+                  <div className="flex items-center gap-2">
+                    {copied === "Gate code copied!" && (
+                      <span className="text-xs font-medium text-[color:var(--success)]">✓ Copied</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => copy(gateCode, "Gate code copied!")}
+                      className="rounded-md border p-1.5 hover:bg-secondary transition-colors"
+                      title="Copy gate code"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-
-                <div className="flex items-center gap-2">
-  {copied === "Loading Bay copied!" && (
-    <span className="text-sm font-medium text-emerald-600">
-      ✓ Copied!
-    </span>
-  )}
-
-  <button
-    onClick={() => copy(loadingBay, "Loading Bay copied!")}
-    className="cursor-pointer rounded-lg border p-2 transition hover:bg-muted"
-  >
-    <Copy className="h-4 w-4" />
-  </button>
-</div>
-
                 </div>
+              </div>
 
+              {/* Loading Bay */}
+              <div className="rounded-lg bg-secondary/60 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Loading Bay
+                </p>
+                <div className="mt-2 flex items-start justify-between gap-3">
+                  <p className="text-sm font-medium">{loadingBay}</p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {copied === "Loading bay copied!" && (
+                      <span className="text-xs font-medium text-[color:var(--success)]">✓ Copied</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => copy(loadingBay, "Loading bay copied!")}
+                      className="rounded-md border p-1.5 hover:bg-secondary transition-colors"
+                      title="Copy loading bay"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
               </div>
 
             </div>
-
-          </div>
+          </section>
 
           {/* Collection Progress */}
-
-          <div className="rounded-2xl border bg-card p-8 shadow-sm">
-
-            <h2 className="mb-6 text-2xl font-semibold">
-              Collection Progress
-            </h2>
-
-            <div className="space-y-6">
-
-              <div className="flex items-start gap-4">
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border">
-                  1
-                </div>
-
-                <div>
-
-                  <p className="font-semibold">
-                    En Route
-                  </p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Driver is travelling to the pickup location.
-                  </p>
-
-                </div>
-
-              </div>
-
-              <div className="ml-5 h-10 w-0.5 bg-border"></div>
-
-              <div className="flex items-start gap-4">
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  2
-                </div>
-
-                <div>
-
-                  <p className="font-semibold">
-                    At Site
-                  </p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Meet the donor contact and verify collection.
-                  </p>
-
-                </div>
-
-              </div>
-
-              <div className="ml-5 h-10 w-0.5 bg-border"></div>
-
-              <div className="flex items-start gap-4">
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border">
-                  3
-                </div>
-
-                <div>
-
-                  <p className="font-semibold">
-                    Loaded & Verified
-                  </p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Confirm collection after loading is complete.
-                  </p>
-
-                </div>
-
-              </div>
-
+          <section className="rounded-xl border bg-card">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold">Collection Progress</h2>
             </div>
+            <div className="p-5">
+              <ol className="space-y-1">
+                {[
+                  {
+                    step: 1,
+                    label: "En Route",
+                    desc: "Driver is travelling to the pickup location.",
+                    active: false,
+                  },
+                  {
+                    step: 2,
+                    label: "At Site",
+                    desc: "Meet the donor contact and verify collection.",
+                    active: true,
+                  },
+                  {
+                    step: 3,
+                    label: "Loaded & Verified",
+                    desc: "Confirm collection after loading is complete.",
+                    active: false,
+                  },
+                ].map(({ step, label, desc, active }, i, arr) => (
+                  <li key={step}>
+                    <div className="flex items-start gap-4 py-2">
+                      <div
+                        className={[
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "border text-muted-foreground",
+                        ].join(" ")}
+                      >
+                        {step}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                          {label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
+                      </div>
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div className="ml-[15px] h-5 w-0.5 bg-border" />
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
 
-          </div>
+          {/* Pickup Information */}
+          <section className="rounded-xl border bg-card lg:col-span-2">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold">Pickup Information &amp; Verification PIN</h2>
+            </div>
+            <div className="grid gap-6 p-5 sm:grid-cols-2">
 
-                    {/* Pickup Information */}
+              {/* Pickup window */}
+              <div className="rounded-lg bg-secondary/60 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Pickup Window
+                </p>
+                <p className="mt-2 text-sm font-semibold">{pickupWindow}</p>
+              </div>
 
-          <div className="mt-6 rounded-2xl border bg-card p-8 shadow-sm lg:col-span-2">
-
-            <div className="grid gap-8 lg:grid-cols-2">
-
-              <div>
-
-                <h2 className="text-2xl font-semibold">
-                  Pickup Information
-                </h2>
-
-                <div className="mt-6 space-y-5">
-
-                  <div className="rounded-xl border p-5">
-
-                    <p className="text-sm text-muted-foreground">
-                      Pickup Window
-                    </p>
-
-                    <p className="mt-2 font-semibold">
-                      {pickupWindow}
-                    </p>
-
+              {/* Verification PIN */}
+              <div className="rounded-lg bg-secondary/60 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Verification PIN
+                </p>
+                <p className="mb-1 mt-0.5 text-xs text-muted-foreground">
+                  Provide this to the donor before collecting.
+                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-4xl font-bold tracking-[0.5rem] text-foreground">
+                    {verificationPin}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {copied === "PIN copied!" && (
+                      <span className="text-xs font-medium text-[color:var(--success)]">✓ Copied</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => copy(verificationPin, "PIN copied!")}
+                      className="rounded-md border p-1.5 hover:bg-secondary transition-colors"
+                      title="Copy PIN"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-
-
                 </div>
-
               </div>
 
-              <div>
-
-  <h2 className="text-2xl font-semibold">
-    Verification PIN
-  </h2>
-
-  <p className="mt-2 text-sm text-muted-foreground">
-    Provide this PIN to the donor before collecting the donation.
-  </p>
-
-  <div className="mt-6 rounded-2xl border p-8">
-
-    <div className="flex items-center justify-between">
-
-      <div>
-
-        <p className="text-sm text-muted-foreground">
-          Collection PIN
-        </p>
-
-        <p className="mt-3 text-5xl font-bold tracking-[0.6rem]">
-          4829
-        </p>
-
-      </div>
-
-      <div className="flex items-center gap-2">
-  {copied === "PIN copied!" && (
-    <span className="text-sm font-medium text-emerald-600">
-      ✓ Copied!
-    </span>
-  )}
-
-  <button
-    onClick={() => copy(verificationPin, "PIN copied!")}
-    className="cursor-pointer rounded-lg border p-2 transition hover:bg-muted"
-  >
-    <Copy className="h-4 w-4" />
-  </button>
-</div>
-
-    </div>
-
-    <p className="mt-6 text-sm text-muted-foreground">
-      The donor will ask for this PIN before handing over the donation.
-    </p>
-
-  </div>
-
-</div>
-
-           
-
             </div>
-
-          </div>
+          </section>
 
         </div>
 
-        <div className="mt-10 flex justify-end">
-
+        {/* Complete collection CTA */}
+        <div className="mt-8 flex justify-end">
           <button
-            className="flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-600 px-8 py-4 font-semibold text-white transition hover:bg-emerald-700 hover:shadow-lg"
+            type="button"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            <CheckCircle2 className="h-5 w-5" />
+            <CheckCircle2 className="h-4 w-4" />
             Complete Collection
           </button>
-
         </div>
 
       </main>
-
     </div>
   );
 }
-
-

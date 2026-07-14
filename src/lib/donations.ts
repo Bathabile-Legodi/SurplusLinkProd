@@ -98,12 +98,22 @@ function mapItemRow(row: any): DonationItem {
 }
 
 function mapBatchRow(row: any): RecentDonation {
+  // display_id is a generated sequence column; fall back to a stable
+  // numeric hash of the UUID so formatBatchId never receives undefined.
+  const displayId =
+    typeof row.display_id === "number"
+      ? row.display_id
+      : Math.abs(
+          String(row.id)
+            .split("")
+            .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
+        ) % 1000;
   return {
-    id: row.display_id,
+    id: displayId,
     batchId: row.id,
-    category: row.batch_type,
-    time: formatDonationTime(row.submitted_at),
-    status: row.status,
+    category: row.batch_type ?? "Donation",
+    time: row.submitted_at ? formatDonationTime(row.submitted_at) : "—",
+    status: row.status ?? "Pending",
     submittedAt: row.submitted_at,
     collectionDateTime: row.collection_datetime,
     items: (row.donation_items ?? []).map(mapItemRow),
@@ -210,9 +220,28 @@ export async function loadRecentDonations(): Promise<RecentDonation[]> {
     .order("submitted_at", { ascending: false })
     .limit(10);
 
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
 
-  return pruneExpiredRecentDonations(data.map(mapBatchRow));
+  // Show all recent batches regardless of item expiry — the donor
+  // should always see their own submissions on the dashboard.
+  return data.map(mapBatchRow);
+}
+
+export async function loadAllDonations(): Promise<RecentDonation[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) return [];
+
+  const { data, error } = await supabase
+    .from("donation_batches")
+    .select("*, donation_items(*)")
+    .eq("donor_id", userData.user.id)
+    .order("submitted_at", { ascending: false });
+
+  if (error) throw error;
+  if (!data) return [];
+
+  return data.map(mapBatchRow);
 }
 
 export async function updateDonationStatus(identifier: string | number, status: string): Promise<RecentDonation | null> {

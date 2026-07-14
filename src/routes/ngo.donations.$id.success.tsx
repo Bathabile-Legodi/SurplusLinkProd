@@ -88,248 +88,123 @@ function ClaimSuccess() {
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
+      <main className="mx-auto max-w-3xl px-6 py-10">
 
-        {/* Success Banner */}
-
-        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-6 shadow-sm">
-
-          <div className="flex items-center gap-5">
-
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white">
-              <CheckCircle2 className="h-9 w-9" />
-            </div>
-
-            <div>
-
-              <h1 className="text-3xl font-bold text-emerald-800">
-                Donation Successfully Claimed
-              </h1>
-
-              <p className="mt-2 text-emerald-700">
-                Your organisation has successfully reserved this donation.
-              </p>
-
-            </div>
-
+        {/* Success banner */}
+        <div className="mb-8 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-[color:var(--success)]">
+            <CheckCircle2 className="h-5 w-5" />
           </div>
-
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Donation Successfully Claimed</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Your organisation has successfully reserved this donation.
+            </p>
+          </div>
         </div>
 
-        {/* Donation Details */}
-
-        <div className="mt-8 rounded-2xl border bg-card p-8 shadow-sm">
-
-          <h2 className="mb-6 text-2xl font-semibold">
-            Donation Details
-          </h2>
-
-          <div className="grid gap-5 md:grid-cols-2">
-
-            <Row
-              icon={<Package className="h-5 w-5" />}
-              label="Batch ID"
-              value={`#${id.toUpperCase().slice(0, 8)}`}
-            />
-
-            <Row
-              icon={<Package className="h-5 w-5" />}
-              label="Batch Type"
-              value={batch?.batch_type ?? "Loading..."}
-            />
-
-            <Row
-              icon={<Building2 className="h-5 w-5" />}
-              label="Donor"
-              value={batch?.donor ?? "Loading..."}
-            />
-
-            <Row
-              icon={<Calendar className="h-5 w-5" />}
-              label="Pickup Deadline"
-              value={deadlineLabel}
-            />
-
+        {/* Donation details */}
+        <section className="mb-6 rounded-xl border bg-card">
+          <div className="border-b px-5 py-4">
+            <h2 className="text-sm font-semibold">Donation Details</h2>
           </div>
+          <div className="grid gap-px bg-border sm:grid-cols-2">
+            {[
+              { label: "Batch ID", value: `#${id.toUpperCase().slice(0, 8)}` },
+              { label: "Batch Type", value: batch?.batch_type ?? "Loading…" },
+              { label: "Donor", value: batch?.donor ?? "Loading…" },
+              { label: "Pickup Deadline", value: deadlineLabel },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-card px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        </div>
-
-        {/* Pickup Method */}
-
-        <div className="mt-10">
-
-          <h2 className="text-2xl font-semibold">
-            How will your organization pick up this donation?
-          </h2>
-
-          <p className="mt-2 text-muted-foreground">
-            Choose how your organisation will receive this donation.
-          </p>
-
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-
-  {/* Pickup Option */}
-                      {/* Pickup Option */}
-
+        {/* Pickup method */}
+        <section className="mb-6 rounded-xl border bg-card">
+          <div className="border-b px-5 py-4">
+            <h2 className="text-sm font-semibold">Collection Method</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Choose how your organisation will receive this donation.</p>
+          </div>
+          <div className="grid gap-3 p-5 sm:grid-cols-2">
+            {/* Self-collect */}
             <button
               type="button"
               onClick={() => setMethod("pickup")}
-              className={`cursor-pointer rounded-2xl border p-6 text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+              className={[
+                "rounded-xl border p-4 text-left transition-all duration-150 hover:shadow-sm",
                 method === "pickup"
-                  ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200"
-                  : "border-border bg-card"
-              }`}
+                  ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+                  : "border-border bg-secondary/40 hover:bg-secondary",
+              ].join(" ")}
             >
-              <div className="flex items-start justify-between">
-
-                <div>
-
-                  <div className="flex items-center gap-3">
-
-                    <Truck className="h-6 w-6 text-emerald-600" />
-
-                    <h3 className="text-lg font-semibold">
-                      We Will Pick It Up
-                    </h3>
-
-                  </div>
-
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Your organisation will collect this donation using its own
-                    vehicle. Please arrive before the pickup deadline shown
-                    above.
-                  </p>
-
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-semibold">We Will Pick It Up</span>
                 </div>
-
                 {method === "pickup" && (
-                  <div className="rounded-full bg-emerald-500 p-1 text-white">
-                    <Check className="h-4 w-4" />
+                  <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Check className="h-2.5 w-2.5" />
                   </div>
                 )}
-
               </div>
-
+              <p className="mt-2 text-xs text-muted-foreground">
+                Your organisation will collect using its own vehicle. Arrive before the pickup deadline.
+              </p>
             </button>
 
-            {/* Delivery Option */}
-
+            {/* Delivery */}
             <button
               type="button"
               onClick={() => setMethod("delivery")}
-              className={`cursor-pointer rounded-2xl border p-6 text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+              className={[
+                "rounded-xl border p-4 text-left transition-all duration-150 hover:shadow-sm",
                 method === "delivery"
-                  ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200"
-                  : "border-border bg-card"
-              }`}
+                  ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+                  : "border-border bg-secondary/40 hover:bg-secondary",
+              ].join(" ")}
             >
-              <div className="flex items-start justify-between">
-
-                <div>
-
-                  <div className="flex items-center gap-3">
-
-                    <MapPin className="h-6 w-6 text-primary" />
-
-                    <h3 className="text-lg font-semibold">
-                      Request Delivery
-                    </h3>
-
-                  </div>
-
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Request delivery to your organisation if transport is not
-                    available. This option can be enabled in a future update.
-                  </p>
-
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-semibold">Request Delivery</span>
                 </div>
-
                 {method === "delivery" && (
-                  <div className="rounded-full bg-emerald-500 p-1 text-white">
-                    <Check className="h-4 w-4" />
+                  <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Check className="h-2.5 w-2.5" />
                   </div>
                 )}
-
               </div>
-
+              <p className="mt-2 text-xs text-muted-foreground">
+                Request delivery to your organisation if transport is unavailable. Coming soon.
+              </p>
             </button>
-
           </div>
+        </section>
 
-        </div>
-
-        {/* Confirmation Section */}
-
-        <div className="mt-8 rounded-xl border bg-muted/30 p-5">
-
-          <h3 className="text-lg font-semibold">
-            Confirm Pickup Method
-          </h3>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            After confirming, you'll receive the pickup instructions and be able
-            to proceed with collecting this donation.
-          </p>
-
-        </div>
-
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-
-  <Link
+        {/* Actions */}
+        <div className="flex gap-3">
+          <Link
             to="/ngo/dashboard"
-            className="flex-1 cursor-pointer rounded-lg border border-border bg-background py-3 text-center font-medium transition-all hover:bg-secondary hover:shadow-md"
+            className="inline-flex h-9 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-secondary transition-colors"
           >
-            ← Back to Dashboard
+            ← Dashboard
           </Link>
-
           <button
             type="button"
             disabled={!method}
             onClick={handleConfirm}
-            className={`flex-1 rounded-lg py-3 font-semibold transition-all ${
-              method
-                ? "cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg"
-                : "cursor-not-allowed bg-muted text-muted-foreground"
-            }`}
+            className="flex-1 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Confirm →
           </button>
-
         </div>
 
       </main>
     </div>
   );
-}
-
-function Row({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-4 rounded-xl border bg-background p-5">
-
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-        {icon}
-      </div>
-
-      <div className="flex-1">
-
-        <p className="text-sm text-muted-foreground">
-          {label}
-        </p>
-
-        <p className="mt-1 font-semibold break-words">
-          {value}
-        </p>
-
-      </div>
-
-    </div>
-  );
-}
+}
