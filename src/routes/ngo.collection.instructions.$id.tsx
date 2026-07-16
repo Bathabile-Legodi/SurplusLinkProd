@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Phone,
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/ngo/collection/instructions/$id")({
 
 function CollectionInstructions() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
 
   const batchId = `#${id.toUpperCase().slice(0, 8)}`;
   const contactName = "David M.";
@@ -301,14 +302,15 @@ function CollectionInstructions() {
 
         </div>
 
-        {/* Complete collection CTA */}
+        {/* Confirm collection CTA */}
         <div className="mt-8 flex justify-end">
           <button
             type="button"
+            onClick={() => navigate({ to: "/ngo/claims" })}
             className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <CheckCircle2 className="h-4 w-4" />
-            Complete Collection
+            Confirm Collection
           </button>
         </div>
 

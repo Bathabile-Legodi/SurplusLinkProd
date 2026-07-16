@@ -17,7 +17,6 @@ interface DropoffData {
 
 interface ActiveDelivery {
   orderRef: string;
-  wumdropId: string;
   status: string;
   lastLocation: string | null;
 }
@@ -106,7 +105,6 @@ export default function DispatchDashboard({
 
       setActiveDelivery({
         orderRef,
-        wumdropId: result.deliveryId ?? '—',
         status: 'DISPATCHED_TO_DRIVER',
         lastLocation: null,
       });
@@ -207,10 +205,7 @@ export default function DispatchDashboard({
               <span className="font-medium text-foreground">Order Reference: </span>
               <span className="font-mono">{activeDelivery.orderRef}</span>
             </p>
-            <p>
-              <span className="font-medium text-foreground">Waybill ID: </span>
-              <span className="font-mono">{activeDelivery.wumdropId}</span>
-            </p>
+
             <div className="flex items-center gap-2">
               <span className="font-medium text-foreground">Live Street Status:</span>
               <StatusBadge status={activeDelivery.status} />

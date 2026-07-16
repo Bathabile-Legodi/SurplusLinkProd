@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
-import { Package, ArrowRight, CheckCircle2, Clock, Truck, MapPin } from "lucide-react";
+import { Package, ArrowRight, CheckCircle2, Clock, Truck, MapPin, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/ngo/claims")({
   head: () => ({ meta: [{ title: "My Claimed Donations — SurplusLink" }] }),
@@ -184,7 +184,7 @@ function ClaimCard({ claim }: { claim: ClaimedBatch }) {
           params={{ id: claim.id }}
           className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
-          Track <ArrowRight className="h-3 w-3" />
+          <Eye className="h-3 w-3" /> View
         </Link>
       </div>
     </li>

@@ -71,18 +71,18 @@ function ClaimSuccess() {
     : "—";
 
   function handleConfirm() {
-  if (method === "pickup") {
-    navigate({
-      to: "/ngo/collection/instructions/$id",
-      params: () => ({ id }),
-    });
-    return;
-  }
+    if (method === "pickup") {
+      navigate({
+        to: "/ngo/collection/instructions/$id",
+        params: () => ({ id }),
+      });
+      return;
+    }
 
-  if (method === "delivery") {
-    alert("Delivery flow coming soon.");
+    if (method === "delivery") {
+      navigate({ to: "/ngo/claims" });
+    }
   }
-}
 
   return (
     <div className="min-h-screen bg-background">
