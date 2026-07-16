@@ -7,3 +7,4 @@ leaflet & react-leaflet (Free map engine for retroactive data representation (su
 @tanstack/react-router (Handling dashboard pages)
 
 react & react-dom (The core framework)
+npm install

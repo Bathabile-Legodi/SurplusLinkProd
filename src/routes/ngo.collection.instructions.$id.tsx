@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Phone,
   Copy,
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/ngo/collection/instructions/$id")({
   head: () => ({
@@ -16,6 +17,12 @@ export const Route = createFileRoute("/ngo/collection/instructions/$id")({
   }),
   component: CollectionInstructions,
 });
+
+interface BatchSummary {
+  batch_type: string;
+  donor: string;
+  collection_datetime: string | null;
+}
 
 function CollectionInstructions() {
   const { id } = Route.useParams();
@@ -27,10 +34,52 @@ function CollectionInstructions() {
   const phone = "+27 82 123 4567";
   const gateCode = "#8842-B";
   const loadingBay = "Enter Gate 3, proceed to Bay 4 (Cold Storage)";
-  const pickupWindow = "Today · 13:00 – 14:30";
-  const verificationPin = "4829";
 
+  const [batch, setBatch] = useState<BatchSummary | null>(null);
   const [copied, setCopied] = useState("");
+  
+  // Generate a random 4-digit verification PIN once on mount
+  const [verificationPin] = useState(() => 
+    Math.floor(1000 + Math.random() * 9000).toString()
+  );
+
+  useEffect(() => {
+    async function fetchBatch() {
+      const { data, error } = await supabase
+        .from("donation_batches")
+        .select(`
+          batch_type,
+          collection_datetime,
+          donors (
+            organization_name
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (!error && data) {
+        const raw = data as any;
+        setBatch({
+          batch_type: raw.batch_type || "Surplus Food",
+          donor: raw.donors?.organization_name || "Anonymous Donor",
+          collection_datetime: raw.collection_datetime,
+        });
+      }
+    }
+
+    fetchBatch();
+  }, [id]);
+
+  // Format the pickup window using the database collection_datetime
+  const pickupWindow = batch?.collection_datetime
+    ? new Date(batch.collection_datetime).toLocaleString("en-ZA", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
 
   function copy(text: string, label: string) {
     navigator.clipboard.writeText(text).catch(() => {
@@ -96,8 +145,8 @@ function CollectionInstructions() {
           <div className="grid divide-y sm:grid-cols-4 sm:divide-x sm:divide-y-0">
             {[
               { label: "Batch ID", value: batchId },
-              { label: "Donor", value: "FreshMart Fourways" },
-              { label: "Food Type", value: "Fresh Produce" },
+              { label: "Donor", value: batch?.donor ?? "Loading…" },
+              { label: "Food Type", value: batch?.batch_type ?? "Loading…" },
               { label: "Pickup Window", value: pickupWindow },
             ].map(({ label, value }) => (
               <div key={label} className="px-5 py-4">
