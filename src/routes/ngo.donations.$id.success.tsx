@@ -70,7 +70,19 @@ function ClaimSuccess() {
       })
     : "—";
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    if (!method) return;
+
+    // Best-effort: persist collection_type for future use (column may not exist yet)
+    try {
+      await supabase
+        .from("donation_batches")
+        .update({ collection_type: method })
+        .eq("id", id);
+    } catch (err) {
+      console.warn("[handleConfirm] collection_type update failed (column may not exist yet):", err);
+    }
+
     if (method === "pickup") {
       navigate({
         to: "/ngo/collection/instructions/$id",

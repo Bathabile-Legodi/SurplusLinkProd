@@ -91,17 +91,24 @@ function Nav() {
             Register as Donor or NGO
           </Link>
         </div>
-        <button
-          className="md:hidden"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          <div className="space-y-1.5">
-            <span className="block h-0.5 w-6 bg-black" />
-            <span className="block h-0.5 w-6 bg-black" />
-            <span className="block h-0.5 w-6 bg-black" />
-          </div>
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <Link
+            to="/login"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-black bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
+          >
+            Sign In
+          </Link>
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+          >
+            <div className="space-y-1.5">
+              <span className="block h-0.5 w-6 bg-black" />
+              <span className="block h-0.5 w-6 bg-black" />
+              <span className="block h-0.5 w-6 bg-black" />
+            </div>
+          </button>
+        </div>
       </div>
       {open && (
         <div className="border-t border-black/10 bg-white px-6 py-4 md:hidden">

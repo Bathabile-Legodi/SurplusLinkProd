@@ -58,6 +58,7 @@ function CategorySelector({ selected, onChange }: { selected: string[]; onChange
 function CreateBatch() {
   const navigate = useNavigate();
   const [items, setItems] = useState<ManagedDonationItem[]>([]);
+  const [resetKey, setResetKey] = useState(0);
 
   // 1. Check expiration times on component mount and update statuses
   useEffect(() => {
@@ -122,6 +123,7 @@ function CreateBatch() {
 
     setItems([...items, item]);
     setDraft({ name: "", category: "Produce", categories: [], quantity: "", unit: "", expiry: "", status: "Active" });
+    setResetKey(k => k + 1);
   };
 
   const removeItem = (idx: number) => {
@@ -151,6 +153,7 @@ function CreateBatch() {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Expiry (optional)</label>
               <DatePicker
+                key={resetKey}
                 value={draft.expiry}
                 onChange={(v) => setDraft({ ...draft, expiry: v })}
               />

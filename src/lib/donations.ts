@@ -177,9 +177,10 @@ export async function submitDonationBatch(
     .from("donation_batches")
     .insert({
       donor_id: userData.user.id,
-      batch_type: computedBatchType, 
+      batch_type: computedBatchType,
       collection_datetime: collectionDateTime || null,
       submitted_at: submittedAt,
+      status: 'unclaimed',
     })
     .select()
     .single();

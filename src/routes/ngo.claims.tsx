@@ -50,6 +50,7 @@ function MyClaims() {
           status,
           collection_datetime,
           claimed_at,
+          collection_type,
           donors (
             organization_name,
             address
@@ -58,14 +59,18 @@ function MyClaims() {
         .eq("claimed_by", user.id)
         .order("claimed_at", { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        console.error("[MyClaims] Supabase fetch error:", error);
+      }
+
+      if (data) {
         setClaims(data.map((b: any) => ({
           id: b.id,
           batch_type: b.batch_type || "Surplus Food",
           status: b.status || "claimed",
           collection_datetime: b.collection_datetime,
           claimed_at: b.claimed_at,
-          collection_type: null,
+          collection_type: b.collection_type || null,
           donor: b.donors?.organization_name || "Anonymous Donor",
           pickup: b.donors?.address || "Location not specified",
         })));
@@ -179,13 +184,24 @@ function ClaimCard({ claim }: { claim: ClaimedBatch }) {
         <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>
           {label}
         </span>
-        <Link
-          to="/ngo/track/$id"
-          params={{ id: claim.id }}
-          className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Eye className="h-3 w-3" /> View
-        </Link>
+        {claim.collection_type === 'pickup' ? (
+          <Link
+            to="/ngo/collection/instructions/$id"
+            params={{ id: claim.id }}
+            search={{ from: 'claims' }}
+            className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Eye className="h-3 w-3" /> View
+          </Link>
+        ) : (
+          <Link
+            to="/ngo/track/$id"
+            params={{ id: claim.id }}
+            className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Eye className="h-3 w-3" /> View
+          </Link>
+        )}
       </div>
     </li>
   );
