@@ -15,6 +15,15 @@ import {
   Clock,
 } from "lucide-react";
 
+// this is a temporarily at the very top of main.tsx to ignore extension noise
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", (event) => {
+    if (event.reason?.message?.includes("A listener indicated an asynchronous response")) {
+      event.preventDefault();
+    }
+  });
+}
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -82,17 +91,24 @@ function Nav() {
             Register as Donor or NGO
           </Link>
         </div>
-        <button
-          className="md:hidden"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          <div className="space-y-1.5">
-            <span className="block h-0.5 w-6 bg-black" />
-            <span className="block h-0.5 w-6 bg-black" />
-            <span className="block h-0.5 w-6 bg-black" />
-          </div>
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <Link
+            to="/login"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-black bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
+          >
+            Sign In
+          </Link>
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+          >
+            <div className="space-y-1.5">
+              <span className="block h-0.5 w-6 bg-black" />
+              <span className="block h-0.5 w-6 bg-black" />
+              <span className="block h-0.5 w-6 bg-black" />
+            </div>
+          </button>
+        </div>
       </div>
       {open && (
         <div className="border-t border-black/10 bg-white px-6 py-4 md:hidden">
@@ -135,10 +151,6 @@ function Hero() {
       <div className="mx-auto max-w-7xl px-6 py-9 md:py-14">
         <div className="grid items-center gap-12 md:grid-cols-12">
           <div className="md:col-span-7">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-medium uppercase tracking-widest text-neutral-700">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-black" />
-              Live network · responding now
-            </div>
             <h1 className="text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
               Connecting<br />
               Excess to<br />

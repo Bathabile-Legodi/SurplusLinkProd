@@ -21,9 +21,6 @@ export type RecentDonation = {
 };
 
 const CURRENT_BATCH_KEY = "surpluslink-current-donation-batch";
-//const RECENT_DONATIONS_KEY = "surpluslink-recent-donations";
-//const LAST_SUBMITTED_BATCH_KEY = "surpluslink-last-submitted-batch-id";
-//const MAX_BATCH_ID = 999;
 
 export function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -101,12 +98,22 @@ function mapItemRow(row: any): DonationItem {
 }
 
 function mapBatchRow(row: any): RecentDonation {
+  // display_id is a generated sequence column; fall back to a stable
+  // numeric hash of the UUID so formatBatchId never receives undefined.
+  const displayId =
+    typeof row.display_id === "number"
+      ? row.display_id
+      : Math.abs(
+          String(row.id)
+            .split("")
+            .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
+        ) % 1000;
   return {
-    id: row.display_id,
+    id: displayId,
     batchId: row.id,
-    category: row.batch_type,
-    time: formatDonationTime(row.submitted_at),
-    status: row.status,
+    category: row.batch_type ?? "Donation",
+    time: row.submitted_at ? formatDonationTime(row.submitted_at) : "—",
+    status: row.status ?? "Pending",
     submittedAt: row.submitted_at,
     collectionDateTime: row.collection_datetime,
     items: (row.donation_items ?? []).map(mapItemRow),
@@ -144,19 +151,36 @@ export function makeItemId() {
 
 export async function submitDonationBatch(
   items: DonationItem[],
+  batchType: string,             // Changed parameter name to match review component usage
   collectionDateTime: string,
+  submittedAt: string
 ): Promise<RecentDonation> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
     throw new Error("You must be signed in to submit a donation.");
   }
 
+  // Fallback category detection context if batchType text comes in blank
+  let computedBatchType = batchType;
+  if (!computedBatchType) {
+    const allCategories = items.flatMap((item) =>
+      item.category ? item.category.split(", ").map(c => c.trim()) : []
+    );
+    const uniqueCategories = Array.from(new Set(allCategories)).filter(Boolean);
+    computedBatchType = uniqueCategories.length > 1
+      ? "Mixed Donation"
+      : uniqueCategories[0] || "Donation";
+  }
+
+  // 3. Perform parent batch insert
   const { data: batchRow, error: batchError } = await supabase
     .from("donation_batches")
     .insert({
       donor_id: userData.user.id,
-      batch_type: items.length > 1 ? "Mixed Donation" : items[0]?.category ?? "Donation",
-      collection_datetime: collectionDateTime,
+      batch_type: computedBatchType,
+      collection_datetime: collectionDateTime || null,
+      submitted_at: submittedAt,
+      status: 'unclaimed',
     })
     .select()
     .single();
@@ -165,13 +189,14 @@ export async function submitDonationBatch(
     throw batchError ?? new Error("Failed to create donation batch");
   }
 
+  // 4. Map and batch save your line items
   const itemRows = items.map((item) => ({
     batch_id: batchRow.id,
     name: item.name,
     category: item.category,
-    quantity: Number(item.quantity),
+    quantity: Number(item.quantity) || 0,
     unit: item.unit,
-    expiry: item.expiry,
+    expiry: item.expiry || null,
   }));
 
   const { data: insertedItems, error: itemsError } = await supabase
@@ -196,9 +221,12 @@ export async function loadRecentDonations(): Promise<RecentDonation[]> {
     .order("submitted_at", { ascending: false })
     .limit(10);
 
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
 
-  return pruneExpiredRecentDonations(data.map(mapBatchRow));
+  // Show all recent batches regardless of item expiry — the donor
+  // should always see their own submissions on the dashboard.
+  return data.map(mapBatchRow);
 }
 
 export async function loadAllDonations(): Promise<RecentDonation[]> {
@@ -211,18 +239,22 @@ export async function loadAllDonations(): Promise<RecentDonation[]> {
     .eq("donor_id", userData.user.id)
     .order("submitted_at", { ascending: false });
 
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
 
   return data.map(mapBatchRow);
 }
 
-export async function updateDonationStatus(displayId: number, status: string): Promise<RecentDonation | null> {
-  const { data, error } = await supabase
+export async function updateDonationStatus(identifier: string | number, status: string): Promise<RecentDonation | null> {
+  const query = supabase
     .from("donation_batches")
     .update({ status })
-    .eq("display_id", displayId)
-    .select("*, donation_items(*)")
-    .single();
+    .select("*, donation_items(*)");
+
+  const { data, error } = await (typeof identifier === "number"
+    ? query.eq("display_id", identifier)
+    : query.eq("id", identifier)
+  ).single();
 
   if (error || !data) return null;
   return mapBatchRow(data);

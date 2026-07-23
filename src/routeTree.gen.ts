@@ -31,6 +31,7 @@ import { Route as DonorDonateBatchRouteImport } from './routes/donor.donate.batc
 import { Route as NgoDonationsIdUnavailableRouteImport } from './routes/ngo.donations.$id.unavailable'
 import { Route as NgoDonationsIdSuccessRouteImport } from './routes/ngo.donations.$id.success'
 import { Route as NgoDonationsIdClaimRouteImport } from './routes/ngo.donations.$id.claim'
+import { Route as NgoCollectionInstructionsIdRouteImport } from './routes/ngo.collection.instructions.$id'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -143,6 +144,12 @@ const NgoDonationsIdClaimRoute = NgoDonationsIdClaimRouteImport.update({
   path: '/claim',
   getParentRoute: () => NgoDonationsIdRoute,
 } as any)
+const NgoCollectionInstructionsIdRoute =
+  NgoCollectionInstructionsIdRouteImport.update({
+    id: '/ngo/collection/instructions/$id',
+    path: '/ngo/collection/instructions/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/donor/donate/success': typeof DonorDonateSuccessRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
+  '/ngo/collection/instructions/$id': typeof NgoCollectionInstructionsIdRoute
   '/ngo/donations/$id/claim': typeof NgoDonationsIdClaimRoute
   '/ngo/donations/$id/success': typeof NgoDonationsIdSuccessRoute
   '/ngo/donations/$id/unavailable': typeof NgoDonationsIdUnavailableRoute
@@ -188,6 +196,7 @@ export interface FileRoutesByTo {
   '/donor/donate/success': typeof DonorDonateSuccessRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
+  '/ngo/collection/instructions/$id': typeof NgoCollectionInstructionsIdRoute
   '/ngo/donations/$id/claim': typeof NgoDonationsIdClaimRoute
   '/ngo/donations/$id/success': typeof NgoDonationsIdSuccessRoute
   '/ngo/donations/$id/unavailable': typeof NgoDonationsIdUnavailableRoute
@@ -213,6 +222,7 @@ export interface FileRoutesById {
   '/donor/donate/success': typeof DonorDonateSuccessRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
+  '/ngo/collection/instructions/$id': typeof NgoCollectionInstructionsIdRoute
   '/ngo/donations/$id/claim': typeof NgoDonationsIdClaimRoute
   '/ngo/donations/$id/success': typeof NgoDonationsIdSuccessRoute
   '/ngo/donations/$id/unavailable': typeof NgoDonationsIdUnavailableRoute
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/donor/donate/success'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
+    | '/ngo/collection/instructions/$id'
     | '/ngo/donations/$id/claim'
     | '/ngo/donations/$id/success'
     | '/ngo/donations/$id/unavailable'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/donor/donate/success'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
+    | '/ngo/collection/instructions/$id'
     | '/ngo/donations/$id/claim'
     | '/ngo/donations/$id/success'
     | '/ngo/donations/$id/unavailable'
@@ -287,6 +299,7 @@ export interface FileRouteTypes {
     | '/donor/donate/success'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
+    | '/ngo/collection/instructions/$id'
     | '/ngo/donations/$id/claim'
     | '/ngo/donations/$id/success'
     | '/ngo/donations/$id/unavailable'
@@ -312,6 +325,7 @@ export interface RootRouteChildren {
   DonorDonateSuccessRoute: typeof DonorDonateSuccessRoute
   NgoDonationsIdRoute: typeof NgoDonationsIdRouteWithChildren
   NgoTrackIdRoute: typeof NgoTrackIdRoute
+  NgoCollectionInstructionsIdRoute: typeof NgoCollectionInstructionsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -470,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NgoDonationsIdClaimRouteImport
       parentRoute: typeof NgoDonationsIdRoute
     }
+    '/ngo/collection/instructions/$id': {
+      id: '/ngo/collection/instructions/$id'
+      path: '/ngo/collection/instructions/$id'
+      fullPath: '/ngo/collection/instructions/$id'
+      preLoaderRoute: typeof NgoCollectionInstructionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -509,6 +530,7 @@ const rootRouteChildren: RootRouteChildren = {
   DonorDonateSuccessRoute: DonorDonateSuccessRoute,
   NgoDonationsIdRoute: NgoDonationsIdRouteWithChildren,
   NgoTrackIdRoute: NgoTrackIdRoute,
+  NgoCollectionInstructionsIdRoute: NgoCollectionInstructionsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

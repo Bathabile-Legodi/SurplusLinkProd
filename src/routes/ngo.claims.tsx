@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
-import { Package, ArrowRight, CheckCircle2, Clock } from "lucide-react";
+import { Package, ArrowRight, CheckCircle2, Clock, Truck, MapPin, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/ngo/claims")({
   head: () => ({ meta: [{ title: "My Claimed Donations — SurplusLink" }] }),
@@ -15,17 +15,18 @@ interface ClaimedBatch {
   status: string;
   collection_datetime: string | null;
   claimed_at: string | null;
+  collection_type: string | null;
   donor: string;
   pickup: string;
 }
 
 function statusMeta(status: string) {
-  switch (status) {
-    case "Claimed":
+  switch (status.toLowerCase()) {
+    case "claimed":
       return { label: "Claimed", cls: "bg-blue-100 text-blue-700 border-blue-200" };
-    case "Delivered":
+    case "delivered":
       return { label: "Delivered", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-    case "Cancelled":
+    case "cancelled":
       return { label: "Cancelled", cls: "bg-red-100 text-red-600 border-red-200" };
     default:
       return { label: status, cls: "bg-neutral-100 text-neutral-500 border-neutral-200" };
@@ -49,6 +50,7 @@ function MyClaims() {
           status,
           collection_datetime,
           claimed_at,
+          collection_type,
           donors (
             organization_name,
             address
@@ -57,13 +59,18 @@ function MyClaims() {
         .eq("claimed_by", user.id)
         .order("claimed_at", { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        console.error("[MyClaims] Supabase fetch error:", error);
+      }
+
+      if (data) {
         setClaims(data.map((b: any) => ({
           id: b.id,
           batch_type: b.batch_type || "Surplus Food",
-          status: b.status || "Claimed",
+          status: b.status || "claimed",
           collection_datetime: b.collection_datetime,
           claimed_at: b.claimed_at,
+          collection_type: b.collection_type || null,
           donor: b.donors?.organization_name || "Anonymous Donor",
           pickup: b.donors?.address || "Location not specified",
         })));
@@ -73,8 +80,9 @@ function MyClaims() {
     fetchClaims();
   }, []);
 
-  const active = claims.filter((c) => c.status === "Claimed");
-  const completed = claims.filter((c) => c.status !== "Claimed");
+  // Normalise to lowercase for comparison so "claimed" and "Claimed" both match
+  const active = claims.filter((c) => c.status.toLowerCase() === "claimed");
+  const completed = claims.filter((c) => c.status.toLowerCase() !== "claimed");
 
   return (
     <div className="min-h-screen bg-background">
@@ -147,6 +155,8 @@ function ClaimCard({ claim }: { claim: ClaimedBatch }) {
       })
     : "No deadline set";
 
+  const isSelfCollect = claim.collection_type === "pickup";
+
   return (
     <li className="flex items-center justify-between rounded-xl border bg-card p-4 gap-4">
       <div className="flex items-center gap-4 min-w-0">
@@ -154,7 +164,19 @@ function ClaimCard({ claim }: { claim: ClaimedBatch }) {
           <Package className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <p className="font-medium capitalize truncate">{claim.batch_type}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium capitalize truncate">{claim.batch_type}</p>
+            {isSelfCollect && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border">
+                <Truck className="h-2.5 w-2.5" /> Self-collect
+              </span>
+            )}
+            {claim.collection_type === "delivery" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border">
+                <MapPin className="h-2.5 w-2.5" /> Delivery
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground truncate">{claim.donor} · Pickup by {deadline}</p>
         </div>
       </div>
@@ -162,13 +184,24 @@ function ClaimCard({ claim }: { claim: ClaimedBatch }) {
         <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>
           {label}
         </span>
-        <Link
-          to="/ngo/track/$id"
-          params={{ id: claim.id }}
-          className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          Track <ArrowRight className="h-3 w-3" />
-        </Link>
+        {claim.collection_type === 'pickup' ? (
+          <Link
+            to="/ngo/collection/instructions/$id"
+            params={{ id: claim.id }}
+            search={{ from: 'claims' }}
+            className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Eye className="h-3 w-3" /> View
+          </Link>
+        ) : (
+          <Link
+            to="/ngo/track/$id"
+            params={{ id: claim.id }}
+            className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Eye className="h-3 w-3" /> View
+          </Link>
+        )}
       </div>
     </li>
   );

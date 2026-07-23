@@ -1,16 +1,58 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import { loadAllDonations, formatDonationTime, type RecentDonation } from "@/lib/donations";
-import { Package, CalendarClock, ChevronDown, ChevronUp, Search, SlidersHorizontal } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import {
+  Package,
+  CalendarClock,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 
 export const Route = createFileRoute("/donor/history")({
   head: () => ({ meta: [{ title: "Donation History — SurplusLink" }] }),
   component: DonorHistory,
 });
 
-function formatBatchId(id: number) {
-  return `#${id.toString().padStart(3, "0")}`;
+// Database TypeScript interfaces
+interface DBItem {
+  id: string;
+  batch_id: string; 
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  expiry: string | null;
+}
+
+interface DBBatch {
+  id: string; 
+  display_id: number; 
+  batch_type: string;
+  created_at: string;
+  status: "Pending" | "Claimed" | "Delivered" | "Expired" | "Cancelled";
+  collection_datetime: string | null;
+  donation_items: DBItem[];
+}
+
+function formatBatchId(id: number | string) {
+  if (typeof id === "number") {
+    return `#${id.toString().padStart(3, "0")}`;
+  }
+  return `#${id.slice(0, 8).toUpperCase()}`;
+}
+
+function formatDonationTime(dateStr: string) {
+  try {
+    return new Date(dateStr).toLocaleString("en-ZA", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return dateStr || "—";
+  }
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -29,12 +71,14 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function DonationRow({ d }: { d: RecentDonation }) {
+function DonationRow({ d }: { d: DBBatch }) {
   const [expanded, setExpanded] = useState(false);
 
-  const collectionLabel = d.collectionDateTime
-    ? formatDonationTime(d.collectionDateTime)
+  const collectionLabel = d.collection_datetime
+    ? formatDonationTime(d.collection_datetime)
     : "—";
+
+  const formattedId = d.display_id ? formatBatchId(d.display_id) : formatBatchId(d.id);
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden transition-shadow hover:shadow-sm">
@@ -52,20 +96,20 @@ function DonationRow({ d }: { d: RecentDonation }) {
         {/* Main info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm">{formatBatchId(d.id)}</span>
+            <span className="font-semibold text-sm">{formattedId}</span>
             <span className="text-muted-foreground text-xs">·</span>
-            <span className="text-sm text-muted-foreground truncate">{d.category}</span>
+            <span className="text-sm text-muted-foreground truncate">{d.batch_type}</span>
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarClock className="h-3 w-3 shrink-0" />
-            <span>Submitted {d.time}</span>
+            <span>Submitted {formatDonationTime(d.created_at)}</span>
           </div>
         </div>
 
         {/* Status + items count + chevron */}
         <div className="flex items-center gap-3 shrink-0">
           <span className="hidden sm:block text-xs text-muted-foreground">
-            {d.items.length} item{d.items.length !== 1 ? "s" : ""}
+            {d.donation_items?.length || 0} item{(d.donation_items?.length || 0) !== 1 ? "s" : ""}
           </span>
           <StatusBadge status={d.status} />
           {expanded ? (
@@ -81,14 +125,14 @@ function DonationRow({ d }: { d: RecentDonation }) {
         <div className="border-t bg-secondary/40 px-5 py-4 space-y-4">
           {/* Meta grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Meta label="Batch ID" value={formatBatchId(d.id)} />
+            <Meta label="Batch ID" value={formattedId} />
             <Meta label="Status" value={d.status} />
             <Meta label="Collection Deadline" value={collectionLabel} />
-            <Meta label="Total Items" value={String(d.items.length)} />
+            <Meta label="Total Items" value={String(d.donation_items?.length || 0)} />
           </div>
 
           {/* Items table */}
-          {d.items.length > 0 && (
+          {d.donation_items && d.donation_items.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Items in batch
@@ -104,7 +148,7 @@ function DonationRow({ d }: { d: RecentDonation }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {d.items.map((item) => (
+                    {d.donation_items.map((item) => (
                       <tr key={item.id} className="hover:bg-secondary/50">
                         <td className="px-4 py-2 font-medium">{item.name}</td>
                         <td className="px-4 py-2">
@@ -150,16 +194,97 @@ function Meta({ label, value }: { label: string; value: string }) {
 const STATUS_OPTIONS = ["All", "Pending", "Claimed", "Delivered", "Expired", "Cancelled"];
 
 function DonorHistory() {
-  const [donations, setDonations] = useState<RecentDonation[]>([]);
+  const [donations, setDonations] = useState<DBBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
-    loadAllDonations().then((d) => {
-      setDonations(d);
-      setLoading(false);
-    });
+    async function fetchDonorData() {
+      try {
+        setLoading(true);
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error("Could not find authenticated user:", userError);
+          setLoading(false);
+          return;
+        }
+
+        // Removed .order('created_at') to prevent missing column crash
+        const { data: batches, error: batchError } = await supabase
+          .from("donation_batches")
+          .select("*")
+          .eq("donor_id", user.id);
+
+        if (batchError) {
+          console.error("Supabase SELECT * failed on donation_batches:", batchError.message, batchError.details);
+          throw batchError;
+        }
+
+        if (batches && batches.length > 0) {
+          const batchIds = batches.map((b) => b.id);
+
+          // Fetch items referencing these batches
+          const { data: items, error: itemsError } = await supabase
+            .from("donation_items")
+            .select("*")
+            .in("batch_id", batchIds);
+
+          if (itemsError) throw itemsError;
+
+          // Process, normalize, and sort batches on the client side
+          const mapped: DBBatch[] = batches.map((batch) => {
+            const batchType = batch.batch_type || batch.category || batch.type || "General Donation";
+            const collectionDatetime = batch.collection_datetime || batch.collection_time || batch.collection_date || null;
+            
+            // Safe fallback for creation timestamp
+            const createdAt = batch.created_at || batch.created_date || batch.date_submitted || batch.timestamp || new Date().toISOString();
+
+            return {
+              id: batch.id,
+              display_id: 0, // Assigned below after sorting
+              batch_type: batchType,
+              created_at: createdAt,
+              status: batch.status || "Pending",
+              collection_datetime: collectionDatetime,
+              donation_items: items
+                ? (items as any[])
+                    .filter((item) => item.batch_id === batch.id)
+                    .map((item) => ({
+                      id: item.id,
+                      batch_id: item.batch_id,
+                      name: item.name,
+                      category: item.category || item.item_type || "Uncategorized",
+                      quantity: Number(item.quantity || 0),
+                      unit: item.unit || "units",
+                      expiry: item.expiry || item.expiry_date || null,
+                    }))
+                : [],
+            };
+          });
+
+          // Sort descending by creation date in memory
+          mapped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+          // Re-index clean UI sequential IDs from oldest to newest
+          const fullyIndexed = mapped.map((batch, index, arr) => ({
+            ...batch,
+            display_id: arr.length - index,
+          }));
+
+          setDonations(fullyIndexed);
+        } else {
+          setDonations([]);
+        }
+      } catch (err) {
+        console.error("Detailed donor history fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDonorData();
   }, []);
 
   const filtered = donations.filter((d) => {
@@ -167,16 +292,16 @@ function DonorHistory() {
     const q = search.toLowerCase();
     const matchesSearch =
       !q ||
-      d.category.toLowerCase().includes(q) ||
-      d.items.some(
-        (item) =>
-          item.name.toLowerCase().includes(q) ||
-          item.category.toLowerCase().includes(q)
-      );
+      d.batch_type.toLowerCase().includes(q) ||
+      (d.donation_items &&
+        d.donation_items.some(
+          (item) =>
+            item.name.toLowerCase().includes(q) ||
+            item.category.toLowerCase().includes(q)
+        ));
     return matchesStatus && matchesSearch;
   });
 
-  // Summary counts
   const total = donations.length;
   const delivered = donations.filter((d) => d.status === "Delivered").length;
   const pending = donations.filter((d) => d.status === "Pending").length;
@@ -261,7 +386,7 @@ function DonorHistory() {
         ) : (
           <div className="space-y-3">
             {filtered.map((d) => (
-              <DonationRow key={d.batchId} d={d} />
+              <DonationRow key={d.id} d={d} />
             ))}
           </div>
         )}

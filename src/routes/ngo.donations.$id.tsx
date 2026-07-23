@@ -34,80 +34,88 @@ interface DonationDetailState {
   donor: string;
   pickup: string;             
   batch_type: string;
+  status: string;
 }
 
-// 1. Google Maps Script Injection Management Hook
 function useGoogleMaps() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if ((window as any).google?.maps?.places) {
+    const globalWin = window as any;
+    if (globalWin.google?.maps?.routes) {
       setReady(true);
       return;
     }
 
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => setReady(true));
-      return;
+    if (!globalWin._mapsReadyCallbacks) {
+      globalWin._mapsReadyCallbacks = [];
     }
 
-    (window as any).initGoogleMaps = () => setReady(true);
+    globalWin._mapsReadyCallbacks.push(() => setReady(true));
+
+    globalWin.initGoogleMaps = () => {
+      if (globalWin._mapsReadyCallbacks) {
+        globalWin._mapsReadyCallbacks.forEach((cb: () => void) => cb());
+      }
+    };
+
+    const existing = document.getElementById("google-maps-script");
+    if (existing) {
+      existing.addEventListener("load", () => {
+        if (globalWin.google?.maps?.routes) setReady(true);
+      });
+      return;
+    }
 
     const script = document.createElement("script");
     script.id = "google-maps-script";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=places&callback=initGoogleMaps`;
+    }&libraries=routes&callback=initGoogleMaps&loading=async`;
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
 
-    return () => {
-      delete (window as any).initGoogleMaps;
-    };
+    return () => {};
   }, []);
 
   return ready;
 }
 
-// 2. Real-world distance background query calculation promise
-export function getRealDrivingDistance(
+export async function getRealDrivingDistance(
   origin: string, 
   destination: string
 ): Promise<string> {
-  return new Promise((resolve) => {
-    if (!(window as any).google?.maps || !origin || !destination) {
-      resolve("Distance unavailable");
-      return;
-    }
+  const globalWin = window as any;
+  if (!globalWin.google?.maps?.routes || !origin || !destination) {
+    return "Distance unavailable";
+  }
 
-    const service = new (window as any).google.maps.DistanceMatrixService();
-    
-    try {
-      service.getDistanceMatrix(
-        {
-          origins: [origin],
-          destinations: [destination],
-          travelMode: (window as any).google.maps.TravelMode.DRIVING,
-          unitSystem: (window as any).google.maps.UnitSystem.METRIC, 
-        },
-        (response: any, status: string) => {
-          if (status === "OK" && response.rows[0]?.elements[0]?.status === "OK") {
-            const distanceText = response.rows[0].elements[0].distance.text; 
-            resolve(`${distanceText} away`);
-          } else {
-            const elementStatus = response?.rows[0]?.elements[0]?.status;
-            console.error("Distance Matrix failed:", status, elementStatus);
-            resolve(`Unavailable (${elementStatus || status})`);
-          }
-        }
-      );
-    } catch (e) {
-      console.error("Distance calculation error:", e);
-      resolve("Calculation error");
+  try {
+    const request = {
+      origins: [origin],
+      destinations: [destination],
+      travelMode: "DRIVING",
+      fields: ["distanceMeters", "condition"], 
+    };
+
+    const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
+    const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
+
+    if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
+      const meters = element.distanceMeters;
+      if (typeof meters === "number") {
+        const km = (meters / 1000).toFixed(1);
+        return `${km} km away`;
+      }
     }
-  });
+    
+    console.error("Route Matrix calculation fallback triggered or route missing:", element);
+    return "Unavailable";
+  } catch (e) {
+    console.error("Distance calculation error via modern SDK:", e);
+    return "Calculation error";
+  }
 }
 
 function DonationDetail() {
@@ -121,14 +129,18 @@ function DonationDetail() {
   const [ngoName, setNgoName] = useState<string>("NGO");
   const [loading, setLoading] = useState<boolean>(true);
   const [distance, setDistance] = useState<string>("Calculating distance...");
+  const [itemCategories, setItemCategories] = useState<string[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchBatchDetailAndProfile() {
       try {
         setLoading(true);
 
-        // A. Fetch current NGO details (Fixed to use organization_name with a 'z')
         const { data: { user } } = await supabase.auth.getUser();
+        if (!isMounted) return;
+
         if (user) {
           const { data: ngoProfile } = await supabase
             .from("ngos")
@@ -136,13 +148,12 @@ function DonationDetail() {
             .eq("id", user.id)
             .single();
 
-          if (ngoProfile) {
+          if (ngoProfile && isMounted) {
             setNgoAddress(ngoProfile.address || "");
             setNgoName(ngoProfile.organization_name || "Hope Shelter");
           }
         }
 
-        // B. Fetch detailed distribution parameters for the target batch
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
@@ -153,40 +164,96 @@ function DonationDetail() {
             donors (
               organization_name,
               address
+            ),
+            donation_items (
+              quantity,
+              unit,
+              category
             )
           `)
           .eq("id", id)
           .single();
         
-
         if (error) throw error;
 
-        if (data) {
-          const rawBatch = data as any;
+        if (data && isMounted) {
+          let rawBatch = data as any;
+
+          // REAL-TIME EXPIRY CONTROL WITH RLS FALLBACK
+          if (rawBatch.collection_datetime && rawBatch.status?.toLowerCase() !== "expired") {
+            const expiryTime = new Date(rawBatch.collection_datetime).getTime();
+            const now = Date.now();
+
+            if (now > expiryTime) {
+              // 1. Force state locally first so UI behaves correctly regardless of DB permissions
+              rawBatch.status = "Expired";
+
+              // 2. Safely attempt database sync
+              try {
+                const { error: updateError } = await supabase
+                  .from("donation_batches")
+                  .update({ status: "Expired" })
+                  .eq("id", id);
+
+                if (updateError) {
+                  // Handled gracefully: RLS restriction warning in the background
+                  console.warn(
+                    "Note: Status updated locally to Expired. Database update bypassed due to RLS write restrictions:",
+                    updateError.message
+                  );
+                }
+              } catch (writeErr) {
+                console.warn("Could not sync expired status to remote database:", writeErr);
+              }
+            }
+          }
+
           const donorInfo = Array.isArray(rawBatch.donors) 
             ? rawBatch.donors[0] 
             : rawBatch.donors;
 
+          const itemQuantities = (rawBatch.donation_items ?? [])
+            .map((item: any) => {
+              const quantity = Number(item.quantity);
+              const unit = item.unit ? String(item.unit).trim() : "items";
+              return Number.isFinite(quantity) && quantity > 0 ? `${quantity} ${unit}` : null;
+            })
+            .filter(Boolean) as string[];
+
+          const formattedQuantityText = itemQuantities.length > 0
+            ? itemQuantities.join(" • ")
+            : "1 Batch";
+
           setBatch({
             id: rawBatch.id,
-            quantity: "1 Batch", 
+            quantity: formattedQuantityText, 
             collection_datetime: rawBatch.collection_datetime ? new Date(rawBatch.collection_datetime).toLocaleString() : "N/A",
             donor: donorInfo?.organization_name || "Anonymous Donor",
             pickup: donorInfo?.address || "Location not specified", 
-            batch_type: rawBatch.batch_type || "Surplus Food"
+            batch_type: rawBatch.batch_type || "Surplus Food",
+            status: rawBatch.status || "Unclaimed"
           });
+
+          const extracted: string[] = (rawBatch.donation_items ?? []).flatMap((item: { category?: string | null }) =>
+            item.category ? item.category.split(", ").map((c: string) => c.trim()) : []
+          );
+          setItemCategories(Array.from(new Set(extracted)).filter((category): category is string => Boolean(category)));
         }
+
       } catch (err) {
-        console.error("Error fetching donation details:", err);
+        if (isMounted) console.error("Error fetching donation details:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchBatchDetailAndProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
-  // Handle real driving distance query execution after dependency addresses stabilize in state
   useEffect(() => {
     const pickupLocation = batch?.pickup;
     if (!isMapsReady || !pickupLocation || !ngoAddress || pickupLocation === "Location not specified") {
@@ -248,9 +315,18 @@ function DonationDetail() {
                 />
               </div>
               <div>
-                <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
+                <div className="flex items-center justify-between gap-4">
+                  <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0
+                    ${batch.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
+                    ${batch.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
+                    ${batch.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}
+                  `}>
+                    {batch.status}
+                  </span>
+                </div>
                 <dl className="mt-4 space-y-2 text-sm">
-                  <Row label="Quantity" value={batch?.quantity || "1 Batch"} />
+                  <Row label="Quantity" value={batch?.quantity} />
                   <Row label="Expiry Time" value={batch?.collection_datetime || "N/A"} />
                   <Row label="Donor" value={batch?.donor || "Anonymous Donor"} />
                   <Row label="Distance" value={distance} />
@@ -271,16 +347,31 @@ function DonationDetail() {
             <section className="mt-8 rounded-xl border bg-card p-5">
               <h2 className="text-sm font-semibold">About This Donation</h2>
               <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                This donation includes {batch?.batch_type}. Donation must be collected before {batch?.collection_datetime} - quality checked and ready for distribution.
+                This donation includes {itemCategories.length > 0 ? itemCategories.join(", ") : batch?.batch_type}. 
+                Donation must be collected before {batch?.collection_datetime} - quality checked and ready for distribution.
               </p>
+              {itemCategories.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {itemCategories.map((cat) => (
+                    <span key={cat} className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              )}
             </section>
 
             <button
               type="button"
+              disabled={batch.status.toLowerCase() === "expired"}
               onClick={() => navigate({ to: `/ngo/donations/${id}/claim` })}
-              className="mt-6 w-full rounded-md bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              className={`mt-6 w-full rounded-md py-3 text-sm font-medium transition-colors ${
+                batch.status.toLowerCase() === "expired" 
+                  ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              }`}
             >
-              Claim Donation
+              {batch.status.toLowerCase() === "expired" ? "Donation Expired" : "Claim Donation"}
             </button>
           </main>
         </div>
@@ -310,7 +401,7 @@ function Row({
             href={href} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="hover:underline hover:text-blue-700 block truncate"
+            className="hover:underline hover:text-blue-700 block truncate text-left"
           >
             {value}
           </a>

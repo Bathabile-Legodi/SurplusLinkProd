@@ -1,125 +1,174 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
+import {
+  loadCurrentBatch,
+  submitDonationBatch,
+  getErrorMessage,
+  type DonationItem,
+} from "@/lib/donations";
 import { DateTimePicker } from "@/components/ScrollPicker";
-import { loadCurrentBatch, submitDonationBatch, getErrorMessage, type DonationItem } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/review")({
-  head: () => ({ meta: [{ title: "Review Donation — SurplusLink" }] }),
-  component: ReviewPage,
+  head: () => ({ meta: [{ title: "Review Batch — SurplusLink" }] }),
+  component: ReviewBatch,
 });
 
-function ReviewPage() {
+function ReviewBatch() {
   const navigate = useNavigate();
   const [items, setItems] = useState<DonationItem[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [collectionDateTime, setCollectionDateTime] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = loadCurrentBatch();
-    if (stored.length === 0) {
-      navigate({ to: "/donor/donate/batch" });
-      return;
-    }
-    setItems(stored);
-  }, [navigate]);
+    setItems(loadCurrentBatch());
+  }, []);
 
-  const batchType = items.length > 1 ? "Mixed Donation" : items[0]?.category ?? "Donation";
+  // Derive a human-readable batch type from the items
+  const batchType = (() => {
+    const cats = Array.from(
+      new Set(
+        items.flatMap((item) =>
+          item.category ? item.category.split(", ").map((c) => c.trim()) : []
+        )
+      )
+    ).filter(Boolean);
+    if (cats.length === 0) return "Donation";
+    if (cats.length === 1) return cats[0];
+    return "Mixed Donation";
+  })();
 
-  // Collection deadline as a single ISO-like string from the DateTimePicker
-  const [collectionDeadline, setCollectionDeadline] = useState<string>("");
-
-  async function handleSubmit() {
+  const handleSubmit = async () => {
     if (items.length === 0) return;
-    setSubmitting(true);
+    setIsSubmitting(true);
     setError(null);
     try {
-      let deadline = "";
-      if (collectionDeadline) {
-        deadline = new Date(collectionDeadline).toISOString();
-      }
-      const result = await submitDonationBatch(items, deadline);
-      navigate({ to: "/donor/donate/success", search: { batchId: result.id } });
+      const result = await submitDonationBatch(
+        items,
+        batchType,
+        collectionDateTime,
+        new Date().toISOString()
+      );
+      navigate({
+        to: "/donor/donate/success",
+        search: { batchId: result.id },
+      });
     } catch (err) {
       setError(getErrorMessage(err));
-    } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-3xl px-6 py-10">
-        <h1 className="text-xl font-semibold">Review Donation</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Verify your batch and contents before officially submitting the batch.
-        </p>
-
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <Stat label="Batch Type" value={batchType} />
-          <Stat label="Items in Batch" value={`${items.length}`} />
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">Review Your Batch</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Confirm the items below and set a collection window before submitting.
+          </p>
         </div>
 
-        <section className="mt-6 rounded-xl border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold">Items in this batch ({items.length})</h2>
-          <ul className="divide-y text-sm">
-            {items.map((item, index) => (
-              <Row key={item.id || index} name={item.name} category={item.category} qty={`${item.quantity} ${item.unit}`} expiry={item.expiry.replace("T", " ")} />
-            ))}
-          </ul>
+        {/* Items summary */}
+        <section className="mb-6 rounded-xl border bg-card">
+          <div className="border-b px-5 py-4">
+            <h2 className="text-sm font-semibold">
+              Items in Batch ({items.length})
+            </h2>
+          </div>
+          {items.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+              No items in your batch. Go back and add some items first.
+            </p>
+          ) : (
+            <div className="overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Item</th>
+                    <th className="px-4 py-3 text-left font-medium">Category</th>
+                    <th className="px-4 py-3 text-left font-medium">Qty</th>
+                    <th className="px-4 py-3 text-left font-medium">Expiry</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {items.map((item) => (
+                    <tr key={item.id} className="hover:bg-secondary/40">
+                      <td className="px-4 py-3 font-medium">{item.name}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {item.category.split(", ").map((c) => (
+                            <span
+                              key={c}
+                              className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {item.quantity} {item.unit}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {item.expiry ? item.expiry.replace("T", " ") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
-        <section className="mt-6 rounded-xl border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold">Collection Deadline</h2>
-          <p className="text-xs text-muted-foreground mb-3">Select the latest date and time when the donation can be collected.</p>
+        {/* Batch type display */}
+        <section className="mb-6 rounded-xl border bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Batch Type
+          </p>
+          <p className="mt-1 text-sm font-medium">{batchType}</p>
+        </section>
+
+        {/* Collection window */}
+        <section className="mb-8 rounded-xl border bg-card p-5">
+          <h2 className="mb-1 text-sm font-semibold">Collection Deadline (optional)</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Set a date by which NGOs should collect this batch.
+          </p>
           <DateTimePicker
-            value={collectionDeadline}
-            onChange={setCollectionDeadline}
+            value={collectionDateTime}
+            onChange={setCollectionDateTime}
           />
         </section>
 
-        {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
+        {/* Error message */}
+        {error && (
+          <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
-        <div className="mt-6 flex justify-between">
-          <Link to="/donor/donate/batch" className="rounded-md border px-4 py-2 text-sm hover:bg-secondary">
-            Edit Items
-          </Link>
+        {/* Actions */}
+        <div className="flex justify-between gap-4">
           <button
-            onClick={handleSubmit}
-            disabled={items.length === 0 || submitting}
-            className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            type="button"
+            onClick={() => navigate({ to: "/donor/donate/batch" })}
+            className="rounded-md border px-6 py-2 text-sm font-medium hover:bg-secondary transition-colors"
           >
-            {submitting ? "Submitting…" : "Submit Donation Batch"}
+            ← Back
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={items.length === 0 || isSubmitting}
+            className="flex-1 rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {isSubmitting ? "Submitting…" : "Submit Donation"}
           </button>
         </div>
       </main>
     </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-base font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function Row({ name, category, qty, expiry }: { name: string; category: string; qty: string; expiry: string }) {
-  return (
-    <li className="flex justify-between py-3">
-      <div>
-        <p className="font-medium">{name}</p>
-        <div className="mt-1 flex flex-wrap gap-1">
-          {category.split(", ").map(c => (
-            <span key={c} className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{c}</span>
-          ))}
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">Exp: {expiry}</p>
-      </div>
-      <p className="text-muted-foreground">{qty}</p>
-    </li>
   );
 }

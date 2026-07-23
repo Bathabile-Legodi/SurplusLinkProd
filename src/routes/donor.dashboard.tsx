@@ -74,7 +74,11 @@ function DonorDashboard() {
         </Link>
 
         {/* Recent Donations Table */}
+<<<<<<< HEAD
         <section>
+=======
+        <section className="mb-10"> {/* Added bottom margin here to space it from the map */}
+>>>>>>> 20c4b92e19d746f4ac9782a0735b685464ac3266
           <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Donations</h2>
           <div className="overflow-hidden rounded-xl border bg-card">
             <table className="w-full text-sm">
