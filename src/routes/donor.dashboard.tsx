@@ -1,4 +1,3 @@
-import CommunityMap from "@/components/CommunityMap";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
@@ -47,9 +46,6 @@ function DonorDashboard() {
           </p>
         </div>
 
-<<<<<<< HEAD
-        {/* Log Donation Button */}
-=======
         {/* Quick Impact Summary */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div className="rounded-xl border bg-card p-5 shadow-sm">
@@ -63,7 +59,8 @@ function DonorDashboard() {
             <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-500">↑ 12% vs last month</p>
           </div>
         </div>
->>>>>>> d83d093ea055220e59e232b4a115ca6170253207
+
+        {/* Log Donation Button */}
         <Link
           to="/donor/donate/consent"
           className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
@@ -76,12 +73,8 @@ function DonorDashboard() {
           </div>
         </Link>
 
-<<<<<<< HEAD
         {/* Recent Donations Table */}
-        <section className="mb-10"> {/* Added bottom margin here to space it from the map */}
-=======
         <section>
->>>>>>> d83d093ea055220e59e232b4a115ca6170253207
           <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Donations</h2>
           <div className="overflow-hidden rounded-xl border bg-card">
             <table className="w-full text-sm">
@@ -126,15 +119,6 @@ function DonorDashboard() {
                 )}
               </tbody>
             </table>
-          </div>
-        </section>
-
-        {/* NEW SECTION: Community Network Map */}
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-foreground">Community Network</h2>
-          {/* I wrapped your map in the same rounded border style as your table so it matches seamlessly */}
-          <div className="overflow-hidden rounded-xl border bg-card p-1">
-            <CommunityMap loggedInDonorId="PASTE_A_TEST_UUID_HERE" />
           </div>
         </section>
 

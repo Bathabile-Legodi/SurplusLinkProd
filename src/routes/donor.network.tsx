@@ -1,15 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { useState } from "react";
-import { MapPin, Building, ChevronRight, X, HeartHandshake } from "lucide-react";
+import { MapPin, ChevronRight, X, HeartHandshake } from "lucide-react";
+import CommunityMap from "@/components/CommunityMap";
 
 export const Route = createFileRoute("/donor/network")({
   head: () => ({
-    meta: [{ title: "Community Network — SurplusLink" }],
+    meta: [{ title: "Community Network — Developing digital projects" }],
   }),
   component: DonorNetwork,
 });
 
+// NOTE: This fake array is temporarily kept so your sidebar doesn't break.
+// We will replace this with live Supabase data in the next step.
 type NGO = {
   id: string;
   name: string;
@@ -79,61 +82,17 @@ function DonorNetwork() {
         </div>
 
         <div className="flex h-[600px] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:flex-row">
-          {/* Map Interface */}
-          <div className="relative flex-1 bg-muted/30 overflow-hidden">
-            {/* Map Background Pattern */}
-            <div 
-              className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
-              style={{
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
-              }}
-            />
-            
-            {/* Store Pin (Center) */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 z-20">
-                <Building className="h-5 w-5" />
-              </div>
-              <div className="mt-2 rounded-md bg-background/90 px-2 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm z-20">
-                Your Store
-              </div>
-              
-              {/* Pulse effect */}
-              <div className="absolute top-0 left-0 h-10 w-10 animate-ping rounded-full bg-primary/40 z-10" />
+          
+          {/* LIVE MAP INTERFACE */}
+          <div className="relative flex-1 bg-muted/30 overflow-hidden flex items-center justify-center p-2">
+            <div className="w-full h-full overflow-hidden rounded-lg bg-white">
+               {/* 
+                 Because CommunityMap has its own padding/title inside its file right now, 
+                 it will render here. We can clean up CommunityMap.tsx later to remove 
+                 its internal title so it fits perfectly here!
+               */}
+              <CommunityMap loggedInDonorId="PASTE_A_TEST_UUID_HERE" />
             </div>
-
-            {/* Path lines mock */}
-            {selectedNgo && (
-              <svg className="absolute inset-0 h-full w-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
-                <line 
-                  x1="50%" 
-                  y1="50%" 
-                  x2={selectedNgo.left} 
-                  y2={selectedNgo.top} 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeDasharray="4 4" 
-                  className="text-primary/30 animate-pulse" 
-                />
-              </svg>
-            )}
-
-            {/* NGO Pins */}
-            {ngos.map((ngo) => (
-              <button
-                key={ngo.id}
-                onClick={() => setSelectedNgo(ngo)}
-                className={`absolute flex flex-col items-center transition-transform hover:scale-110 z-20 group`}
-                style={{ top: ngo.top, left: ngo.left, transform: 'translate(-50%, -50%)' }}
-              >
-                <div className={`relative flex h-8 w-8 items-center justify-center rounded-full text-white shadow-md transition-colors ${selectedNgo?.id === ngo.id ? 'bg-secondary-foreground scale-110' : 'bg-emerald-500 group-hover:bg-emerald-600'}`}>
-                  <MapPin className="h-4 w-4" />
-                </div>
-                <div className={`mt-1.5 rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-medium shadow-sm backdrop-blur-sm transition-opacity ${selectedNgo?.id === ngo.id ? 'opacity-100 font-bold' : 'opacity-70 group-hover:opacity-100'}`}>
-                  {ngo.name}
-                </div>
-              </button>
-            ))}
           </div>
 
           {/* Directory / Detail Panel Container */}
