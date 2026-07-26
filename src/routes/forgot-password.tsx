@@ -16,21 +16,20 @@ function ForgotPassword() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  async function handleResetPassword(
-    e: React.FormEvent
-  ) {
+  async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
 
     setLoading(true);
 
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo:
-            "http://localhost:5173/update-password",
-        }
-      );
+    // Dynamically uses your current site origin (local or Vercel production)
+    const redirectUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/update-password`
+        : "https://surplus-link-five.vercel.app/update-password";
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
 
     setLoading(false);
 
@@ -51,20 +50,14 @@ function ForgotPassword() {
           </h1>
         </div>
 
-        <h2 className="text-base font-semibold">
-          Reset Password
-        </h2>
+        <h2 className="text-base font-semibold">Reset Password</h2>
 
         <p className="mt-1 text-xs text-muted-foreground">
-          Enter your registered email address.
-          We will send you a link to reset
+          Enter your registered email address. We will send you a link to reset
           your password.
         </p>
 
-        <form
-          onSubmit={handleResetPassword}
-          className="mt-5 space-y-4"
-        >
+        <form onSubmit={handleResetPassword} className="mt-5 space-y-4">
           <Field
             label="Email Address"
             type="email"
