@@ -189,10 +189,12 @@ function Hero() {
 
 function ImageCarousel() {
   const images = [
-    "/images/grocery_surplus_1.png",
-    "/images/food_market_2.png",
-    "/images/grocery_store_3.png",
-    "/images/fresh_produce_4.png",
+    "/images/surpluslink1.png",
+    "/images/surpluslink2.png",
+    "/images/surpluslink3.png",
+    "/images/surpluslink4.png",
+    "/images/surpluslink5.webp",
+    "/images/surpluslink6.png",
   ];
   const [idx, setIdx] = useState(0);
 
