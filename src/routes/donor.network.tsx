@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MapPin, ChevronRight, X, HeartHandshake, Loader2 } from "lucide-react";
 import CommunityMap from "@/components/CommunityMap";
-
-// TODO: confirm this matches the client export used in CommunityMap.tsx
 import { supabase } from "@/lib/supabase";
+import { useGoogleMaps, getBatchDrivingDistances, parseDistance } from "@/lib/distance";
 
 export const Route = createFileRoute("/donor/network")({
   head: () => ({
@@ -37,44 +36,12 @@ type NGO = {
   id: string;
   name: string;
   address: string | null;
-  distanceKm: number | null;
   needs: string[]; // top categories claimed by this NGO from this donor
   impactStory: string;
   impactMetric: string;
 };
 
 // ---- Helpers -------------------------------------------------------------
-
-// Haversine distance in km
-function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-// Reads lat/lng from donors.address_components, which register.tsx stores
-// as { ..., lat: number | null, lng: number | null }. Donors registered
-// BEFORE that fix won't have these fields and will show no distance.
-function extractLatLng(addressComponents: unknown): { lat: number; lng: number } | null {
-  if (!addressComponents || typeof addressComponents !== "object") return null;
-  const obj = addressComponents as Record<string, any>;
-
-  if (typeof obj.lat === "number" && typeof obj.lng === "number") {
-    return { lat: obj.lat, lng: obj.lng };
-  }
-
-  console.warn(
-    "[DonorNetwork] No lat/lng on this donor's address_components " +
-      "(likely registered before location capture was added). Distance unavailable."
-  );
-  return null;
-}
 
 function buildNeedsAndImpact(items: ItemAgg[]): {
   needs: string[];
@@ -108,14 +75,18 @@ function buildNeedsAndImpact(items: ItemAgg[]): {
 // ---- Component -------------------------------------------------------------
 
 function DonorNetwork() {
+  const isMapsReady = useGoogleMaps();
+
   const [selectedNgo, setSelectedNgo] = useState<NGO | null>(null);
   const [ngos, setNgos] = useState<NGO[]>([]);
+  const [distancesMap, setDistancesMap] = useState<Record<string, string>>({});
+  const [donorAddress, setDonorAddress] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loggedInDonorId, setLoggedInDonorId] = useState<string | null>(null);
 
   // Get the current logged-in user's id from Supabase Auth.
-  // Assumes donors.id === auth.users.id (set at registration time).
+  // donors.id === auth.users.id, set by the handle_new_user trigger on signup.
   useEffect(() => {
     let cancelled = false;
 
@@ -138,6 +109,7 @@ function DonorNetwork() {
     };
   }, []);
 
+  // Fetch partner directory + donor address + delivered items for impact stats
   useEffect(() => {
     if (!loggedInDonorId) return;
     let cancelled = false;
@@ -155,15 +127,14 @@ function DonorNetwork() {
 
         if (networkErr) throw networkErr;
 
-        // 2. Donor's own coordinates, for distance calculation
+        // 2. Donor's own address, used as the origin for driving distance
         const { data: donorRow, error: donorErr } = await supabase
           .from("donors")
-          .select("address_components")
+          .select("address")
           .eq("id", loggedInDonorId)
           .maybeSingle();
 
         if (donorErr) throw donorErr;
-        const donorCoords = extractLatLng(donorRow?.address_components);
 
         // 3. Delivered donation items, joined via donation_batches, to compute
         //    needs + impact per NGO. Only "Delivered" counts as real impact —
@@ -210,35 +181,20 @@ function DonorNetwork() {
           const itemAggs = catMap ? Array.from(catMap.values()) : [];
           const { needs, impactStory, impactMetric } = buildNeedsAndImpact(itemAggs);
 
-          const dist =
-            donorCoords && row.ngo_latitude != null && row.ngo_longitude != null
-              ? distanceKm(
-                  donorCoords.lat,
-                  donorCoords.lng,
-                  row.ngo_latitude,
-                  row.ngo_longitude
-                )
-              : null;
-
           return {
             id: row.ngo_id,
             name: row.ngo_name,
             address: row.ngo_address,
-            distanceKm: dist,
             needs,
             impactStory,
             impactMetric,
           };
         });
 
-        // Nearest first; unknown distances sink to the bottom
-        built.sort((a, b) => {
-          if (a.distanceKm == null) return 1;
-          if (b.distanceKm == null) return -1;
-          return a.distanceKm - b.distanceKm;
-        });
-
-        if (!cancelled) setNgos(built);
+        if (!cancelled) {
+          setNgos(built);
+          setDonorAddress(donorRow?.address || "");
+        }
       } catch (e: any) {
         console.error("[DonorNetwork] Failed to load live network data:", e);
         if (!cancelled) setError(e?.message ?? "Failed to load community network.");
@@ -252,6 +208,34 @@ function DonorNetwork() {
       cancelled = true;
     };
   }, [loggedInDonorId]);
+
+  // Once maps are ready and we have NGOs + a donor address, compute driving
+  // distances in a single batched call — same pattern as ngo/explore.tsx.
+  useEffect(() => {
+    if (!isMapsReady || ngos.length === 0 || !donorAddress) return;
+    let cancelled = false;
+
+    async function appendDistances() {
+      const destinations = ngos.map((n) => n.address || "");
+      const calculated = await getBatchDrivingDistances(donorAddress, destinations);
+
+      const next: Record<string, string> = {};
+      ngos.forEach((ngo, i) => {
+        next[ngo.id] = destinations[i] ? calculated[i] : "Distance unavailable";
+      });
+
+      if (!cancelled) setDistancesMap(next);
+    }
+
+    appendDistances();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMapsReady, ngos, donorAddress]);
+
+  const sortedNgos = [...ngos].sort(
+    (a, b) => parseDistance(distancesMap[a.id]) - parseDistance(distancesMap[b.id])
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -313,7 +297,7 @@ function DonorNetwork() {
 
                 {!loading &&
                   !error &&
-                  ngos.map((ngo) => (
+                  sortedNgos.map((ngo) => (
                     <button
                       key={ngo.id}
                       onClick={() => setSelectedNgo(ngo)}
@@ -325,9 +309,7 @@ function DonorNetwork() {
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground flex items-center">
                           <MapPin className="h-3 w-3 mr-1" />
-                          {ngo.distanceKm != null
-                            ? `${ngo.distanceKm.toFixed(1)} km away`
-                            : "Distance unavailable"}
+                          {distancesMap[ngo.id] || "Calculating…"}
                         </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -365,9 +347,7 @@ function DonorNetwork() {
                       <h2 className="text-2xl font-bold tracking-tight">{selectedNgo.name}</h2>
                       <p className="text-sm text-muted-foreground flex items-center mt-2">
                         <MapPin className="h-3.5 w-3.5 mr-1" />
-                        {selectedNgo.distanceKm != null
-                          ? `${selectedNgo.distanceKm.toFixed(1)} km from loading dock`
-                          : selectedNgo.address ?? "Address unavailable"}
+                        {distancesMap[selectedNgo.id] || selectedNgo.address || "Address unavailable"}
                       </p>
                     </div>
 

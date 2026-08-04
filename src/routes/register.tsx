@@ -14,8 +14,6 @@ interface AddressComponents {
   postalCode: string;
   country: string;
   formatted: string;
-  lat: number | null;
-  lng: number | null;
 }
 
 const BUSINESS_TYPES = [
@@ -34,7 +32,6 @@ const BUSINESS_TYPES = [
 const emptyAddress = (): AddressComponents => ({
   streetNumber: "", streetName: "", suburb: "",
   city: "", province: "", postalCode: "", country: "", formatted: "",
-  lat: null, lng: null,
 });
 
 
@@ -116,21 +113,13 @@ function AddressAutocomplete({
 
       const place = placePrediction.toPlace();
 
-      // NOTE: "location" added here — this is what was missing before.
-      // Without requesting this field, Google never returns coordinates,
-      // only text address components.
       await place.fetchFields({
-        fields: ["addressComponents", "formattedAddress", "location"],
+        fields: ["addressComponents", "formattedAddress"],
       });
 
       const get = (type: string) =>
         place.addressComponents?.find((c: any) => c.types.includes(type))
           ?.longText ?? "";
-
-      // place.location is a google.maps.LatLng object — lat()/lng() are
-      // methods, not plain properties, so they must be called.
-      const lat = typeof place.location?.lat === "function" ? place.location.lat() : null;
-      const lng = typeof place.location?.lng === "function" ? place.location.lng() : null;
 
       onChange({
         streetNumber: get("street_number"),
@@ -141,8 +130,6 @@ function AddressAutocomplete({
         postalCode:   get("postal_code"),
         country:      get("country"),
         formatted:    place.formattedAddress ?? "",
-        lat,
-        lng,
       });
     });
 
