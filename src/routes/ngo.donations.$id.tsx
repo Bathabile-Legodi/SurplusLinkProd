@@ -250,13 +250,17 @@ function DonationDetail() {
             ? rawBatch.donors[0] 
             : rawBatch.donors;
 
-          const itemQuantities = (rawBatch.donation_items ?? [])
-            .map((item: any) => {
-              const quantity = Number(item.quantity);
-              const unit = item.unit ? String(item.unit).trim() : "items";
-              return Number.isFinite(quantity) && quantity > 0 ? `${quantity} ${unit}` : null;
-            })
-            .filter(Boolean) as string[];
+           const itemQuantities = (rawBatch.donation_items ?? [])
+              .map((item: any) => {
+                if (item.quantity === null || item.quantity === undefined) return null;
+                const quantity = String(item.quantity).trim();
+                const unit = item.unit ? String(item.unit).trim() : "items";
+
+                if (!quantity) return null;
+
+                return unit ? `${quantity} ${unit}` : quantity;
+              })
+              .filter(Boolean) as string[];
 
           const formattedQuantityText = itemQuantities.length > 0
             ? itemQuantities.join(" • ")

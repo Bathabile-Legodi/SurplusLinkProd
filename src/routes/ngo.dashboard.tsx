@@ -41,7 +41,7 @@ function NgoDashboard() {
               View Status
             </button>
             <Link
-              to="/ngo/explore"
+              to="/register"
               className="rounded-md border px-4 py-1.5 text-xs font-medium hover:bg-secondary"
             >
               Log Out

@@ -196,9 +196,13 @@ function ExplorePage() {
 
             const itemQuantities = (batch.donation_items ?? [])
               .map((item: any) => {
-                const quantity = Number(item.quantity);
+                if (item.quantity === null || item.quantity === undefined) return null;
+                const quantity = String(item.quantity).trim();
                 const unit = item.unit ? String(item.unit).trim() : "items";
-                return Number.isFinite(quantity) && quantity > 0 ? `${quantity} ${unit}` : null;
+
+                if (!quantity) return null;
+
+                return unit ? `${quantity} ${unit}` : quantity;
               })
               .filter(Boolean) as string[];
 
