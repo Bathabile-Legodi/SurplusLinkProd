@@ -58,31 +58,20 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Tries a few common shapes for lat/lng stored in a Google Places-style jsonb blob.
-// ADJUST THIS if it doesn't match your actual address_components shape.
+// Reads lat/lng from donors.address_components, which register.tsx stores
+// as { ..., lat: number | null, lng: number | null }. Donors registered
+// BEFORE that fix won't have these fields and will show no distance.
 function extractLatLng(addressComponents: unknown): { lat: number; lng: number } | null {
   if (!addressComponents || typeof addressComponents !== "object") return null;
   const obj = addressComponents as Record<string, any>;
 
-  const candidates = [
-    obj?.geometry?.location, // { lat, lng }
-    obj?.location, // { lat, lng }
-    obj, // { lat, lng } directly on the object
-    obj?.latitude != null && obj?.longitude != null
-      ? { lat: obj.latitude, lng: obj.longitude }
-      : null,
-  ];
-
-  for (const c of candidates) {
-    if (c && typeof c.lat === "number" && typeof c.lng === "number") {
-      return { lat: c.lat, lng: c.lng };
-    }
+  if (typeof obj.lat === "number" && typeof obj.lng === "number") {
+    return { lat: obj.lat, lng: obj.lng };
   }
 
   console.warn(
-    "[DonorNetwork] Could not find lat/lng in donors.address_components. " +
-      "Distances will be unavailable. Actual shape:",
-    addressComponents
+    "[DonorNetwork] No lat/lng on this donor's address_components " +
+      "(likely registered before location capture was added). Distance unavailable."
   );
   return null;
 }
@@ -123,11 +112,34 @@ function DonorNetwork() {
   const [ngos, setNgos] = useState<NGO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loggedInDonorId, setLoggedInDonorId] = useState<string | null>(null);
 
-  // TODO: replace with the real authenticated donor id
-  const loggedInDonorId = "PASTE_A_TEST_UUID_HERE";
+  // Get the current logged-in user's id from Supabase Auth.
+  // Assumes donors.id === auth.users.id (set at registration time).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUser() {
+      const { data, error: authErr } = await supabase.auth.getUser();
+      if (authErr) {
+        console.error("[DonorNetwork] Failed to get logged-in user:", authErr);
+        if (!cancelled) {
+          setError("You need to be logged in to view this page.");
+          setLoading(false);
+        }
+        return;
+      }
+      if (!cancelled) setLoggedInDonorId(data.user?.id ?? null);
+    }
+
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
+    if (!loggedInDonorId) return;
     let cancelled = false;
 
     async function load() {
@@ -256,7 +268,13 @@ function DonorNetwork() {
           {/* LIVE MAP INTERFACE */}
           <div className="relative flex-1 bg-muted/30 overflow-hidden flex items-center justify-center p-2">
             <div className="w-full h-full overflow-hidden rounded-lg bg-white">
-              <CommunityMap loggedInDonorId={loggedInDonorId} />
+              {loggedInDonorId ? (
+                <CommunityMap loggedInDonorId={loggedInDonorId} />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {error ?? "Loading…"}
+                </div>
+              )}
             </div>
           </div>
 
