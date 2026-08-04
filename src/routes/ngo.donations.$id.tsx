@@ -87,35 +87,64 @@ export async function getRealDrivingDistance(
   destination: string
 ): Promise<string> {
   const globalWin = window as any;
-  if (!globalWin.google?.maps?.routes || !origin || !destination) {
+  if (!globalWin.google?.maps || !origin || !destination) {
     return "Distance unavailable";
   }
 
+  // Primary calculation attempt via modern RouteMatrix API with safety timeout
   try {
-    const request = {
-      origins: [origin],
-      destinations: [destination],
-      travelMode: "DRIVING",
-      fields: ["distanceMeters", "condition"], 
-    };
+    if (globalWin.google.maps.routes?.RouteMatrix) {
+      const request = {
+        origins: [origin],
+        destinations: [destination],
+        travelMode: "DRIVING",
+        fields: ["distanceMeters", "condition"], 
+      };
 
-    const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
-    const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
+      const modernCall = globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("RouteMatrix stream timeout")), 3000)
+      );
 
-    if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
-      const meters = element.distanceMeters;
-      if (typeof meters === "number") {
-        const km = (meters / 1000).toFixed(1);
-        return `${km} km away`;
+      const response: any = await Promise.race([modernCall, timeout]);
+      const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
+
+      if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
+        const meters = element.distanceMeters;
+        if (typeof meters === "number") {
+          const km = (meters / 1000).toFixed(1);
+          return `${km} km away`;
+        }
       }
     }
-    
-    console.error("Route Matrix calculation fallback triggered or route missing:", element);
-    return "Unavailable";
   } catch (e) {
-    console.error("Distance calculation error via modern SDK:", e);
-    return "Calculation error";
+    console.warn("Modern Route Matrix execution timed out or failed. Attempting fallback to DistanceMatrixService...", e);
   }
+
+  // Fallback to legacy DistanceMatrixService
+  return new Promise((resolve) => {
+    try {
+      const service = new globalWin.google.maps.DistanceMatrixService();
+      service.getDistanceMatrix(
+        {
+          origins: [origin],
+          destinations: [destination],
+          travelMode: globalWin.google.maps.TravelMode.DRIVING,
+        },
+        (response: any, status: string) => {
+          if (status === "OK" && response?.rows?.[0]?.elements?.[0]?.status === "OK") {
+            const element = response.rows[0].elements[0];
+            resolve(element.distance.text);
+          } else {
+            resolve("Distance unknown");
+          }
+        }
+      );
+    } catch (fallbackErr) {
+      console.error("Distance Matrix fallback failed:", fallbackErr);
+      resolve("Distance unavailable");
+    }
+  });
 }
 
 function DonationDetail() {
@@ -138,19 +167,28 @@ function DonationDetail() {
       try {
         setLoading(true);
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!isMounted) return;
+        // 1. Verify session before auth call
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (user) {
-          const { data: ngoProfile } = await supabase
-            .from("ngos")
-            .select("organization_name, address")
-            .eq("id", user.id)
-            .single();
+        if (sessionError || !session) {
+          if (isMounted) console.warn("No active auth session detected or session expired.");
+        } else {
+          // 2. Safely retrieve user data
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-          if (ngoProfile && isMounted) {
-            setNgoAddress(ngoProfile.address || "");
-            setNgoName(ngoProfile.organization_name || "Hope Shelter");
+          if (userError) {
+            console.error("Failed to fetch user:", userError.message);
+          } else if (user && isMounted) {
+            const { data: ngoProfile } = await supabase
+              .from("ngos")
+              .select("organization_name, address")
+              .eq("id", user.id)
+              .single();
+
+            if (ngoProfile && isMounted) {
+              setNgoAddress(ngoProfile.address || "");
+              setNgoName(ngoProfile.organization_name || "Hope Shelter");
+            }
           }
         }
 

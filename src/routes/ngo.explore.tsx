@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase"; 
 
 export const Route = createFileRoute("/ngo/explore")({
+  // Guard the route before rendering: Redirect to login if no valid session
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw redirect({
+        to: "/login", // Adjust to match your login route path
+      });
+    }
+  },
   head: () => ({ meta: [{ title: "Explore Donations — SurplusLink" }] }),
   component: ExplorePage,
 });
@@ -127,23 +136,35 @@ function ExplorePage() {
     async function fetchDonationsAndProfile() {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!isMounted) return;
-        
-        if (user) {
-          const { data: ngoProfile } = await supabase
-            .from("ngos")
-            .select("id, organization_name, address")
-            .eq("id", user.id)
-            .single();
 
-          if (ngoProfile && isMounted) {
-            setNgoAddress(ngoProfile.address || "");
-            setNgoName(ngoProfile.organization_name || "Hope Shelter");
+        // 1. Verify active session prior to requesting auth user data
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+          if (isMounted) {
+            console.warn("No active auth session detected or session has expired.");
+          }
+        } else {
+          // 2. Fetch authenticated user data safely using active session
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+          if (userError) {
+            console.error("User retrieval error:", userError.message);
+          } else if (user && isMounted) {
+            const { data: ngoProfile } = await supabase
+              .from("ngos")
+              .select("id, organization_name, address")
+              .eq("id", user.id)
+              .single();
+
+            if (ngoProfile && isMounted) {
+              setNgoAddress(ngoProfile.address || "");
+              setNgoName(ngoProfile.organization_name || "Hope Shelter");
+            }
           }
         }
 
-        // UPDATED: Fetches only "unclaimed" or "Unclaimed" donation batches
+        // 3. Fetch unclaimed donation batches
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
