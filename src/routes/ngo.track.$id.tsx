@@ -42,6 +42,7 @@ function TrackDelivery() {
 
   const [batch,      setBatch]      = useState<BatchInfo | null>(null);
   const [ngoAddress, setNgoAddress] = useState("");
+  const [ngoName,    setNgoName]    = useState("NGO");
   const [loading,    setLoading]    = useState(true);
   const [notFound,   setNotFound]   = useState(false);
 
@@ -58,54 +59,78 @@ function TrackDelivery() {
 
   // ── 1. Fetch batch data + current NGO's address ───────────────────────────
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchData() {
-      // NGO address (destination for the delivery)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: ngo } = await supabase
-          .from("ngos")
-          .select("address")
-          .eq("id", user.id)
+      try {
+        setLoading(true);
+
+        // Verify session before calling user/profile endpoints
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && isMounted) {
+            const { data: ngo } = await supabase
+              .from("ngos")
+              .select("organization_name, address")
+              .eq("id", user.id)
+              .single();
+
+            if (ngo && isMounted) {
+              if (ngo.address) setNgoAddress(ngo.address);
+              if (ngo.organization_name) setNgoName(ngo.organization_name);
+            }
+          }
+        }
+
+        // Fetch donation batch details
+        const { data, error } = await supabase
+          .from("donation_batches")
+          .select(`
+            id,
+            batch_type,
+            status,
+            collection_datetime,
+            claimed_at,
+            donors (
+              organization_name,
+              address
+            )
+          `)
+          .eq("id", id)
           .single();
-        if (ngo?.address) setNgoAddress(ngo.address);
-      }
 
-      // Donation batch
-      const { data, error } = await supabase
-        .from("donation_batches")
-        .select(`
-          id,
-          batch_type,
-          status,
-          collection_datetime,
-          claimed_at,
-          donors (
-            organization_name,
-            address
-          )
-        `)
-        .eq("id", id)
-        .single();
+        if (!isMounted) return;
 
-      if (error || !data) {
-        setNotFound(true);
-      } else {
-        const raw = data as any;
-        setBatch({
-          id: raw.id,
-          batch_type: raw.batch_type || "Surplus Food",
-          status: raw.status || "Claimed",
-          collection_datetime: raw.collection_datetime,
-          claimed_at: raw.claimed_at,
-          donor: raw.donors?.organization_name || "Anonymous Donor",
-          pickup: raw.donors?.address || "Location not specified",
-        });
+        if (error || !data) {
+          setNotFound(true);
+        } else {
+          const raw = data as any;
+          setBatch({
+            id: raw.id,
+            batch_type: raw.batch_type || "Surplus Food",
+            status: raw.status || "Claimed",
+            collection_datetime: raw.collection_datetime,
+            claimed_at: raw.claimed_at,
+            donor: raw.donors?.organization_name || "Anonymous Donor",
+            pickup: raw.donors?.address || "Location not specified",
+          });
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error("Error fetching delivery tracking details:", err);
+          setNotFound(true);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
     }
+
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   // ── 2. Progress interval (ticks every 5 s) ────────────────────────────────
@@ -190,11 +215,13 @@ function TrackDelivery() {
     ? getSimulatedDriver(batch.id)
     : null;
 
+  const userInitials = ngoName ? ngoName.substring(0, 2).toUpperCase() : "NG";
+
   // ── Render: loading ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel="HS" />
+        <AppHeader nav={ngoNav} userLabel={userInitials} />
         <main className="mx-auto max-w-5xl px-6 py-10">
           <div className="h-5 w-40 rounded bg-muted animate-pulse" />
           <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
@@ -214,7 +241,7 @@ function TrackDelivery() {
   if (notFound || !batch) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel="HS" />
+        <AppHeader nav={ngoNav} userLabel={userInitials} />
         <main className="mx-auto max-w-5xl px-6 py-10 text-center">
           <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-4 text-sm font-medium">Donation not found</p>
@@ -232,7 +259,7 @@ function TrackDelivery() {
   // ── Render: main ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
+      <AppHeader nav={ngoNav} userLabel={userInitials} />
       <main className="mx-auto max-w-5xl px-6 py-10">
 
         {/* Back link */}
