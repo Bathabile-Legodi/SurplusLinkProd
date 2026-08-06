@@ -1,91 +1,128 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import type { FormEvent } from "react";
-import { useState } from "react";
-import { Field } from "@/components/Field";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-export const Route = createFileRoute("/forgot-password")({
+export const Route = createFileRoute("/update-password")({
   head: () => ({
-    meta: [{ title: "Reset Password — SurplusLink" }],
+    meta: [{ title: "Update Password — SurplusLink" }],
   }),
-  component: ForgotPassword,
+  component: UpdatePassword,
 });
 
-function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+function UpdatePassword() {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const navigate = useNavigate();
 
-  async function handleResetPassword(e: React.FormEvent) {
+  useEffect(() => {
+    // Check if there is an error in the hash fragment (e.g., link expired)
+    const hash = window.location.hash;
+    if (hash.includes("error_description=")) {
+      const params = new URLSearchParams(hash.replace("#", "?"));
+      const description = params.get("error_description");
+      if (description) {
+        setErrorMsg(decodeURIComponent(description.replace(/\+/g, " ")));
+      }
+    }
+  }, []);
+
+  async function handleUpdatePassword(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    if (password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg("Passwords do not match.");
+      return;
+    }
 
     setLoading(true);
 
-    // Dynamically uses your current site origin (local or Vercel production)
-    const redirectUrl =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/update-password`
-        : "https://surplus-link-five.vercel.app/update-password";
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
+    // Supabase uses the recovery session automatically created from clicking the email link
+    const { error } = await supabase.auth.updateUser({
+      password: password,
     });
 
     setLoading(false);
 
     if (error) {
-      alert(error.message);
+      setErrorMsg(error.message);
       return;
     }
 
-    setSent(true);
+    setSuccessMsg("Password successfully updated! Redirecting to login...");
+    setTimeout(() => {
+      navigate({ to: "/login" });
+    }, 2000);
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-sm rounded-xl border bg-card p-8 shadow-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">
-            SurplusLink
-          </h1>
+      <div className="w-full max-w-sm rounded-xl border bg-card p-8 shadow-sm space-y-4">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
+          <h2 className="text-sm font-medium text-muted-foreground mt-1">
+            Set Your New Password
+          </h2>
         </div>
 
-        <h2 className="text-base font-semibold">Reset Password</h2>
+        {errorMsg && (
+          <div className="rounded-md bg-destructive/15 p-3 text-xs text-destructive">
+            {errorMsg}
+          </div>
+        )}
 
-        <p className="mt-1 text-xs text-muted-foreground">
-          Enter your registered email address. We will send you a link to reset
-          your password.
-        </p>
+        {successMsg && (
+          <div className="rounded-md bg-emerald-500/15 p-3 text-xs text-emerald-600 font-medium">
+            {successMsg}
+          </div>
+        )}
 
-        <form onSubmit={handleResetPassword} className="mt-5 space-y-4">
-          <Field
-            label="Email Address"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            placeholder="you@business.org"
-          />
+        <form onSubmit={handleUpdatePassword} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold mb-1">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </div>
 
           <button
+            type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading
-              ? "Sending..."
-              : sent
-                ? "Reset Link Sent ✓"
-                : "Send Reset Link"}
+            {loading ? "Updating Password..." : "Update Password"}
           </button>
         </form>
-
-        <div className="mt-5 text-center">
-          <Link
-            to="/login"
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            ← Back to Login
-          </Link>
-        </div>
       </div>
     </main>
   );
