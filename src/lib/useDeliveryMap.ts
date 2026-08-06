@@ -3,18 +3,137 @@
  *
  * React hook that owns the full Google Maps lifecycle for the delivery
  * tracking page using modern Google Maps APIs (Routes API & Advanced Markers):
- *   1. Waits for the Maps JS SDK via a polling-based readiness check
- *   2. Geocodes originAddress (donor) and destAddress (NGO) to real LatLng
- *   3. Fetches the real road route via google.maps.routes.Route.computeRoutes
- *   4. Renders an embedded map with:
- *      · Green "D" pin  — donor pickup location (AdvancedMarkerElement)
- *      · Blue  "N" pin  — NGO destination (AdvancedMarkerElement)
- *      · Amber courier pin — courier moving along the polyline path
- *   5. Smoothly animates and updates courier position along the route
+ *   1. Waits for the Maps JS SDK via polling readiness check
+ *   2. Instantiates the Map canvas immediately to avoid blank renders
+ *   3. Geocodes originAddress (donor) and destAddress (NGO) to real LatLng
+ *   4. Fetches road route via google.maps.routes.Route.computeRoutes (with straight-line fallback)
+ *   5. Formats distances in km and durations in hrs / mins
+ *   6. Renders embedded map with Advanced Marker elements
+ *   7. Smoothly animates courier position along the route
  */
 
 import { RefObject, useEffect, useRef, useState } from "react";
 import { getDeliveryProgress } from "@/lib/delivery-sim";
+
+// ── Duration Formatter (Converts minutes to "X hr Y mins") ─────────────────
+function formatDuration(totalMinutes: number): string {
+  const mins = Math.round(totalMinutes);
+  if (mins < 1) return "< 1 min";
+
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+
+  if (hours === 0) {
+    return `${remainingMins} min${remainingMins === 1 ? "" : "s"}`;
+  }
+  if (remainingMins === 0) {
+    return `${hours} hr${hours === 1 ? "" : "s"}`;
+  }
+  return `${hours} hr${hours === 1 ? "" : "s"} ${remainingMins} min${remainingMins === 1 ? "" : "s"}`;
+}
+
+// ── Pure TS Encoded Polyline Decoder ──────────────────────────────────────
+function decodeEncodedPolyline(encoded: string): { lat: number; lng: number }[] {
+  const points: { lat: number; lng: number }[] = [];
+  let index = 0;
+  const len = encoded.length;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < len) {
+    let b: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+
+  return points;
+}
+
+// ── Universal Deep Extraction Engine ──────────────────────────────────────
+function extractPathFromRoute(
+  obj: any,
+  gw: any,
+  depth = 0,
+  visited = new Set<any>()
+): any[] {
+  if (!obj || depth > 6 || visited.has(obj)) return [];
+  if (typeof obj === "object") visited.add(obj);
+
+  // 1. Direct array of LatLng or LatLngLiterals
+  if (Array.isArray(obj) && obj.length > 0) {
+    const first = obj[0];
+    if (
+      first &&
+      (typeof first.lat === "function" ||
+        typeof first.lat === "number" ||
+        typeof first.latitude === "number")
+    ) {
+      return obj
+        .map((pt: any) => {
+          if (typeof pt.lat === "function") return pt;
+          const lat = typeof pt.lat === "number" ? pt.lat : pt.latitude;
+          const lng = typeof pt.lng === "number" ? pt.lng : pt.longitude;
+          return new gw.google.maps.LatLng(lat, lng);
+        })
+        .filter(Boolean);
+    }
+  }
+
+  // 2. Encoded polyline string
+  if (typeof obj === "string" && obj.length > 10) {
+    try {
+      const decoded = decodeEncodedPolyline(obj);
+      if (decoded.length > 1) {
+        return decoded.map((pt) => new gw.google.maps.LatLng(pt.lat, pt.lng));
+      }
+    } catch {
+      // Ignored if not a valid polyline string
+    }
+  }
+
+  // 3. Inspect object properties and prototype getters
+  const keys = new Set<string>();
+  let currentObj = obj;
+  while (currentObj && currentObj !== Object.prototype) {
+    Object.getOwnPropertyNames(currentObj).forEach((k) => keys.add(k));
+    currentObj = Object.getPrototypeOf(currentObj);
+  }
+
+  for (const key of keys) {
+    if (key === "map" || key === "parent" || key.startsWith("__")) continue;
+    try {
+      let val = obj[key];
+      if (typeof val === "function" && val.length === 0) {
+        val = val.call(obj);
+      }
+      const res = extractPathFromRoute(val, gw, depth + 1, visited);
+      if (res.length > 0) return res;
+    } catch {
+      // Ignore getter execution errors
+    }
+  }
+
+  return [];
+}
 
 // ── Internal Maps SDK readiness hook ──────────────────────────────────────
 function useGoogleMapsCore(): boolean {
@@ -30,10 +149,8 @@ function useGoogleMapsCore(): boolean {
       return;
     }
 
-    // Ensure dummy global callback exists to prevent script parameter throws
     gw.initGoogleMaps = gw.initGoogleMaps || function () {};
 
-    // Ensure script is present in the DOM with required libraries
     const SCRIPT_ID = "google-maps-script";
     if (!document.getElementById(SCRIPT_ID)) {
       const s = document.createElement("script");
@@ -46,7 +163,6 @@ function useGoogleMapsCore(): boolean {
       document.head.appendChild(s);
     }
 
-    // Poll until core namespace, routes, marker, and geometry libraries are present
     const timer = setInterval(() => {
       const g = (window as any).google;
       if (g?.maps?.routes && g?.maps?.marker && g?.maps?.geometry) {
@@ -70,8 +186,6 @@ export interface DeliveryMapResult {
 }
 
 // ── Path maths ─────────────────────────────────────────────────────────────
-
-/** Linearly interpolate a LatLng along a path array at fractional position t. */
 function interpolateAlongPath(path: any[], t: number): any | null {
   const gw = window as any;
   if (!path || path.length === 0) return null;
@@ -89,8 +203,6 @@ function interpolateAlongPath(path: any[], t: number): any | null {
 }
 
 // ── Geocoding helper ───────────────────────────────────────────────────────
-
-/** Geocode address with South Africa country restriction */
 async function geocodeAddress(address: string): Promise<any | null> {
   const gw = window as any;
   return new Promise((resolve) => {
@@ -132,18 +244,16 @@ function createCustomPin(gw: any, color: string, labelText: string) {
 }
 
 function createCourierPin(gw: any) {
-  const pin = new gw.google.maps.marker.PinElement({
+  return new gw.google.maps.marker.PinElement({
     background: "#f59e0b",
     borderColor: "#ffffff",
     glyphColor: "#ffffff",
     glyphText: "🚚",
     scale: 1.2,
   });
-  return pin;
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
-
 export function useDeliveryMap(
   mapRef: RefObject<HTMLDivElement | null>,
   originAddress: string,
@@ -159,7 +269,6 @@ export function useDeliveryMap(
   const [durationText, setDurationText] = useState("");
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
 
-  // Stable refs across renders
   const courierMarkerRef = useRef<any>(null);
   const routePathRef = useRef<any[]>([]);
   const polylineRef = useRef<any>(null);
@@ -174,12 +283,35 @@ export function useDeliveryMap(
     let cancelled = false;
 
     async function initMap() {
+      if (!mapRef.current) return;
+
       setRouteReady(false);
       setGeocodeError(null);
       setDistanceText("");
       setDurationText("");
 
-      // ── 1. Geocode both addresses ────────────────────────────────────────
+      mapRef.current.innerHTML = "";
+
+      const defaultCenter = { lat: -26.2041, lng: 28.0473 };
+
+      // ── 1. Create Map Canvas IMMEDIATELY ──────────────────────────────
+      const map = new gw.google.maps.Map(mapRef.current, {
+        center: defaultCenter,
+        zoom: 12,
+        mapId: "DEMO_MAP_ID",
+        mapTypeControl: false,
+        fullscreenControl: true,
+        streetViewControl: false,
+        zoomControl: true,
+      });
+
+      setTimeout(() => {
+        if (gw.google?.maps?.event) {
+          gw.google.maps.event.trigger(map, "resize");
+        }
+      }, 100);
+
+      // ── 2. Geocode Addresses ─────────────────────────────────────────────
       const [originLL, destLL] = await Promise.all([
         geocodeAddress(originAddress),
         geocodeAddress(destAddress),
@@ -197,22 +329,6 @@ export function useDeliveryMap(
         );
         return;
       }
-
-      if (!mapRef.current) return;
-      mapRef.current.innerHTML = ""; // Clear existing map DOM nodes
-
-      // ── 2. Create the Map ────────────────────────────────────────────────
-      const map = new gw.google.maps.Map(mapRef.current, {
-        center: originLL,
-        zoom: 14,
-        mapId: "DEMO_MAP_ID", // Required for AdvancedMarkerElement
-        mapTypeControl: false,
-        fullscreenControl: true,
-        streetViewControl: false,
-        zoomControl: true,
-      });
-
-      gw.google.maps.event.trigger(map, "resize");
 
       const bounds = new gw.google.maps.LatLngBounds();
       bounds.extend(originLL);
@@ -238,7 +354,7 @@ export function useDeliveryMap(
         zIndex: 100,
       });
 
-      // ── 4. Modern Routes API calculation ────────────────────────────────
+      // ── 4. Routes API calculation ───────────────────────────────────────
       let decodedPath: any[] = [];
 
       try {
@@ -253,63 +369,30 @@ export function useDeliveryMap(
         };
 
         const response = await gw.google.maps.routes.Route.computeRoutes(request);
-        console.log("[useDeliveryMap] computeRoutes raw response:", response);
+        decodedPath = extractPathFromRoute(response, gw);
 
-        const routesList = Array.isArray(response) ? response : response?.routes;
-        const route = routesList?.[0];
-
-        if (route) {
-          // Distance extraction
-          if (route.distanceMeters != null) {
-            setDistanceText(`${(route.distanceMeters / 1000).toFixed(1)} km`);
-          }
-
-          // Duration extraction
-          const rawDuration = route.duration || route.staticDuration;
-          if (rawDuration != null) {
-            const seconds =
-              typeof rawDuration === "number"
-                ? rawDuration
-                : typeof rawDuration === "object" && rawDuration.seconds
-                ? Number(rawDuration.seconds)
-                : parseInt(String(rawDuration).replace("s", ""), 10);
-            if (!isNaN(seconds) && seconds > 0) {
-              setDurationText(`${Math.round(seconds / 60)} mins`);
-            }
-          }
-
-          // Polyline extraction
-          if (Array.isArray(route.polyline)) {
-            decodedPath = route.polyline.map((pt: any) =>
-              pt instanceof gw.google.maps.LatLng
-                ? pt
-                : new gw.google.maps.LatLng(pt.lat, pt.lng)
-            );
-          } else {
-            const encodedStr =
-              typeof route.polyline === "string"
-                ? route.polyline
-                : route.polyline?.encodedPolyline ||
-                  route.overviewPolyline?.encodedPolyline ||
-                  route.overviewPolyline;
-
-            if (typeof encodedStr === "string" && encodedStr.length > 0) {
-              decodedPath = gw.google.maps.geometry.encoding.decodePath(encodedStr);
-            }
-          }
+        if (decodedPath.length > 1) {
+          const meters = gw.google.maps.geometry.spherical.computeLength(decodedPath);
+          setDistanceText(`${(meters / 1000).toFixed(1)} km`);
+          
+          const rawMins = Math.max(1, (meters / 1000 / 35) * 60);
+          setDurationText(formatDuration(rawMins));
         }
       } catch (routesErr) {
         console.error("[useDeliveryMap] computeRoutes error:", routesErr);
       }
 
-      if (cancelled) return;
-
+      // Hard Fallback: Straight path between origin and destination
       if (decodedPath.length === 0) {
-        console.warn("[useDeliveryMap] Route calculation produced no path.");
-        setGeocodeError("Could not calculate driving directions between addresses.");
-        setRouteReady(true);
-        return;
+        decodedPath = [originLL, destLL];
+        const meters = gw.google.maps.geometry.spherical.computeLength(decodedPath);
+        setDistanceText(`${(meters / 1000).toFixed(1)} km`);
+        
+        const rawMins = Math.max(1, (meters / 1000 / 35) * 60);
+        setDurationText(formatDuration(rawMins));
       }
+
+      if (cancelled) return;
 
       routePathRef.current = decodedPath;
 
@@ -326,7 +409,6 @@ export function useDeliveryMap(
       });
       polylineRef.current = polyline;
 
-      // Fit map bounds to full polyline path
       const polylineBounds = new gw.google.maps.LatLngBounds();
       decodedPath.forEach((pt: any) => polylineBounds.extend(pt));
       map.fitBounds(polylineBounds, 60);
