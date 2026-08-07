@@ -2,33 +2,140 @@
  * useDeliveryMap.ts
  *
  * React hook that owns the full Google Maps lifecycle for the delivery
- * tracking page:
- *   1. Waits for the Maps JS SDK via a polling-based readiness check
- *      (robust against async-loading edge cases and already-loaded scripts)
- *   2. Geocodes originAddress (donor) and destAddress (NGO) to real LatLng
- *   3. Fetches the real road route via DirectionsService
- *   4. Renders a styled embedded map with:
- *      · Green "D" pin  — donor pickup location
- *      · Blue  "N" pin  — NGO destination
- *      · Amber arrow    — courier, moving along the route
- *   5. Whenever `progress` (0–1) changes, the courier is repositioned and
- *      its heading is updated to match the road direction.
+ * tracking page using modern Google Maps APIs (Routes API & Advanced Markers):
+ *   1. Waits for the Maps JS SDK via polling readiness check
+ *   2. Instantiates the Map canvas immediately to avoid blank renders
+ *   3. Geocodes originAddress (donor) and destAddress (NGO) to real LatLng
+ *   4. Fetches road route via google.maps.routes.Route.computeRoutes (with straight-line fallback)
+ *   5. Formats distances in km and durations in hrs / mins
+ *   6. Renders embedded map with Advanced Marker elements
+ *   7. Smoothly animates courier position along the route
  */
 
 import { RefObject, useEffect, useRef, useState } from "react";
 import { getDeliveryProgress } from "@/lib/delivery-sim";
 
+// ── Duration Formatter (Converts minutes to "X hr Y mins") ─────────────────
+function formatDuration(totalMinutes: number): string {
+  const mins = Math.round(totalMinutes);
+  if (mins < 1) return "< 1 min";
+
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+
+  if (hours === 0) {
+    return `${remainingMins} min${remainingMins === 1 ? "" : "s"}`;
+  }
+  if (remainingMins === 0) {
+    return `${hours} hr${hours === 1 ? "" : "s"}`;
+  }
+  return `${hours} hr${hours === 1 ? "" : "s"} ${remainingMins} min${remainingMins === 1 ? "" : "s"}`;
+}
+
+// ── Pure TS Encoded Polyline Decoder ──────────────────────────────────────
+function decodeEncodedPolyline(encoded: string): { lat: number; lng: number }[] {
+  const points: { lat: number; lng: number }[] = [];
+  let index = 0;
+  const len = encoded.length;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < len) {
+    let b: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+
+  return points;
+}
+
+// ── Universal Deep Extraction Engine ──────────────────────────────────────
+function extractPathFromRoute(
+  obj: any,
+  gw: any,
+  depth = 0,
+  visited = new Set<any>()
+): any[] {
+  if (!obj || depth > 6 || visited.has(obj)) return [];
+  if (typeof obj === "object") visited.add(obj);
+
+  // 1. Direct array of LatLng or LatLngLiterals
+  if (Array.isArray(obj) && obj.length > 0) {
+    const first = obj[0];
+    if (
+      first &&
+      (typeof first.lat === "function" ||
+        typeof first.lat === "number" ||
+        typeof first.latitude === "number")
+    ) {
+      return obj
+        .map((pt: any) => {
+          if (typeof pt.lat === "function") return pt;
+          const lat = typeof pt.lat === "number" ? pt.lat : pt.latitude;
+          const lng = typeof pt.lng === "number" ? pt.lng : pt.longitude;
+          return new gw.google.maps.LatLng(lat, lng);
+        })
+        .filter(Boolean);
+    }
+  }
+
+  // 2. Encoded polyline string
+  if (typeof obj === "string" && obj.length > 10) {
+    try {
+      const decoded = decodeEncodedPolyline(obj);
+      if (decoded.length > 1) {
+        return decoded.map((pt) => new gw.google.maps.LatLng(pt.lat, pt.lng));
+      }
+    } catch {
+      // Ignored if not a valid polyline string
+    }
+  }
+
+  // 3. Inspect object properties and prototype getters
+  const keys = new Set<string>();
+  let currentObj = obj;
+  while (currentObj && currentObj !== Object.prototype) {
+    Object.getOwnPropertyNames(currentObj).forEach((k) => keys.add(k));
+    currentObj = Object.getPrototypeOf(currentObj);
+  }
+
+  for (const key of keys) {
+    if (key === "map" || key === "parent" || key.startsWith("__")) continue;
+    try {
+      let val = obj[key];
+      if (typeof val === "function" && val.length === 0) {
+        val = val.call(obj);
+      }
+      const res = extractPathFromRoute(val, gw, depth + 1, visited);
+      if (res.length > 0) return res;
+    } catch {
+      // Ignore getter execution errors
+    }
+  }
+
+  return [];
+}
+
 // ── Internal Maps SDK readiness hook ──────────────────────────────────────
-//
-// We intentionally do NOT reuse the shared useGoogleMaps() from distance.ts
-// because that hook waits for window.google.maps.routes specifically. With
-// the Maps JS API's `loading=async` flag the `routes` sub-namespace is
-// sometimes populated lazily, causing the shared hook to hang indefinitely
-// when the script was already inserted by a previous page or is mid-load.
-//
-// This hook only requires window.google.maps (the core API), which is the
-// minimum needed for Geocoder and DirectionsService. Polling at 200 ms is
-// cheap and handles all three cases: fresh load, mid-load, already loaded.
 function useGoogleMapsCore(): boolean {
   const [ready, setReady] = useState<boolean>(
     () => typeof window !== "undefined" && !!(window as any).google?.maps,
@@ -37,27 +144,28 @@ function useGoogleMapsCore(): boolean {
   useEffect(() => {
     const gw = window as any;
 
-    if (gw.google?.maps) {
+    if (gw.google?.maps?.routes && gw.google?.maps?.marker) {
       setReady(true);
       return;
     }
 
-    // Ensure the script is in the DOM (safe to call even if already there)
+    gw.initGoogleMaps = gw.initGoogleMaps || function () {};
+
     const SCRIPT_ID = "google-maps-script";
     if (!document.getElementById(SCRIPT_ID)) {
       const s = document.createElement("script");
-      s.id        = SCRIPT_ID;
-      s.src       = `https://maps.googleapis.com/maps/api/js?key=${
+      s.id = SCRIPT_ID;
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${
         import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-      }&callback=initGoogleMaps&loading=async&libraries=routes`;
-      s.async     = true;
-      s.defer     = true;
+      }&loading=async&libraries=routes,marker,geometry`;
+      s.async = true;
+      s.defer = true;
       document.head.appendChild(s);
     }
 
-    // Poll until the core namespace appears
     const timer = setInterval(() => {
-      if ((window as any).google?.maps) {
+      const g = (window as any).google;
+      if (g?.maps?.routes && g?.maps?.marker && g?.maps?.geometry) {
         clearInterval(timer);
         setReady(true);
       }
@@ -78,8 +186,6 @@ export interface DeliveryMapResult {
 }
 
 // ── Path maths ─────────────────────────────────────────────────────────────
-
-/** Linearly interpolate a LatLng along a polyline at fractional position t. */
 function interpolateAlongPath(path: any[], t: number): any | null {
   const gw = window as any;
   if (!path || path.length === 0) return null;
@@ -87,8 +193,8 @@ function interpolateAlongPath(path: any[], t: number): any | null {
   if (t >= 1) return path[path.length - 1];
 
   const idx = t * (path.length - 1);
-  const lo  = Math.floor(idx);
-  const hi  = Math.min(lo + 1, path.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, path.length - 1);
   const frac = idx - lo;
 
   const lat = path[lo].lat() + frac * (path[hi].lat() - path[lo].lat());
@@ -96,36 +202,13 @@ function interpolateAlongPath(path: any[], t: number): any | null {
   return new gw.google.maps.LatLng(lat, lng);
 }
 
-/** Compute compass bearing (degrees 0–360) at position t along the path. */
-function computeBearing(path: any[], t: number): number {
-  if (!path || path.length < 2) return 0;
-  const idx = Math.floor(t * (path.length - 1));
-  const lo  = Math.max(0, Math.min(idx, path.length - 2));
-  const hi  = lo + 1;
-
-  const φ1 = (path[lo].lat() * Math.PI) / 180;
-  const φ2 = (path[hi].lat() * Math.PI) / 180;
-  const Δλ = ((path[hi].lng() - path[lo].lng()) * Math.PI) / 180;
-
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-}
-
 // ── Geocoding helper ───────────────────────────────────────────────────────
-
-/** Geocode a plain-text address → google.maps.LatLng | null.
- *  Uses componentRestrictions (hard country filter) rather than region
- *  (bias only) so results are strictly limited to South Africa. */
 async function geocodeAddress(address: string): Promise<any | null> {
   const gw = window as any;
   return new Promise((resolve) => {
     new gw.google.maps.Geocoder().geocode(
       {
         address,
-        // Hard filter — ONLY return South African results.
-        // This prevents common street names (e.g. "Fulham Road") from
-        // matching a higher-ranked global result in another country.
         componentRestrictions: { country: "ZA" },
       },
       (results: any[], status: string) => {
@@ -140,40 +223,37 @@ async function geocodeAddress(address: string): Promise<any | null> {
   });
 }
 
+// ── Pin Element Factory ───────────────────────────────────────────────────
+function createCustomPin(gw: any, color: string, labelText: string) {
+  const pinContainer = document.createElement("div");
+  pinContainer.style.position = "relative";
+  pinContainer.style.display = "flex";
+  pinContainer.style.alignItems = "center";
+  pinContainer.style.justifyContent = "center";
 
-// ── Map styles ─────────────────────────────────────────────────────────────
-// Keep styles minimal — only hide noisy layers. Aggressive road/landscape
-// colour overrides can make roads invisible (white on near-white background)
-// which causes the map to appear blank.
-const MAP_STYLES = [
-  { featureType: "poi",     stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-];
+  const pin = new gw.google.maps.marker.PinElement({
+    background: color,
+    borderColor: "#ffffff",
+    glyphColor: "#ffffff",
+    glyphText: labelText,
+    scale: 1.1,
+  });
 
-// ── Custom SVG pin factory ─────────────────────────────────────────────────
-function pinIcon(gw: any, color: string, label: string) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
-    <path d="M18 0C8.059 0 0 8.059 0 18c0 13.5 18 26 18 26S36 31.5 36 18C36 8.059 27.941 0 18 0z" fill="${color}"/>
-    <circle cx="18" cy="18" r="8" fill="white"/>
-    <text x="18" y="22" text-anchor="middle" font-size="11" font-weight="bold" fill="${color}" font-family="sans-serif">${label}</text>
-  </svg>`;
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new gw.google.maps.Size(36, 44),
-    anchor: new gw.google.maps.Point(18, 44),
-  };
+  pinContainer.appendChild(pin);
+  return pinContainer;
+}
+
+function createCourierPin(gw: any) {
+  return new gw.google.maps.marker.PinElement({
+    background: "#f59e0b",
+    borderColor: "#ffffff",
+    glyphColor: "#ffffff",
+    glyphText: "🚚",
+    scale: 1.2,
+  });
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
-
-/**
- * @param mapRef              Ref to the <div> that will host the map
- * @param originAddress       Donor's address string (pickup location)
- * @param destAddress         NGO's address string (delivery destination)
- * @param progress            0–1 snapshot (used for initial placement)
- * @param claimedAt           ISO timestamp when the batch was claimed
- * @param collectionDatetime  ISO timestamp of the collection deadline
- */
 export function useDeliveryMap(
   mapRef: RefObject<HTMLDivElement | null>,
   originAddress: string,
@@ -184,33 +264,54 @@ export function useDeliveryMap(
 ): DeliveryMapResult {
   const mapsReady = useGoogleMapsCore();
 
-  const [routeReady,   setRouteReady]   = useState(false);
+  const [routeReady, setRouteReady] = useState(false);
   const [distanceText, setDistanceText] = useState("");
   const [durationText, setDurationText] = useState("");
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
 
-  // Stable refs — survive re-renders without triggering effects
   const courierMarkerRef = useRef<any>(null);
-  const routePathRef     = useRef<any[]>([]);
+  const routePathRef = useRef<any[]>([]);
+  const polylineRef = useRef<any>(null);
 
-  // ── Map initialisation ────────────────────────────────────────────────────
-  // Re-runs when: Maps SDK becomes ready OR either address changes.
   useEffect(() => {
-    if (!mapsReady)          return;
-    if (!mapRef.current)     return;
+    if (!mapsReady) return;
+    if (!mapRef.current) return;
     if (!originAddress || originAddress === "Location not specified") return;
-    if (!destAddress   || destAddress   === "Location not specified") return;
+    if (!destAddress || destAddress === "Location not specified") return;
 
     const gw = window as any;
     let cancelled = false;
 
     async function initMap() {
+      if (!mapRef.current) return;
+
       setRouteReady(false);
       setGeocodeError(null);
       setDistanceText("");
       setDurationText("");
 
-      // ── 1. Geocode both addresses ────────────────────────────────────────
+      mapRef.current.innerHTML = "";
+
+      const defaultCenter = { lat: -26.2041, lng: 28.0473 };
+
+      // ── 1. Create Map Canvas IMMEDIATELY ──────────────────────────────
+      const map = new gw.google.maps.Map(mapRef.current, {
+        center: defaultCenter,
+        zoom: 12,
+        mapId: "DEMO_MAP_ID",
+        mapTypeControl: false,
+        fullscreenControl: true,
+        streetViewControl: false,
+        zoomControl: true,
+      });
+
+      setTimeout(() => {
+        if (gw.google?.maps?.event) {
+          gw.google.maps.event.trigger(map, "resize");
+        }
+      }, 100);
+
+      // ── 2. Geocode Addresses ─────────────────────────────────────────────
       const [originLL, destLL] = await Promise.all([
         geocodeAddress(originAddress),
         geocodeAddress(destAddress),
@@ -229,214 +330,176 @@ export function useDeliveryMap(
         return;
       }
 
-      if (!mapRef.current) return;
-      mapRef.current.innerHTML = ""; // clear any prior map instance
-
-      // ── 2. Create the map ────────────────────────────────────────────────
-      // Start centered between the two pins; fitBounds below will zoom properly.
-      const map = new gw.google.maps.Map(mapRef.current, {
-        center: { lat: originLL.lat(), lng: originLL.lng() },
-        zoom: 14,
-        mapTypeControl: false,
-        fullscreenControl: true,
-        streetViewControl: false,
-        zoomControl: true,
-        styles: MAP_STYLES,
-      });
-
-      // Force a resize in case the container was zero-sized at mount time
-      gw.google.maps.event.trigger(map, "resize");
-
-      // Immediately fit the viewport to both pins so the map is never blank
       const bounds = new gw.google.maps.LatLngBounds();
       bounds.extend(originLL);
       bounds.extend(destLL);
-      map.fitBounds(bounds, /* padding px */ 60);
+      map.fitBounds(bounds, 60);
 
-      // ── 3. Donor pickup pin (green) ──────────────────────────────────────
-      new gw.google.maps.Marker({
+      // ── 3. Advanced Markers for Pickup and NGO Destination ────────────────
+      const { AdvancedMarkerElement } = gw.google.maps.marker;
+
+      new AdvancedMarkerElement({
         position: originLL,
         map,
         title: "Donor Pickup Location",
-        icon: pinIcon(gw, "#16a34a", "D"),
+        content: createCustomPin(gw, "#16a34a", "D"),
         zIndex: 100,
       });
 
-      // ── 4. NGO destination pin (blue) ────────────────────────────────────
-      new gw.google.maps.Marker({
+      new AdvancedMarkerElement({
         position: destLL,
         map,
         title: "Your Organisation",
-        icon: pinIcon(gw, "#2563eb", "N"),
+        content: createCustomPin(gw, "#2563eb", "N"),
         zIndex: 100,
       });
 
-      // ── 5. Directions route ──────────────────────────────────────────────
-      const directionsService  = new gw.google.maps.DirectionsService();
-      const directionsRenderer = new gw.google.maps.DirectionsRenderer({
-        suppressMarkers: true,
-        // preserveViewport: true so fitBounds (above) controls the view, not
-        // the renderer. The renderer still draws the polyline correctly.
-        preserveViewport: true,
-        polylineOptions: {
-          strokeColor:   "#3b82f6",
-          strokeWeight:  5,
-          strokeOpacity: 0.8,
-        },
-      });
-      directionsRenderer.setMap(map);
+      // ── 4. Routes API calculation ───────────────────────────────────────
+      let decodedPath: any[] = [];
 
-      directionsService.route(
-        {
-          origin:      originLL,
-          destination: destLL,
-          travelMode:  gw.google.maps.TravelMode.DRIVING,
-        },
-        (result: any, status: string) => {
-          if (cancelled) return;
+      try {
+        const originLiteral = { lat: originLL.lat(), lng: originLL.lng() };
+        const destLiteral = { lat: destLL.lat(), lng: destLL.lng() };
 
-          if (status !== "OK" || !result) {
-            console.warn("[useDeliveryMap] Directions failed:", status);
-            // Still usable — just no route line / courier
-            setRouteReady(true);
-            return;
-          }
+        const request = {
+          origin: originLiteral,
+          destination: destLiteral,
+          travelMode: "DRIVING",
+          fields: ["*"],
+        };
 
-          directionsRenderer.setDirections(result);
+        const response = await gw.google.maps.routes.Route.computeRoutes(request);
+        decodedPath = extractPathFromRoute(response, gw);
 
-          const leg = result.routes?.[0]?.legs?.[0];
-          if (leg) {
-            setDistanceText(leg.distance?.text ?? "");
-            setDurationText(leg.duration?.text ?? "");
-          }
-
-          // Store the overview path for interpolation
-          const path: any[] = result.routes[0].overview_path;
-          routePathRef.current = path;
-
-          // ── 6. Courier marker (amber arrow) ──────────────────────────────
-          const initPos     = interpolateAlongPath(path, progress);
-          const initBearing = computeBearing(path, progress);
-
-          const courierMarker = new gw.google.maps.Marker({
-            position: initPos,
-            map,
-            title: "Courier",
-            icon: {
-              path:        gw.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-              scale:       7,
-              fillColor:   "#f59e0b",
-              fillOpacity: 1,
-              strokeColor: "#ffffff",
-              strokeWeight: 2,
-              rotation:    initBearing,
-            },
-            zIndex: 999,
-          });
-          courierMarkerRef.current = courierMarker;
-
-          // ── 7. Courier animation ──────────────────────────────────────────
-          //
-          // Phase A — Intro sweep (rAF, 2.5 s):
-          //   Animate from position 0 (origin) to the REAL current progress
-          //   so the user sees the courier "travel" the route on page load.
-          //
-          // Phase B — Real-time ticker (1 s interval):
-          //   Keep the marker moving at the actual wall-clock pace so it
-          //   continues to advance smoothly rather than jumping.
-
-          // Helper: move marker to fractional position p along the path
-          function placeAt(p: number) {
-            const pos = interpolateAlongPath(path, p);
-            if (!pos) return;
-            courierMarker.setPosition(pos);
-            const brng = computeBearing(path, p);
-            const icon = courierMarker.getIcon();
-            if (icon) courierMarker.setIcon({ ...icon, rotation: brng });
-          }
-
-          // Ease-in-out quad
-          function easeInOut(t: number) {
-            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-          }
-
-          // Phase A — rAF intro sweep
-          const INTRO_MS = 2500;
-          const introStart = performance.now();
-          const introEnd   = progress; // target = real current progress
-
-          let rafId: number;
-          let tickerId: ReturnType<typeof setInterval>;
-
-          function introFrame(now: number) {
-            if (cancelled) return;
-            const t  = Math.min((now - introStart) / INTRO_MS, 1);
-            const p  = easeInOut(t) * introEnd;
-            placeAt(p);
-
-            if (t < 1) {
-              rafId = requestAnimationFrame(introFrame);
-            } else {
-              // Phase B — switch to real-time 1-second ticker
-              tickerId = setInterval(() => {
-                if (cancelled) {
-                  clearInterval(tickerId);
-                  return;
-                }
-                const { progress: p2 } = getDeliveryProgress(
-                  claimedAt,
-                  collectionDatetime,
-                );
-                placeAt(Math.min(p2, 1));
-              }, 1000);
-            }
-          }
-
-          rafId = requestAnimationFrame(introFrame);
-
-          // Store cleanup handles in the courier marker ref so the effect
-          // cleanup can cancel them (the ref itself is set to null on cleanup)
-          (courierMarker as any).__rafId     = () => cancelAnimationFrame(rafId);
-          (courierMarker as any).__tickerId  = () => clearInterval(tickerId);
-
-          setRouteReady(true);
+        if (decodedPath.length > 1) {
+          const meters = gw.google.maps.geometry.spherical.computeLength(decodedPath);
+          setDistanceText(`${(meters / 1000).toFixed(1)} km`);
+          
+          const rawMins = Math.max(1, (meters / 1000 / 35) * 60);
+          setDurationText(formatDuration(rawMins));
         }
-      );
+      } catch (routesErr) {
+        console.error("[useDeliveryMap] computeRoutes error:", routesErr);
+      }
+
+      // Hard Fallback: Straight path between origin and destination
+      if (decodedPath.length === 0) {
+        decodedPath = [originLL, destLL];
+        const meters = gw.google.maps.geometry.spherical.computeLength(decodedPath);
+        setDistanceText(`${(meters / 1000).toFixed(1)} km`);
+        
+        const rawMins = Math.max(1, (meters / 1000 / 35) * 60);
+        setDurationText(formatDuration(rawMins));
+      }
+
+      if (cancelled) return;
+
+      routePathRef.current = decodedPath;
+
+      // Render Polyline on Map
+      if (polylineRef.current) polylineRef.current.setMap(null);
+
+      const polyline = new gw.google.maps.Polyline({
+        path: decodedPath,
+        geodesic: true,
+        strokeColor: "#3b82f6",
+        strokeWeight: 5,
+        strokeOpacity: 0.8,
+        map,
+      });
+      polylineRef.current = polyline;
+
+      const polylineBounds = new gw.google.maps.LatLngBounds();
+      decodedPath.forEach((pt: any) => polylineBounds.extend(pt));
+      map.fitBounds(polylineBounds, 60);
+
+      // ── 5. Courier Advanced Marker ────────────────────────────────────
+      const initPos = interpolateAlongPath(decodedPath, progress);
+
+      const courierMarker = new AdvancedMarkerElement({
+        position: initPos,
+        map,
+        title: "Courier",
+        content: createCourierPin(gw),
+        zIndex: 999,
+      });
+      courierMarkerRef.current = courierMarker;
+
+      // ── 6. Courier movement animation loop ────────────────────────────
+      function placeAt(p: number) {
+        const pos = interpolateAlongPath(decodedPath, p);
+        if (!pos) return;
+        courierMarker.position = pos;
+      }
+
+      function easeInOut(t: number) {
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      }
+
+      const INTRO_MS = 2500;
+      const introStart = performance.now();
+      const introEnd = progress;
+
+      let rafId: number;
+      let tickerId: ReturnType<typeof setInterval>;
+
+      function introFrame(now: number) {
+        if (cancelled) return;
+        const t = Math.min((now - introStart) / INTRO_MS, 1);
+        const p = easeInOut(t) * introEnd;
+        placeAt(p);
+
+        if (t < 1) {
+          rafId = requestAnimationFrame(introFrame);
+        } else {
+          tickerId = setInterval(() => {
+            if (cancelled) {
+              clearInterval(tickerId);
+              return;
+            }
+            const { progress: p2 } = getDeliveryProgress(
+              claimedAt,
+              collectionDatetime,
+            );
+            placeAt(Math.min(p2, 1));
+          }, 1000);
+        }
+      }
+
+      rafId = requestAnimationFrame(introFrame);
+
+      (courierMarker as any).__rafId = () => cancelAnimationFrame(rafId);
+      (courierMarker as any).__tickerId = () => clearInterval(tickerId);
+
+      setRouteReady(true);
     }
 
     initMap();
 
     return () => {
       cancelled = true;
-      // Cancel any in-flight rAF or tick from the animation
       const m = courierMarkerRef.current;
       if (m) {
         m.__rafId?.();
         m.__tickerId?.();
       }
+      if (polylineRef.current) polylineRef.current.setMap(null);
       courierMarkerRef.current = null;
-      routePathRef.current     = [];
+      routePathRef.current = [];
       if (mapRef.current) mapRef.current.innerHTML = "";
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady, originAddress, destAddress]);
 
-  // Progress → marker is now handled entirely by the animation loop above.
-  // This effect is kept as a safety fallback for when the route hasn't loaded
-  // yet (e.g., Directions API is slow) so the marker still snaps on initial render.
+  // Fallback update for progress ticks
   useEffect(() => {
     const marker = courierMarkerRef.current;
-    const path   = routePathRef.current;
-    // Only snap if there is NO active animation running (i.e., route not yet loaded)
-    if (!marker || path.length > 0) return;
+    const path = routePathRef.current;
+    if (!marker || path.length === 0) return;
 
     const pos = interpolateAlongPath(path, progress);
-    if (!pos) return;
-    marker.setPosition(pos);
-
-    const bearing     = computeBearing(path, progress);
-    const existingIcon = marker.getIcon();
-    if (existingIcon) marker.setIcon({ ...existingIcon, rotation: bearing });
+    if (pos) marker.position = pos;
   }, [progress]);
 
   return { routeReady, distanceText, durationText, geocodeError };
