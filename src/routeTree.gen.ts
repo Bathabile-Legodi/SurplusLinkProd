@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UpdatePasswordRouteImport } from './routes/update-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -33,6 +34,11 @@ import { Route as NgoDonationsIdSuccessRouteImport } from './routes/ngo.donation
 import { Route as NgoDonationsIdClaimRouteImport } from './routes/ngo.donations.$id.claim'
 import { Route as NgoCollectionInstructionsIdRouteImport } from './routes/ngo.collection.instructions.$id'
 
+const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
+  id: '/update-password',
+  path: '/update-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
   '/donor/history': typeof DonorHistoryRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
   '/donor/history': typeof DonorHistoryRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
   '/donor/history': typeof DonorHistoryRoute
@@ -234,6 +243,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register'
+    | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
     | '/donor/history'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register'
+    | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
     | '/donor/history'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register'
+    | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
     | '/donor/history'
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  UpdatePasswordRoute: typeof UpdatePasswordRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
   DonorHistoryRoute: typeof DonorHistoryRoute
@@ -330,6 +343,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/update-password': {
+      id: '/update-password'
+      path: '/update-password'
+      fullPath: '/update-password'
+      preLoaderRoute: typeof UpdatePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  UpdatePasswordRoute: UpdatePasswordRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,
   DonorHistoryRoute: DonorHistoryRoute,

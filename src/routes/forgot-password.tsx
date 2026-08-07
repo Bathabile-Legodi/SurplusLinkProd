@@ -1,54 +1,35 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export const Route = createFileRoute("/update-password")({
+export const Route = createFileRoute("/forgot-password")({
   head: () => ({
-    meta: [{ title: "Update Password — SurplusLink" }],
+    meta: [{ title: "Forgot Password — SurplusLink" }],
   }),
-  component: UpdatePassword,
+  component: ForgotPassword,
 });
 
-function UpdatePassword() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+function ForgotPassword() {
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if there is an error in the hash fragment (e.g., link expired)
-    const hash = window.location.hash;
-    if (hash.includes("error_description=")) {
-      const params = new URLSearchParams(hash.replace("#", "?"));
-      const description = params.get("error_description");
-      if (description) {
-        setErrorMsg(decodeURIComponent(description.replace(/\+/g, " ")));
-      }
-    }
-  }, []);
-
-  async function handleUpdatePassword(e: React.FormEvent) {
+  async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (password.length < 6) {
-      setErrorMsg("Password must be at least 6 characters long.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMsg("Passwords do not match.");
+    if (!email) {
+      setErrorMsg("Please enter your email address.");
       return;
     }
 
     setLoading(true);
 
-    // Supabase uses the recovery session automatically created from clicking the email link
-    const { error } = await supabase.auth.updateUser({
-      password: password,
+    // Points to your local dev server running on port 3000
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "http://localhost:3000/update-password",
     });
 
     setLoading(false);
@@ -58,10 +39,9 @@ function UpdatePassword() {
       return;
     }
 
-    setSuccessMsg("Password successfully updated! Redirecting to login...");
-    setTimeout(() => {
-      navigate({ to: "/login" });
-    }, 2000);
+    setSuccessMsg(
+      "Password reset link sent! Check your inbox for further instructions."
+    );
   }
 
   return (
@@ -70,7 +50,7 @@ function UpdatePassword() {
         <div className="text-center">
           <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
           <h2 className="text-sm font-medium text-muted-foreground mt-1">
-            Set Your New Password
+            Reset Your Password
           </h2>
         </div>
 
@@ -86,31 +66,17 @@ function UpdatePassword() {
           </div>
         )}
 
-        <form onSubmit={handleUpdatePassword} className="space-y-4">
+        <form onSubmit={handleResetPassword} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold mb-1">
-              New Password
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Email Address
             </label>
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold mb-1">
-              Confirm New Password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full rounded-md border border-input bg-background p-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
               required
             />
           </div>
@@ -118,11 +84,18 @@ function UpdatePassword() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Updating Password..." : "Update Password"}
+            {loading ? "Sending link..." : "Send Reset Link"}
           </button>
         </form>
+
+        <div className="text-center text-xs text-muted-foreground pt-2">
+          Remembered your password?{" "}
+          <Link to="/login" className="font-medium text-primary hover:underline">
+            Back to Sign In
+          </Link>
+        </div>
       </div>
     </main>
   );
