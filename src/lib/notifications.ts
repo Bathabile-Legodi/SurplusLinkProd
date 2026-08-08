@@ -43,7 +43,7 @@ const NotifyNGOsSchema = z.object({
 
 // Send a push notification to a specific user via their saved subscriptions
 export const sendPushNotification = createServerFn({ method: "POST" })
-  .validator(PushPayloadSchema)
+  .inputValidator(PushPayloadSchema)
   .handler(async ({ data }) => {
     const { userId, payload } = data;
     const isConfigured = initWebPush();
@@ -107,7 +107,7 @@ export const sendPushNotification = createServerFn({ method: "POST" })
 
 // Broadcast a new donation alert to all verified NGOs
 export const notifyNGOsOfNewDonation = createServerFn({ method: "POST" })
-  .validator(NotifyNGOsSchema)
+  .inputValidator(NotifyNGOsSchema)
   .handler(async ({ data }) => {
     const { batchType } = data;
 

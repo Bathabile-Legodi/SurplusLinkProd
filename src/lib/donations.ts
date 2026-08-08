@@ -173,7 +173,20 @@ export async function submitDonationBatch(
       : uniqueCategories[0] || "Donation";
   }
 
-  // 3. Perform parent batch insert
+  // Ensure the user has a row in the donors table (satisfies the FK constraint).
+  // This is a no-op for existing donors; it only inserts on first donation.
+  const userMeta = userData.user.user_metadata ?? {};
+  await supabase.from("donors").upsert(
+    {
+      id: userData.user.id,
+      organization_name: userMeta.business_name ?? userMeta.organization_name ?? "Unknown Donor",
+      address: userMeta.address ?? "",
+      email: userData.user.email ?? "",
+    },
+    { onConflict: "id" }
+  );
+
+  // Perform parent batch insert
   const { data: batchRow, error: batchError } = await supabase
     .from("donation_batches")
     .insert({
@@ -187,7 +200,8 @@ export async function submitDonationBatch(
     .single();
 
   if (batchError || !batchRow) {
-    throw batchError ?? new Error("Failed to create donation batch");
+    console.error("Batch insert error:", batchError);
+    throw new Error("Failed to submit your donation. Please try again.");
   }
 
   // 4. Map and batch save your line items
@@ -205,7 +219,10 @@ export async function submitDonationBatch(
     .insert(itemRows)
     .select();
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    console.error("Items insert error:", itemsError);
+    throw new Error("Failed to save donation items. Please try again.");
+  }
 
   // Fire and forget push notification to the donor
   sendPushNotification({

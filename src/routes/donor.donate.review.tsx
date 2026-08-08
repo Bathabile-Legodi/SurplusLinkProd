@@ -55,7 +55,21 @@ function ReviewBatch() {
         search: { batchId: result.id },
       });
     } catch (err) {
-      setError(getErrorMessage(err));
+      const raw = getErrorMessage(err);
+      // Don't expose raw DB/Supabase internals to the user
+      const isDatabaseError =
+        raw.includes("violates") ||
+        raw.includes("constraint") ||
+        raw.includes("duplicate key") ||
+        raw.includes("foreign key") ||
+        raw.includes("syntax error") ||
+        raw.includes("supabase") ||
+        raw.includes("postgres");
+      setError(
+        isDatabaseError
+          ? "Something went wrong while saving your donation. Please try again."
+          : raw
+      );
       setIsSubmitting(false);
     }
   };

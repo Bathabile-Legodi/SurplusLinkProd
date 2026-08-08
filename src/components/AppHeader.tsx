@@ -95,10 +95,14 @@ export const donorNav: NavItem[] = [
   { to: "/donor/history", label: "History" },
   { to: "/donor/impact", label: "Impact & Records" },
   { to: "/donor/network", label: "Community Network" },
+  { to: "/donor/funds", label: "Fund NGOs" },
+  { to: "/donor/profile", label: "Profile" },
 ];
 
 export const ngoNav: NavItem[] = [
   { to: "/ngo/dashboard", label: "Dashboard" },
   { to: "/ngo/explore", label: "Explore Donations" },
   { to: "/ngo/claims", label: "My Claims" },
+  { to: "/ngo/profile", label: "Profile" },
 ];
+
