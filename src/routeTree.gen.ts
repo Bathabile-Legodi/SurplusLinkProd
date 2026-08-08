@@ -23,6 +23,7 @@ import { Route as DonorProfileRouteImport } from './routes/donor.profile'
 import { Route as DonorNetworkRouteImport } from './routes/donor.network'
 import { Route as DonorImpactRouteImport } from './routes/donor.impact'
 import { Route as DonorHistoryRouteImport } from './routes/donor.history'
+import { Route as DonorFundsRouteImport } from './routes/donor.funds'
 import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
@@ -106,6 +107,11 @@ const DonorHistoryRoute = DonorHistoryRouteImport.update({
   path: '/donor/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DonorFundsRoute = DonorFundsRouteImport.update({
+  id: '/donor/funds',
+  path: '/donor/funds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DonorDashboardRoute = DonorDashboardRouteImport.update({
   id: '/donor/dashboard',
   path: '/donor/dashboard',
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/funds': typeof DonorFundsRoute
   '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/funds': typeof DonorFundsRoute
   '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/funds': typeof DonorFundsRoute
   '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/funds'
     | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/funds'
     | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/funds'
     | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
@@ -349,6 +361,7 @@ export interface RootRouteChildren {
   UpdatePasswordRoute: typeof UpdatePasswordRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
+  DonorFundsRoute: typeof DonorFundsRoute
   DonorHistoryRoute: typeof DonorHistoryRoute
   DonorImpactRoute: typeof DonorImpactRoute
   DonorNetworkRoute: typeof DonorNetworkRoute
@@ -467,6 +480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DonorHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/donor/funds': {
+      id: '/donor/funds'
+      path: '/donor/funds'
+      fullPath: '/donor/funds'
+      preLoaderRoute: typeof DonorFundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/donor/dashboard': {
       id: '/donor/dashboard'
       path: '/donor/dashboard'
@@ -578,6 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   UpdatePasswordRoute: UpdatePasswordRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,
+  DonorFundsRoute: DonorFundsRoute,
   DonorHistoryRoute: DonorHistoryRoute,
   DonorImpactRoute: DonorImpactRoute,
   DonorNetworkRoute: DonorNetworkRoute,
