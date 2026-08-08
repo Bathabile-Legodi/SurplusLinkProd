@@ -181,7 +181,6 @@ export async function submitDonationBatch(
       id: userData.user.id,
       organization_name: userMeta.business_name ?? userMeta.organization_name ?? "Unknown Donor",
       address: userMeta.address ?? "",
-      email: userData.user.email ?? "",
     },
     { onConflict: "id" }
   );
