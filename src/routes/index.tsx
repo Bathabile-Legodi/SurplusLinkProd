@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   Search,
   Clock,
+  HeartHandshake,
 } from "lucide-react";
 
 // this is a temporarily at the very top of main.tsx to ignore extension noise
@@ -163,18 +164,31 @@ function Hero() {
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/register"
-                className="group inline-flex h-14 items-center justify-center gap-2 rounded-full border border-black bg-black px-8 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+                className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+                
+                
               >
                 Post Available Food (Donors)
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
-              <Link
-                to="/register"
-                className="group inline-flex h-14 items-center justify-center gap-2 rounded-full border border-black bg-white px-8 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
-              >
-                Request Food Alerts (NGOs)
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+              
+               <Link
+  to="/register"
+  className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+>
+  Request Food Alerts (NGOs)
+  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+</Link>
+               <Link
+  to="/donor/funds"
+  className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+>
+  <HeartHandshake className="h-4 w-4" />
+  Support an NGO
+  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+</Link>
+              
+
             </div>
           </div>
 

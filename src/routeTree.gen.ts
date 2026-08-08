@@ -14,13 +14,16 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NgoProfileRouteImport } from './routes/ngo.profile'
 import { Route as NgoNotVerifiedRouteImport } from './routes/ngo.not-verified'
 import { Route as NgoExploreRouteImport } from './routes/ngo.explore'
 import { Route as NgoDashboardRouteImport } from './routes/ngo.dashboard'
 import { Route as NgoClaimsRouteImport } from './routes/ngo.claims'
+import { Route as DonorProfileRouteImport } from './routes/donor.profile'
 import { Route as DonorNetworkRouteImport } from './routes/donor.network'
 import { Route as DonorImpactRouteImport } from './routes/donor.impact'
 import { Route as DonorHistoryRouteImport } from './routes/donor.history'
+import { Route as DonorFundsRouteImport } from './routes/donor.funds'
 import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
@@ -59,6 +62,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NgoProfileRoute = NgoProfileRouteImport.update({
+  id: '/ngo/profile',
+  path: '/ngo/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NgoNotVerifiedRoute = NgoNotVerifiedRouteImport.update({
   id: '/ngo/not-verified',
   path: '/ngo/not-verified',
@@ -79,6 +87,11 @@ const NgoClaimsRoute = NgoClaimsRouteImport.update({
   path: '/ngo/claims',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DonorProfileRoute = DonorProfileRouteImport.update({
+  id: '/donor/profile',
+  path: '/donor/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DonorNetworkRoute = DonorNetworkRouteImport.update({
   id: '/donor/network',
   path: '/donor/network',
@@ -92,6 +105,11 @@ const DonorImpactRoute = DonorImpactRouteImport.update({
 const DonorHistoryRoute = DonorHistoryRouteImport.update({
   id: '/donor/history',
   path: '/donor/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorFundsRoute = DonorFundsRouteImport.update({
+  id: '/donor/funds',
+  path: '/donor/funds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DonorDashboardRoute = DonorDashboardRouteImport.update({
@@ -165,13 +183,16 @@ export interface FileRoutesByFullPath {
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/funds': typeof DonorFundsRoute
   '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
+  '/donor/profile': typeof DonorProfileRoute
   '/ngo/claims': typeof NgoClaimsRoute
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/ngo/profile': typeof NgoProfileRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -191,13 +212,16 @@ export interface FileRoutesByTo {
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/funds': typeof DonorFundsRoute
   '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
+  '/donor/profile': typeof DonorProfileRoute
   '/ngo/claims': typeof NgoClaimsRoute
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/ngo/profile': typeof NgoProfileRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -218,13 +242,16 @@ export interface FileRoutesById {
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/funds': typeof DonorFundsRoute
   '/donor/history': typeof DonorHistoryRoute
   '/donor/impact': typeof DonorImpactRoute
   '/donor/network': typeof DonorNetworkRoute
+  '/donor/profile': typeof DonorProfileRoute
   '/ngo/claims': typeof NgoClaimsRoute
   '/ngo/dashboard': typeof NgoDashboardRoute
   '/ngo/explore': typeof NgoExploreRoute
   '/ngo/not-verified': typeof NgoNotVerifiedRoute
+  '/ngo/profile': typeof NgoProfileRoute
   '/donor/donate/batch': typeof DonorDonateBatchRoute
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
@@ -246,13 +273,16 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/funds'
     | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
+    | '/donor/profile'
     | '/ngo/claims'
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
+    | '/ngo/profile'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -272,13 +302,16 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/funds'
     | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
+    | '/donor/profile'
     | '/ngo/claims'
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
+    | '/ngo/profile'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -298,13 +331,16 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
+    | '/donor/funds'
     | '/donor/history'
     | '/donor/impact'
     | '/donor/network'
+    | '/donor/profile'
     | '/ngo/claims'
     | '/ngo/dashboard'
     | '/ngo/explore'
     | '/ngo/not-verified'
+    | '/ngo/profile'
     | '/donor/donate/batch'
     | '/donor/donate/consent'
     | '/donor/donate/review'
@@ -325,13 +361,16 @@ export interface RootRouteChildren {
   UpdatePasswordRoute: typeof UpdatePasswordRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
+  DonorFundsRoute: typeof DonorFundsRoute
   DonorHistoryRoute: typeof DonorHistoryRoute
   DonorImpactRoute: typeof DonorImpactRoute
   DonorNetworkRoute: typeof DonorNetworkRoute
+  DonorProfileRoute: typeof DonorProfileRoute
   NgoClaimsRoute: typeof NgoClaimsRoute
   NgoDashboardRoute: typeof NgoDashboardRoute
   NgoExploreRoute: typeof NgoExploreRoute
   NgoNotVerifiedRoute: typeof NgoNotVerifiedRoute
+  NgoProfileRoute: typeof NgoProfileRoute
   DonorDonateBatchRoute: typeof DonorDonateBatchRoute
   DonorDonateConsentRoute: typeof DonorDonateConsentRoute
   DonorDonateReviewRoute: typeof DonorDonateReviewRoute
@@ -378,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ngo/profile': {
+      id: '/ngo/profile'
+      path: '/ngo/profile'
+      fullPath: '/ngo/profile'
+      preLoaderRoute: typeof NgoProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ngo/not-verified': {
       id: '/ngo/not-verified'
       path: '/ngo/not-verified'
@@ -406,6 +452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NgoClaimsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/donor/profile': {
+      id: '/donor/profile'
+      path: '/donor/profile'
+      fullPath: '/donor/profile'
+      preLoaderRoute: typeof DonorProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/donor/network': {
       id: '/donor/network'
       path: '/donor/network'
@@ -425,6 +478,13 @@ declare module '@tanstack/react-router' {
       path: '/donor/history'
       fullPath: '/donor/history'
       preLoaderRoute: typeof DonorHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/funds': {
+      id: '/donor/funds'
+      path: '/donor/funds'
+      fullPath: '/donor/funds'
+      preLoaderRoute: typeof DonorFundsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/donor/dashboard': {
@@ -538,13 +598,16 @@ const rootRouteChildren: RootRouteChildren = {
   UpdatePasswordRoute: UpdatePasswordRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,
+  DonorFundsRoute: DonorFundsRoute,
   DonorHistoryRoute: DonorHistoryRoute,
   DonorImpactRoute: DonorImpactRoute,
   DonorNetworkRoute: DonorNetworkRoute,
+  DonorProfileRoute: DonorProfileRoute,
   NgoClaimsRoute: NgoClaimsRoute,
   NgoDashboardRoute: NgoDashboardRoute,
   NgoExploreRoute: NgoExploreRoute,
   NgoNotVerifiedRoute: NgoNotVerifiedRoute,
+  NgoProfileRoute: NgoProfileRoute,
   DonorDonateBatchRoute: DonorDonateBatchRoute,
   DonorDonateConsentRoute: DonorDonateConsentRoute,
   DonorDonateReviewRoute: DonorDonateReviewRoute,
