@@ -84,9 +84,10 @@ function ClaimSuccess() {
     }
 
     if (method === "pickup") {
+      // @ts-ignore - Route params type bug
       navigate({
         to: "/ngo/collection/instructions/$id",
-        params: () => ({ id }),
+        params: { id },
       });
       return;
     }

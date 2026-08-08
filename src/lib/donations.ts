@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { sendPushNotification, notifyNGOsOfNewDonation } from "./notifications";
 
 export type DonationItem = {
   id: string;
@@ -205,6 +206,26 @@ export async function submitDonationBatch(
     .select();
 
   if (itemsError) throw itemsError;
+
+  // Fire and forget push notification to the donor
+  sendPushNotification({
+    data: {
+      userId: userData.user.id,
+      payload: {
+        title: "Donation Received!",
+        body: `Your batch ${batchRow.batch_type} has been listed. You'll be notified when an NGO claims it.`,
+        url: "/donor/dashboard",
+      },
+    },
+  }).catch((err: any) => console.error("Push failed:", err));
+
+  // Also broadcast to all verified NGOs so they know about the new donation
+  notifyNGOsOfNewDonation({
+    data: {
+      batchType: batchRow.batch_type,
+      batchId: batchRow.id,
+    },
+  }).catch(console.error);
 
   clearCurrentBatch();
   return mapBatchRow({ ...batchRow, donation_items: insertedItems });

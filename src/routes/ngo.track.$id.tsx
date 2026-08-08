@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useEffect, useRef, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
+import { sendPushNotification } from "@/lib/notifications";
 import {
   Package,
   Navigation,
@@ -31,6 +32,9 @@ interface BatchInfo {
   status: string;
   collection_datetime: string | null;
   claimed_at: string | null;
+  // needed for push notifications
+  claimed_by: string | null;
+  donor_id: string | null;
   donor: string;
   pickup: string;
 }
@@ -83,7 +87,7 @@ function TrackDelivery() {
           }
         }
 
-        // Fetch donation batch details
+        // Fetch donation batch details — include claimed_by and donor_id for push notifications
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
@@ -92,6 +96,8 @@ function TrackDelivery() {
             status,
             collection_datetime,
             claimed_at,
+            claimed_by,
+            donor_id,
             donors (
               organization_name,
               address
@@ -112,6 +118,8 @@ function TrackDelivery() {
             status: raw.status || "Claimed",
             collection_datetime: raw.collection_datetime,
             claimed_at: raw.claimed_at,
+            claimed_by: raw.claimed_by ?? null,
+            donor_id: raw.donor_id ?? null,
             donor: raw.donors?.organization_name || "Anonymous Donor",
             pickup: raw.donors?.address || "Location not specified",
           });
@@ -178,7 +186,22 @@ function TrackDelivery() {
           .from("donation_batches")
           .update({ status: "In Transit" })
           .eq("id", batch!.id);
-        if (!error) setBatch((b) => (b ? { ...b, status: "In Transit" } : b));
+        if (!error) {
+          setBatch((b) => (b ? { ...b, status: "In Transit" } : b));
+          // Notify NGO that it's on the way
+          if (batch!.claimed_by) {
+            sendPushNotification({
+              data: {
+                userId: batch!.claimed_by,
+                payload: {
+                  title: "Courier En Route",
+                  body: "The driver has picked up the donation and is heading your way.",
+                  url: `/ngo/track/${batch!.id}`,
+                },
+              },
+            }).catch(console.error);
+          }
+        }
       }
 
       if (
@@ -190,7 +213,37 @@ function TrackDelivery() {
           .from("donation_batches")
           .update({ status: "Delivered" })
           .eq("id", batch!.id);
-        if (!error) setBatch((b) => (b ? { ...b, status: "Delivered" } : b));
+        if (!error) {
+          setBatch((b) => (b ? { ...b, status: "Delivered" } : b));
+
+          // Notify NGO that the donation was delivered
+          if (batch!.claimed_by) {
+            sendPushNotification({
+              data: {
+                userId: batch!.claimed_by,
+                payload: {
+                  title: "Donation Delivered",
+                  body: "The courier has arrived with your donation.",
+                  url: `/ngo/track/${batch!.id}`,
+                },
+              },
+            }).catch(console.error);
+          }
+
+          // Notify Donor
+          if (batch!.donor_id) {
+            sendPushNotification({
+              data: {
+                userId: batch!.donor_id,
+                payload: {
+                  title: "Donation Delivered",
+                  body: "Your donation has successfully reached the NGO. Thank you!",
+                  url: "/donor/dashboard",
+                },
+              },
+            }).catch(console.error);
+          }
+        }
       }
     }
     maybeUpdate();

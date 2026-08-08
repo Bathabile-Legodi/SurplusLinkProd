@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { sendPushNotification } from "@/lib/notifications";
 
 export const Route = createFileRoute("/ngo/donations/$id/claim")({
   head: () => ({ meta: [{ title: "Processing Claim — SurplusLink" }] }),
@@ -34,7 +35,7 @@ function ClaimProcessing() {
 
         const { data: batch, error: fetchError } = await supabase
           .from("donation_batches")
-          .select("status")
+          .select("status, donor_id, batch_type")
           .eq("id", id)
           .single();
 
@@ -63,6 +64,20 @@ function ClaimProcessing() {
 
         if (updateError) {
           throw new Error("Could not lock claim. Please try again.");
+        }
+
+        // Notify donor
+        if (batch.donor_id) {
+          sendPushNotification({
+            data: {
+              userId: batch.donor_id,
+              payload: {
+                title: "Donation Claimed!",
+                body: `An NGO has claimed your ${batch.batch_type || 'donation'}. A courier is being dispatched.`,
+                url: "/donor/dashboard",
+              },
+            },
+          }).catch((err: any) => console.error("Push failed:", err));
         }
 
         setTimeout(() => {

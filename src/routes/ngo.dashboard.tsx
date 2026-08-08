@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { useNgoVerification } from "@/hooks/useNgoVerification";
+import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 
 export const Route = createFileRoute("/ngo/dashboard")({
   head: () => ({ meta: [{ title: "NGO Dashboard — SurplusLink" }] }),
@@ -27,8 +28,13 @@ function NgoDashboard() {
     <div className="min-h-screen bg-background">
       <AppHeader nav={ngoNav} userLabel="HS" />
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">NGO Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Welcome back, Hope Shelter.</p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">NGO Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Welcome back, Hope Shelter.</p>
+          </div>
+          <PushSubscriptionManager />
+        </div>
 
         <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
           <p className="text-sm font-semibold">Account Pending Approval</p>

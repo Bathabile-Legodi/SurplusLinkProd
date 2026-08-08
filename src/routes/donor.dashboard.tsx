@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
+import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
@@ -39,11 +40,14 @@ function DonorDashboard() {
       <main className="mx-auto max-w-5xl px-6 py-10">
         
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome, Fresh Market</h1> 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Thank you for helping fight food waste in your community.
-          </p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Welcome, Fresh Market</h1> 
+            <p className="mt-1 text-sm text-muted-foreground">
+              Thank you for helping fight food waste in your community.
+            </p>
+          </div>
+          <PushSubscriptionManager />
         </div>
 
         {/* Quick Impact Summary */}

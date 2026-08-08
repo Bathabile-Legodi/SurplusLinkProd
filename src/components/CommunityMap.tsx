@@ -35,12 +35,14 @@ export default function CommunityMap({ loggedInDonorId }: CommunityMapProps) {
 
   return (
     <MapContainer 
+      // @ts-ignore
       center={donorLocation} 
       zoom={11} 
       style={{ height: '100%', width: '100%', zIndex: 0 }}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        // @ts-ignore
         attribution='&copy; OpenStreetMap contributors'
       />
 
