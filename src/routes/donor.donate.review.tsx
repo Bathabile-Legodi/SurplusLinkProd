@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import emailjs from "@emailjs/browser";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import {
   loadCurrentBatch,
@@ -8,6 +9,7 @@ import {
   type DonationItem,
 } from "@/lib/donations";
 import { DateTimePicker } from "@/components/ScrollPicker";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/donor/donate/review")({
   head: () => ({ meta: [{ title: "Review Batch — SurplusLink" }] }),
@@ -39,17 +41,59 @@ function ReviewBatch() {
     return "Mixed Donation";
   })();
 
+  // Format total items/quantities into a clean string for the email summary
+  const formattedQuantity = items
+    .map((item) => `${item.name} (${item.quantity} ${item.unit})`)
+    .join(", ");
+
   const handleSubmit = async () => {
     if (items.length === 0) return;
     setIsSubmitting(true);
     setError(null);
+
     try {
+      // 1. Get logged-in user details from Supabase Auth
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const currentUserEmail = user?.email;
+
+      // 2. Submit batch to database
       const result = await submitDonationBatch(
         items,
         batchType,
         collectionDateTime,
         new Date().toISOString()
       );
+
+      // 3. Send Confirmation Email via EmailJS
+      if (currentUserEmail) {
+        try {
+          await emailjs.send(
+            import.meta.env.VITE_EMAILJS_SERVICE_ID,
+            import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+            {
+              to_email: currentUserEmail,
+              donor_name:
+                user?.user_metadata?.full_name ||
+                currentUserEmail.split("@")[0] ||
+                "Generous Donor",
+              donation_id: result.id,
+              quantity: formattedQuantity,
+              collection_address:
+                result.collection_address || "Provided upon claim",
+              collection_deadline: collectionDateTime || "Not specified",
+              submission_date: new Date().toLocaleDateString(),
+              collection_method: result.collection_method || "NGO Pick-up",
+            },
+            import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+          );
+        } catch (emailErr) {
+          console.error("Failed to send confirmation email:", emailErr);
+        }
+      }
+
+      // 4. Navigate to success page
       navigate({
         to: "/donor/donate/success",
         search: { batchId: result.id },
@@ -79,7 +123,9 @@ function ReviewBatch() {
       <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Review Your Batch</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Review Your Batch
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Confirm the items below and set a collection window before submitting.
           </p>
@@ -102,7 +148,9 @@ function ReviewBatch() {
                 <thead className="bg-secondary text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Item</th>
-                    <th className="px-4 py-3 text-left font-medium">Category</th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Category
+                    </th>
                     <th className="px-4 py-3 text-left font-medium">Qty</th>
                     <th className="px-4 py-3 text-left font-medium">Expiry</th>
                   </tr>
@@ -147,7 +195,9 @@ function ReviewBatch() {
 
         {/* Collection window */}
         <section className="mb-8 rounded-xl border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">Collection Deadline (optional)</h2>
+          <h2 className="mb-1 text-sm font-semibold">
+            Collection Deadline (optional)
+          </h2>
           <p className="mb-3 text-xs text-muted-foreground">
             Set a date by which NGOs should collect this batch.
           </p>
