@@ -98,7 +98,7 @@ function mapItemRow(row: any): DonationItem {
   };
 }
 
-function mapBatchRow(row: any): RecentDonation {
+export function mapBatchRow(row: any): RecentDonation {
   // display_id is a generated sequence column; fall back to a stable
   // numeric hash of the UUID so formatBatchId never receives undefined.
   const displayId =

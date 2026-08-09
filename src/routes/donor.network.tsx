@@ -257,7 +257,7 @@ function DonorNetwork() {
           <div className="relative flex-1 bg-muted/30 overflow-hidden flex items-center justify-center p-2">
             <div className="w-full h-full overflow-hidden rounded-lg bg-white">
               {loggedInDonorId ? (
-                <CommunityMap loggedInDonorId={loggedInDonorId} />
+                <CommunityMap loggedInDonorId={loggedInDonorId} donorAddress={donorAddress} />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   {error ?? "Loading…"}

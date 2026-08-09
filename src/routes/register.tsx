@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { FormEvent } from "react";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useForm, Controller, type Control, type FieldErrors } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface AddressComponents {
   streetNumber: string;
@@ -353,188 +355,123 @@ function PasswordField({
   );
 }
 
-function isValidEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
+const phoneRegex = /^[+\d][\d\s\-()]{6,}$/;
 
-function isValidPhone(v: string) {
-  return /^[+\d][\d\s\-()]{6,}$/.test(v.trim());
-}
+const addressSchema = z.object({
+  streetNumber: z.string(),
+  streetName: z.string(),
+  suburb: z.string(),
+  city: z.string(),
+  province: z.string(),
+  postalCode: z.string(),
+  country: z.string(),
+  formatted: z.string().min(1, "Please select an address from the suggestions."),
+});
+
+const donorSchema = z.object({
+  name: z.string().min(1, "Business name is required."),
+  type: z.string().min(1, "Please select a business type."),
+  email: z.string().email("Enter a valid email address."),
+  phone: z.string().regex(phoneRegex, "Enter a valid phone number."),
+  address: addressSchema,
+  password: z.string().min(8, "Must be at least 8 characters."),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
+const ngoSchema = z.object({
+  org: z.string().min(1, "Organisation name is required."),
+  reg: z.string().min(1, "Registration number is required."),
+  email: z.string().email("Enter a valid email address."),
+  phone: z.string().regex(phoneRegex, "Enter a valid phone number."),
+  address: addressSchema,
+  password: z.string().min(8, "Must be at least 8 characters."),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
+type DonorForm = z.infer<typeof donorSchema>;
+type NgoForm = z.infer<typeof ngoSchema>;
 
 function RegisterPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<"donor" | "ngo">("donor");
-  const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
 
-  const [donorData, setDonorData] = useState({
-    name: "",
-    type: "",
-    email: "",
-    phone: "",
-    address: emptyAddress(),
-    password: "",
-    confirmPassword: "",
-  });
-  const [ngoData, setNgoData] = useState({
-    org: "",
-    reg: "",
-    email: "",
-    phone: "",
-    address: emptyAddress(),
-    password: "",
-    confirmPassword: "",
+  const donorForm = useForm<DonorForm>({
+    resolver: zodResolver(donorSchema),
+    defaultValues: { name: "", type: "", email: "", phone: "", address: emptyAddress(), password: "", confirmPassword: "" },
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const ngoForm = useForm<NgoForm>({
+    resolver: zodResolver(ngoSchema),
+    defaultValues: { org: "", reg: "", email: "", phone: "", address: emptyAddress(), password: "", confirmPassword: "" },
+  });
 
-  function validateDonor(d = donorData) {
-    const e: Record<string, string> = {};
-    if (!d.name.trim()) e.name = "Business name is required.";
-    if (!d.type.trim()) e.type = "Please select a business type.";
-    if (!d.email.trim()) e.email = "Email is required.";
-    else if (!isValidEmail(d.email)) e.email = "Enter a valid email address.";
-    if (!d.phone.trim()) e.phone = "Phone number is required.";
-    else if (!isValidPhone(d.phone)) e.phone = "Enter a valid phone number.";
-    if (!d.address.formatted)
-      e.address = "Please select an address from the suggestions.";
-    if (!d.password) e.password = "Password is required.";
-    else if (d.password.length < 8) e.password = "Must be at least 8 characters.";
-    if (!d.confirmPassword)
-      e.confirmPassword = "Please confirm your password.";
-    else if (d.password !== d.confirmPassword)
-      e.confirmPassword = "Passwords do not match.";
-    return e;
-  }
+  const isSubmitting = tab === "donor" ? donorForm.formState.isSubmitting : ngoForm.formState.isSubmitting;
 
-  function validateNgo(d = ngoData) {
-    const e: Record<string, string> = {};
-    if (!d.org.trim()) e.org = "Organisation name is required.";
-    if (!d.reg.trim()) e.reg = "Registration number is required.";
-    if (!d.email.trim()) e.email = "Email is required.";
-    else if (!isValidEmail(d.email)) e.email = "Enter a valid email address.";
-    if (!d.phone.trim()) e.phone = "Phone number is required.";
-    else if (!isValidPhone(d.phone)) e.phone = "Enter a valid phone number.";
-    if (!d.address.formatted)
-      e.address = "Please select an address from the suggestions.";
-    if (!d.password) e.password = "Password is required.";
-    else if (d.password.length < 8) e.password = "Must be at least 8 characters.";
-    if (!d.confirmPassword)
-      e.confirmPassword = "Please confirm your password.";
-    else if (d.password !== d.confirmPassword)
-      e.confirmPassword = "Passwords do not match.";
-    return e;
-  }
-
-  function runValidation() {
-    return tab === "donor" ? validateDonor() : validateNgo();
-  }
-
-  function touch(field: string) {
-    setTouched((t) => ({ ...t, [field]: true }));
-    const errs = runValidation();
-    setErrors(errs);
-  }
-
-  function err(field: string) {
-    return touched[field] ? errors[field] : undefined;
-  }
-
-  function onDonorChange(key: string, value: string) {
-    setDonorData((prev) => {
-      const next = { ...prev, [key]: value };
-      if (touched[key]) setErrors(validateDonor(next));
-      return next;
-    });
-  }
-
-  function onNgoChange(key: string, value: string) {
-    setNgoData((prev) => {
-      const next = { ...prev, [key]: value };
-      if (touched[key]) setErrors(validateNgo(next));
-      return next;
-    });
-  }
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    const allDonorKeys = [
-      "name",
-      "type",
-      "email",
-      "phone",
-      "address",
-      "password",
-      "confirmPassword",
-    ];
-    const allNgoKeys = [
-      "org",
-      "reg",
-      "email",
-      "phone",
-      "address",
-      "password",
-      "confirmPassword",
-    ];
-    const keys = tab === "donor" ? allDonorKeys : allNgoKeys;
-    const allTouched = Object.fromEntries(keys.map((k) => [k, true]));
-    setTouched(allTouched);
-    const errs = runValidation();
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    setLoading(true);
-    const data = tab === "donor" ? donorData : ngoData;
+  async function handleDonorSubmit(data: DonorForm) {
     const addressString = data.address.formatted;
+    const { data: signUpData, error: supabaseError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          role: "donor",
+          business_name: data.name,
+          business_type: data.type,
+          phone: data.phone,
+          address: addressString,
+          address_components: data.address,
+        }
+      }
+    });
 
-    const isVerifiedNgo = /^NGO-REG009\d{5}$/.test(ngoData.reg.trim());
+    handleSignUpResult(signUpData, supabaseError, data.email, donorForm.setError);
+  }
+
+  async function handleNgoSubmit(data: NgoForm) {
+    const addressString = data.address.formatted;
+    const isVerifiedNgo = /^NGO-REG009\d{5}$/.test(data.reg.trim());
 
     const { data: signUpData, error: supabaseError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        data:
-          tab === "donor"
-            ? {
-                role: "donor",
-                business_name: donorData.name,
-                business_type: donorData.type,
-                phone: donorData.phone,
-                address: addressString,
-                address_components: donorData.address,
-              }
-            : {
-                role: "ngo",
-                organization_name: ngoData.org,
-                registration_number: ngoData.reg,
-                phone: ngoData.phone,
-                address: addressString,
-                address_components: ngoData.address,
-                is_verified: isVerifiedNgo,
-              },
-      },
+        data: {
+          role: "ngo",
+          organization_name: data.org,
+          registration_number: data.reg,
+          phone: data.phone,
+          address: addressString,
+          address_components: data.address,
+          is_verified: isVerifiedNgo,
+        }
+      }
     });
 
-    setLoading(false);
+    handleSignUpResult(signUpData, supabaseError, data.email, ngoForm.setError);
+  }
 
+  function handleSignUpResult(signUpData: any, supabaseError: any, email: string, setError: any) {
     if (supabaseError) {
       const msg = supabaseError.message.toLowerCase();
       if (msg.includes("email")) {
-        setErrors({ email: supabaseError.message });
-        setTouched((t) => ({ ...t, email: true }));
+        setError("email", { message: supabaseError.message });
       } else {
         toast.error(supabaseError.message);
       }
       return;
     }
 
-    // If session is absent, Supabase sent a confirmation email to the user
     if (signUpData.user && !signUpData.session) {
-      setRegisteredEmail(data.email);
+      setRegisteredEmail(email);
       setEmailSent(true);
       toast.success("Check your email to confirm your account!");
     } else {
@@ -591,8 +528,7 @@ function RegisterPage() {
             type="button"
             onClick={() => {
               setTab("donor");
-              setErrors({});
-              setTouched({});
+              donorForm.clearErrors();
             }}
             className={`rounded py-1.5 transition ${
               tab === "donor"
@@ -606,8 +542,7 @@ function RegisterPage() {
             type="button"
             onClick={() => {
               setTab("ngo");
-              setErrors({});
-              setTouched({});
+              ngoForm.clearErrors();
             }}
             className={`rounded py-1.5 transition ${
               tab === "ngo"
@@ -619,40 +554,22 @@ function RegisterPage() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form onSubmit={tab === "donor" ? donorForm.handleSubmit(handleDonorSubmit) : ngoForm.handleSubmit(handleNgoSubmit)} noValidate className="space-y-4">
           {tab === "donor" ? (
             <DonorFields
-              values={donorData}
-              onChange={onDonorChange}
-              setAddress={(addr) => {
-                setDonorData((prev) => {
-                  const next = { ...prev, address: addr };
-                  if (touched.address) setErrors(validateDonor(next));
-                  return next;
-                });
-              }}
-              err={err}
-              touch={touch}
+              control={donorForm.control}
+              errors={donorForm.formState.errors}
             />
           ) : (
             <NgoFields
-              values={ngoData}
-              onChange={onNgoChange}
-              setAddress={(addr) => {
-                setNgoData((prev) => {
-                  const next = { ...prev, address: addr };
-                  if (touched.address) setErrors(validateNgo(next));
-                  return next;
-                });
-              }}
-              err={err}
-              touch={touch}
+              control={ngoForm.control}
+              errors={ngoForm.formState.errors}
             />
           )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {loading ? "Creating Account…" : "Create Account"}
@@ -671,80 +588,119 @@ function RegisterPage() {
 }
 
 type DonorProps = {
-  values: any;
-  onChange: (key: string, value: string) => void;
-  setAddress: (addr: AddressComponents) => void;
-  err: (field: string) => string | undefined;
-  touch: (field: string) => void;
+  control: Control<DonorForm>;
+  errors: FieldErrors<DonorForm>;
 };
 
-function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
+function DonorFields({ control, errors }: DonorProps) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Business Name"
-          value={values.name}
-          onChange={(v) => onChange("name", v)}
-          onBlur={() => touch("name")}
-          placeholder="Fresh Market"
-          error={err("name")}
+        <Controller
+          control={control}
+          name="name"
+          render={({ field }) => (
+            <Field
+              label="Business Name"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              placeholder="Fresh Market"
+              error={errors.name?.message}
+            />
+          )}
         />
-        <ComboField
-          label="Business Type"
-          value={values.type}
-          onChange={(v) => onChange("type", v)}
-          onBlur={() => touch("type")}
-          options={BUSINESS_TYPES}
-          placeholder="Grocery, Bakery…"
-          error={err("type")}
+        <Controller
+          control={control}
+          name="type"
+          render={({ field }) => (
+            <ComboField
+              label="Business Type"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              options={BUSINESS_TYPES}
+              placeholder="Grocery, Bakery…"
+              error={errors.type?.message}
+            />
+          )}
         />
       </div>
 
-      <Field
-        label="Email Address"
-        type="email"
-        value={values.email}
-        onChange={(v) => onChange("email", v)}
-        onBlur={() => touch("email")}
-        placeholder="contact@example.com"
-        error={err("email")}
-      />
-      <Field
-        label="Phone Number"
-        value={values.phone}
-        onChange={(v) => onChange("phone", v)}
-        onBlur={() => touch("phone")}
-        placeholder="+27 "
-        error={err("phone")}
-      />
-
-      <div>
-        <AddressAutocomplete
-          value={values.address}
-          onChange={(addr) => setAddress(addr)}
-        />
-        {err("address") && (
-          <p className="mt-1 text-[11px] text-destructive leading-tight">
-            {err("address")}
-          </p>
+      <Controller
+        control={control}
+        name="email"
+        render={({ field }) => (
+          <Field
+            label="Email Address"
+            type="email"
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder="contact@example.com"
+            error={errors.email?.message}
+          />
         )}
-      </div>
+      />
+      <Controller
+        control={control}
+        name="phone"
+        render={({ field }) => (
+          <Field
+            label="Phone Number"
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder="+27 "
+            error={errors.phone?.message}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="address"
+        render={({ field }) => (
+          <div>
+            <AddressAutocomplete
+              value={field.value}
+              onChange={field.onChange}
+            />
+            {errors.address?.formatted && (
+              <p className="mt-1 text-[11px] text-destructive leading-tight">
+                {errors.address.formatted.message}
+              </p>
+            )}
+          </div>
+        )}
+      />
 
       <div className="grid grid-cols-2 gap-3">
-        <PasswordField
-          label="Password"
-          value={values.password}
-          onChange={(v) => onChange("password", v)}
-          onBlur={() => touch("password")}
-          error={err("password")}
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <PasswordField
+              label="Password"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.password?.message}
+            />
+          )}
         />
-        <PasswordField
-          label="Confirm Password"
-          value={values.confirmPassword}
-          onChange={(v) => onChange("confirmPassword", v)}
-          onBlur={() => touch("confirmPassword")}
-          error={err("confirmPassword")}
+        <Controller
+          control={control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <PasswordField
+              label="Confirm Password"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.confirmPassword?.message}
+            />
+          )}
         />
       </div>
     </>
@@ -752,79 +708,118 @@ function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
 }
 
 type NgoProps = {
-  values: any;
-  onChange: (key: string, value: string) => void;
-  setAddress: (addr: AddressComponents) => void;
-  err: (field: string) => string | undefined;
-  touch: (field: string) => void;
+  control: Control<NgoForm>;
+  errors: FieldErrors<NgoForm>;
 };
 
-function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
+function NgoFields({ control, errors }: NgoProps) {
   return (
     <>
-      <Field
-        label="Organisation Name"
-        value={values.org}
-        onChange={(v) => onChange("org", v)}
-        onBlur={() => touch("org")}
-        placeholder="Hope Shelter"
-        error={err("org")}
-      />
-
-      <Field
-        label="NGO Registration Number"
-        value={values.reg}
-        onChange={(v) => onChange("reg", v)}
-        onBlur={() => touch("reg")}
-        placeholder="NGO-REG00912345"
-        error={err("reg")}
-      />
-
-      <Field
-        label="Email Address"
-        type="email"
-        value={values.email}
-        onChange={(v) => onChange("email", v)}
-        onBlur={() => touch("email")}
-        placeholder="contact@ngo.org"
-        error={err("email")}
-      />
-
-      <Field
-        label="Phone Number"
-        value={values.phone}
-        onChange={(v) => onChange("phone", v)}
-        onBlur={() => touch("phone")}
-        placeholder="+27..."
-        error={err("phone")}
-      />
-
-      <div>
-        <AddressAutocomplete
-          value={values.address}
-          onChange={(addr) => setAddress(addr)}
-        />
-        {err("address") && (
-          <p className="mt-1 text-[11px] text-destructive leading-tight">
-            {err("address")}
-          </p>
+      <Controller
+        control={control}
+        name="org"
+        render={({ field }) => (
+          <Field
+            label="Organisation Name"
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder="Hope Shelter"
+            error={errors.org?.message}
+          />
         )}
-      </div>
+      />
+
+      <Controller
+        control={control}
+        name="reg"
+        render={({ field }) => (
+          <Field
+            label="NGO Registration Number"
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder="NGO-REG00912345"
+            error={errors.reg?.message}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="email"
+        render={({ field }) => (
+          <Field
+            label="Email Address"
+            type="email"
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder="contact@ngo.org"
+            error={errors.email?.message}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="phone"
+        render={({ field }) => (
+          <Field
+            label="Phone Number"
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder="+27..."
+            error={errors.phone?.message}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="address"
+        render={({ field }) => (
+          <div>
+            <AddressAutocomplete
+              value={field.value}
+              onChange={field.onChange}
+            />
+            {errors.address?.formatted && (
+              <p className="mt-1 text-[11px] text-destructive leading-tight">
+                {errors.address.formatted.message}
+              </p>
+            )}
+          </div>
+        )}
+      />
 
       <div className="grid grid-cols-2 gap-3">
-        <PasswordField
-          label="Password"
-          value={values.password}
-          onChange={(v) => onChange("password", v)}
-          onBlur={() => touch("password")}
-          error={err("password")}
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <PasswordField
+              label="Password"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.password?.message}
+            />
+          )}
         />
-        <PasswordField
-          label="Confirm Password"
-          value={values.confirmPassword}
-          onChange={(v) => onChange("confirmPassword", v)}
-          onBlur={() => touch("confirmPassword")}
-          error={err("confirmPassword")}
+        <Controller
+          control={control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <PasswordField
+              label="Confirm Password"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.confirmPassword?.message}
+            />
+          )}
         />
       </div>
     </>

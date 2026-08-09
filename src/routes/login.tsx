@@ -1,93 +1,71 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { FormEvent } from "react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Field } from "@/components/Field";
 import { toast } from "sonner";
 import { redirectIfAuthenticated } from "@/lib/auth-guard";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
 });
 
-type LoginErrors = { email?: string; password?: string };
+const loginSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(1, "Password is required."),
+});
 
-function isValidEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
+type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<"donor" | "ngo">("donor");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState<LoginErrors>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  function validate(fields = form): LoginErrors {
-    const e: LoginErrors = {};
-    if (!fields.email) {
-      e.email = "Email is required.";
-    } else if (!isValidEmail(fields.email)) {
-      e.email = "Enter a valid email address.";
-    }
-    if (!fields.password) {
-      e.password = "Password is required.";
-    }
-    return e;
-  }
-
-  function handleBlur(field: keyof typeof form) {
-    setTouched((t) => ({ ...t, [field]: true }));
-    setErrors(validate());
-  }
-
-  function handleChange(field: keyof typeof form, value: string) {
-    const next = { ...form, [field]: value };
-    setForm(next);
-    if (touched[field]) setErrors(validate(next));
-  }
-
-  async function handleLogin(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    // Mark all as touched and validate
-    setTouched({ email: true, password: true });
-    const errs = validate();
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    setLoading(true);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
+  async function handleLogin(data: LoginForm) {
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
     });
 
-    setLoading(false);
-
     if (error) {
-      // Map Supabase error messages to friendly field-level errors
       const msg = error.message.toLowerCase();
-      if (msg.includes("invalid login") || msg.includes("invalid credentials") || msg.includes("wrong") || msg.includes("password")) {
-        setErrors({ password: "Incorrect email or password." });
+      if (
+        msg.includes("invalid login") ||
+        msg.includes("invalid credentials") ||
+        msg.includes("wrong") ||
+        msg.includes("password")
+      ) {
+        setError("password", { message: "Incorrect email or password." });
       } else if (msg.includes("email")) {
-        setErrors({ email: error.message });
+        setError("email", { message: error.message });
       } else {
         toast.error(error.message);
       }
       return;
     }
 
-    const userRole = data.user.user_metadata.role;
+    const userRole = authData.user.user_metadata.role;
 
     if (userRole !== tab) {
       await supabase.auth.signOut();
-      toast.error(`This account is registered as a ${userRole.toUpperCase()}, not a ${tab.toUpperCase()}.`);
+      toast.error(
+        `This account is registered as a ${userRole.toUpperCase()}, not a ${tab.toUpperCase()}.`
+      );
       return;
     }
 
@@ -120,16 +98,23 @@ function LoginPage() {
           </button>
         </div>
 
-        <form onSubmit={handleLogin} noValidate className="space-y-4">
-          <Field
-            label="Email Address"
-            type="email"
-            value={form.email}
-            onChange={(v) => handleChange("email", v)}
-            onBlur={() => handleBlur("email")}
-            placeholder="you@example.com"
-            error={touched.email ? errors.email : undefined}
-          />
+        <form onSubmit={handleSubmit(handleLogin)} noValidate className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-foreground">Email Address</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              {...register("email")}
+              className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                errors.email
+                  ? "border-destructive focus:ring-destructive focus:border-destructive"
+                  : "border-input focus:border-ring focus:ring-ring"
+              }`}
+            />
+            {errors.email && (
+              <p className="text-[11px] text-destructive leading-tight">{errors.email.message}</p>
+            )}
+          </div>
 
           {/* Password with show/hide toggle */}
           <div className="flex flex-col gap-1">
@@ -137,12 +122,10 @@ function LoginPage() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                onBlur={() => handleBlur("password")}
                 placeholder="••••••••"
+                {...register("password")}
                 className={`w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
-                  ${touched.password && errors.password
+                  ${errors.password
                     ? "border-destructive focus:ring-destructive"
                     : "border-input focus:border-ring focus:ring-ring"
                   }`}
@@ -167,16 +150,16 @@ function LoginPage() {
                 )}
               </button>
             </div>
-            {touched.password && errors.password && (
-              <p className="text-[11px] text-destructive leading-tight">{errors.password}</p>
+            {errors.password && (
+              <p className="text-[11px] text-destructive leading-tight">{errors.password.message}</p>
             )}
           </div>
 
           <button
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Logging in…" : tab === "donor" ? "Login as Donor" : "Login as NGO"}
+            {isSubmitting ? "Logging in…" : tab === "donor" ? "Login as Donor" : "Login as NGO"}
           </button>
         </form>
 

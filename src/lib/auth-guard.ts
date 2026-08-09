@@ -1,5 +1,16 @@
 import { redirect } from "@tanstack/react-router";
-import { supabase } from "@/lib/supabase";
+import { createServerFn } from "@tanstack/react-start";
+import { createSupabaseServerClient } from "./supabase-server";
+
+/**
+ * Server function to securely retrieve the current user from cookies.
+ * During SSR, this runs directly on the server. During CSR, it acts as an RPC.
+ */
+export const getSessionServer = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return { user };
+});
 
 /**
  * Use inside a route's `beforeLoad` to enforce a specific role.
@@ -7,22 +18,15 @@ import { supabase } from "@/lib/supabase";
  * different role. Returns { user, role } on success.
  */
 export async function requireRole(required: "donor" | "ngo") {
-  if (typeof document === "undefined") return { user: null, role: required };
+  const { user } = await getSessionServer();
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  if (!user) {
     throw redirect({ to: "/login" });
   }
 
   const role = user.user_metadata?.role as string | undefined;
 
   if (role !== required) {
-    // Authenticated but wrong role — send back to login so they can
-    // switch accounts rather than silently failing later.
     throw redirect({ to: "/login" });
   }
 
@@ -34,14 +38,9 @@ export async function requireRole(required: "donor" | "ngo") {
  * without caring about role (e.g. shared pages).
  */
 export async function requireAuth() {
-  if (typeof document === "undefined") return { user: null, role: undefined };
+  const { user } = await getSessionServer();
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  if (!user) {
     throw redirect({ to: "/login" });
   }
 
@@ -53,11 +52,7 @@ export async function requireAuth() {
  * users straight to their dashboard.
  */
 export async function redirectIfAuthenticated() {
-  if (typeof document === "undefined") return;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getSessionServer();
 
   if (!user) return; // Not logged in — allow through.
 

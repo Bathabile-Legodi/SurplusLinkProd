@@ -1,79 +1,80 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { useNgoVerification } from "@/hooks/useNgoVerification";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/lib/supabase";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+export const getNgoDashboardStats = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const now = new Date().toISOString();
+  
+  // 1. Available nearby (Unclaimed and NOT expired batches)
+  const { count: availableCount } = await supabase
+    .from('donation_batches')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['unclaimed', 'Unclaimed'])
+    .or(`collection_datetime.gte.${now},collection_datetime.is.null`);
+    
+  // 2. Claims this week
+  const startOfWeek = new Date();
+  startOfWeek.setHours(0, 0, 0, 0);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday
+
+  const { count: claimsCount } = await supabase
+    .from('donation_batches')
+    .select('*', { count: 'exact', head: true })
+    .eq('claimed_by', user.id)
+    .gte('claimed_at', startOfWeek.toISOString());
+
+  // 3. Meals served (estimate based on total claimed quantities)
+  const { data: claimedBatches } = await supabase
+    .from('donation_batches')
+    .select('id, donation_items(quantity, unit)')
+    .eq('claimed_by', user.id);
+
+  let totalMeals = 0;
+  if (claimedBatches) {
+    claimedBatches.forEach((batch: any) => {
+      batch.donation_items?.forEach((item: any) => {
+        const qty = parseFloat(item.quantity) || 0;
+        if (item.unit?.toLowerCase().includes('kg')) {
+          totalMeals += qty * 2;
+        } else {
+          totalMeals += qty;
+        }
+      });
+    });
+  }
+
+  return {
+    available: (availableCount || 0).toString(),
+    claimsThisWeek: (claimsCount || 0).toString(),
+    mealsServed: Math.round(totalMeals).toLocaleString()
+  };
+});
+
+export const ngoDashboardQueryOptions = queryOptions({
+  queryKey: ["ngo", "dashboard", "stats"],
+  queryFn: () => getNgoDashboardStats(),
+});
 
 export const Route = createFileRoute("/ngo/dashboard")({
   head: () => ({ meta: [{ title: "NGO Dashboard — SurplusLink" }] }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(ngoDashboardQueryOptions),
   component: NgoDashboard,
 });
 
 function NgoDashboard() {
   const { isAuthorized, isVerified, isChecking, user } = useNgoVerification();
   const { signOut } = useAuth();
-  const [stats, setStats] = useState({
-    available: "0",
-    claimsThisWeek: "0",
-    mealsServed: "0"
-  });
-
-  useEffect(() => {
-    if (!user || !isVerified) return;
-
-    async function fetchStats() {
-      const now = new Date().toISOString();
-      
-      // 1. Available nearby (Unclaimed and NOT expired batches)
-      const { count: availableCount } = await supabase
-        .from('donation_batches')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['unclaimed', 'Unclaimed'])
-        .or(`collection_datetime.gte.${now},collection_datetime.is.null`);
-        
-      // 2. Claims this week
-      const startOfWeek = new Date();
-      startOfWeek.setHours(0, 0, 0, 0);
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday
-
-      const { count: claimsCount } = await supabase
-        .from('donation_batches')
-        .select('*', { count: 'exact', head: true })
-        .eq('claimed_by', user.id)
-        .gte('claimed_at', startOfWeek.toISOString());
-
-      // 3. Meals served (estimate based on total claimed quantities)
-      const { data: claimedBatches } = await supabase
-        .from('donation_batches')
-        .select('id, donation_items(quantity, unit)')
-        .eq('claimed_by', user.id);
-
-      let totalMeals = 0;
-      if (claimedBatches) {
-        claimedBatches.forEach((batch: any) => {
-          batch.donation_items?.forEach((item: any) => {
-            const qty = parseFloat(item.quantity) || 0;
-            // Rough estimation: 1kg = 2 meals, otherwise 1 item = 1 meal
-            if (item.unit?.toLowerCase().includes('kg')) {
-              totalMeals += qty * 2;
-            } else {
-              totalMeals += qty;
-            }
-          });
-        });
-      }
-
-      setStats({
-        available: (availableCount || 0).toString(),
-        claimsThisWeek: (claimsCount || 0).toString(),
-        mealsServed: Math.round(totalMeals).toLocaleString()
-      });
-    }
-
-    fetchStats();
-  }, [user, isVerified]);
+  
+  const { data: stats } = useSuspenseQuery(ngoDashboardQueryOptions);
 
   if (isChecking) {
     return (
