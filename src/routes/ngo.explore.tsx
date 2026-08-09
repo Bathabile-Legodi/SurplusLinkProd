@@ -94,14 +94,24 @@ export async function getBatchDrivingDistances(
 
     const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
     
-    const matrixItems = response?.matrix?.rows?.[0]?.items || response?.[0]?.elements;
+    let matrixItems: any[] = [];
+    if (Array.isArray(response)) {
+      matrixItems = response;
+    } else if (Array.isArray(response?.matrix?.rows?.[0]?.items)) {
+      matrixItems = response.matrix.rows[0].items;
+    } else if (Array.isArray(response?.[0]?.elements)) {
+      matrixItems = response[0].elements;
+    }
 
-    if (Array.isArray(matrixItems)) {
+    if (matrixItems.length > 0) {
       return matrixItems.map((element: any) => {
         if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
           const meters = element.distanceMeters;
-          if (typeof meters === "number") {
-            return `${(meters / 1000).toFixed(1)} km away`;
+          if (typeof meters === "number" && !isNaN(meters)) {
+            if (meters === 0) return "Same location";
+            if (meters < 100) return "< 0.1 km away";
+            const km = (meters / 1000).toFixed(1);
+            return `${km} km away`;
           }
         }
         return "Distance unknown";
