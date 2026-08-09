@@ -8,46 +8,63 @@ export const Route = createFileRoute("/ngo/dashboard")({
 });
 
 function NgoDashboard() {
-  const { isAuthorized, isChecking } = useNgoVerification();
+  const { isAuthorized, isVerified, isChecking, user } = useNgoVerification();
 
   if (isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Verifying access...</p>
+        <p className="text-sm text-muted-foreground">Verifying access...</p>
       </div>
     );
   }
 
   if (!isAuthorized) return null;
 
+  const orgName = user?.user_metadata?.organization_name || "Organisation";
 
+  // Unverified status: Render ONLY the pending approval message
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader nav={ngoNav} userLabel={orgName.slice(0, 2).toUpperCase()} />
+        <main className="mx-auto max-w-5xl px-6 py-10">
+          <h1 className="text-2xl font-semibold tracking-tight">NGO Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Welcome back, {orgName}.
+          </p>
 
-  
+          <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
+            <p className="text-sm font-semibold">Account Pending Approval</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Please allow 3-7 working days for our team to validate your application.
+              Once verified, your organization will receive a notification and full access to claim donations.
+            </p>
+            <div className="mt-3 flex gap-3">
+              <button className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+                View Status
+              </button>
+              <Link
+                to="/login"
+                className="rounded-md border px-4 py-1.5 text-xs font-medium hover:bg-secondary"
+              >
+                Log Out
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Verified status: Full dashboard view with all features unlocked
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
+      <AppHeader nav={ngoNav} userLabel={orgName.slice(0, 2).toUpperCase()} />
       <main className="mx-auto max-w-5xl px-6 py-10">
         <h1 className="text-2xl font-semibold tracking-tight">NGO Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Welcome back, Hope Shelter.</p>
-
-        <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
-          <p className="text-sm font-semibold">Account Pending Approval</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            To complete the approval for 3-7 working days for our team to validate your application.
-            Once verified, your organization will receive a notification and full access to claim donations.
-          </p>
-          <div className="mt-3 flex gap-3">
-            <button className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-              View Status
-            </button>
-            <Link
-              to="/register"
-              className="rounded-md border px-4 py-1.5 text-xs font-medium hover:bg-secondary"
-            >
-              Log Out
-            </Link>
-          </div>
-        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Welcome back, {orgName}.
+        </p>
 
         <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
           <Stat label="Available nearby" value="12" />

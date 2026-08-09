@@ -81,10 +81,11 @@ function ReviewBatch() {
               donation_id: result.id,
               quantity: formattedQuantity,
               collection_address:
-                result.collection_address || "Provided upon claim",
+                (result as any).collection_address || "Provided upon claim",
               collection_deadline: collectionDateTime || "Not specified",
               submission_date: new Date().toLocaleDateString(),
-              collection_method: result.collection_method || "NGO Pick-up",
+              collection_method:
+                (result as any).collection_method || "NGO Pick-up",
             },
             import.meta.env.VITE_EMAILJS_PUBLIC_KEY
           );
