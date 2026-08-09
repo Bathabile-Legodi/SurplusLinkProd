@@ -1,7 +1,11 @@
-
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { requireRole } from '@/lib/auth-guard'
+import { AppHeader, ngoNav } from '@/components/AppHeader'
+import { useAuth } from '@/hooks/useAuth'
+import { Mail, Phone, Home, Settings, Shield, HelpCircle, FileText } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { usePlacesAutocomplete } from '@/hooks/usePlacesAutocomplete'
 
 export const Route = createFileRoute('/ngo/profile')({
   beforeLoad: () => requireRole('ngo'),
@@ -10,289 +14,278 @@ export const Route = createFileRoute('/ngo/profile')({
 
 function NgoProfile() {
   const navigate = useNavigate()
+  const { user, displayName, initials, signOut } = useAuth()
 
-  const [editMode, setEditMode] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [dbVerified, setDbVerified] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    businessName: '',
+    businessType: '',
+    phone: '',
+    address: '',
+    city: '',
+  })
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        businessName: displayName || '',
+        businessType: (user.user_metadata?.organization_type as string) || '',
+        phone: (user.user_metadata?.phone as string) || '',
+        address: (user.user_metadata?.address as string) || '',
+        city: (user.user_metadata?.city as string) || '',
+      })
+
+      supabase.from('ngos').select('is_verified').eq('id', user.id).single().then(({ data }) => {
+        if (data) {
+          setDbVerified(Boolean(data.is_verified))
+        } else {
+          setDbVerified(Boolean(user.user_metadata?.is_verified))
+        }
+      })
+    }
+  }, [user, displayName])
+
+  const [addressInput, setAddressInput] = useState<HTMLInputElement | null>(null)
+  
+  usePlacesAutocomplete(addressInput, (formattedAddress, city) => {
+    setFormData(prev => ({
+      ...prev,
+      address: formattedAddress,
+      city: city || prev.city
+    }))
+  })
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          organization_name: formData.businessName,
+          organization_type: formData.businessType,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+        }
+      })
+      if (authError) throw authError
+
+      if (user?.id) {
+        const { error: dbError } = await supabase
+          .from('ngos')
+          .update({
+            organization_name: formData.businessName,
+            address: formData.address,
+          })
+          .eq('id', user.id)
+          
+        if (dbError) {
+          await supabase.from('ngos').upsert({
+            id: user.id,
+            organization_name: formData.businessName,
+            address: formData.address,
+          })
+        }
+      }
+
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      alert('Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const ngo = {
-    businessName: 'Helping Hands NGO',
-    businessType: 'Food Relief Organisation',
-    email: 'helpinghands@gmail.com',
-    phone: '+27 123 456 789',
-    address: '897 Second St, Johannesburg',
-    location: 'Johannesburg, South Africa',
-    verified: true,
+    businessName: displayName,
+    businessType: (user?.user_metadata?.organization_type as string) || 'NGO Organization',
+    email: user?.email || 'No email provided',
+    phone: (user?.user_metadata?.phone as string) || 'No phone provided',
+    address: (user?.user_metadata?.address as string) || 'No address provided',
   }
-
-const donations = [
-  {
-    date: '12 June 2026',
-    donor: 'Pick n Pay',
-    items: ['Bread', 'Milk', 'Eggs'],
-  },
-  {
-    date: '10 June 2026',
-    donor: 'Woolworths',
-    items: ['Fresh Produce', 'Dairy Products'],
-  },
-  {
-    date: '8 June 2026',
-    donor: 'Checkers',
-    items: ['Flour Bags', 'Rice', 'Canned Food'],
-  },
-]
-
-  const totalDonations = donations.length
-  const lastDonation = donations[0].date
-
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) setProfileImage(URL.createObjectURL(file))
-  }
+  
+  const isVerified = dbVerified
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-
-        {/* TITLE */}
-        <h1 style={styles.pageTitle}>NGO Profile</h1>
-
-        {/* HEADER */}
-        <div style={styles.header}>
-          <h2 style={styles.title}>
-            {ngo.businessName}
-            {ngo.verified && <span style={styles.badge}>✔ Verified</span>}
-          </h2>
-
-          <button className="btn-edit">
-            {editMode ? 'Save' : 'Edit Profile'}
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader nav={ngoNav} userLabel={initials} />
+      
+      <main className="mx-auto flex-1 w-full max-w-5xl px-4 sm:px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">NGO Profile</h1>
+          <button
+            onClick={() => navigate({ to: '/ngo/dashboard' })}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            &larr; Back to Dashboard
           </button>
         </div>
 
-        <p style={styles.subtitle}>{ngo.businessType}</p>
-
-        {/* PROFILE IMAGE */}
-        <div style={styles.profileSection}>
-          <div style={styles.avatar}>
-            {profileImage ? (
-              <img src={profileImage} style={styles.avatarImg} />
+        {/* Top Profile Banner */}
+        <div className="rounded-xl border bg-card p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 mb-6">
+          <div className="h-28 w-28 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-4xl font-bold text-primary">
+            {initials}
+          </div>
+          <div className="flex-1 text-center md:text-left space-y-3">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">{ngo.businessName}</h2>
+              <p className="text-muted-foreground mt-0.5">{ngo.businessType}</p>
+            </div>
+            
+            {isVerified ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+                <Shield className="h-4 w-4" />
+                Verified NGO
+              </div>
             ) : (
-              'Profile Image'
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                <Shield className="h-4 w-4" />
+                Unverified NGO
+              </div>
+            )}
+            
+          </div>
+          <div className="w-full md:w-48 space-y-3 shrink-0 pt-2 md:pt-0">
+            <button 
+              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+              disabled={saving}
+              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : (isEditing ? 'Save Profile' : 'Edit Profile')}
+            </button>
+            {isEditing ? (
+              <button 
+                onClick={() => setIsEditing(false)}
+                disabled={saving}
+                className="w-full rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            ) : (
+              <button 
+                onClick={signOut}
+                className="w-full rounded-md border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/20 transition-colors"
+              >
+                Log Out
+              </button>
             )}
           </div>
-
-          {editMode && (
-            <input type="file" onChange={handleImageUpload} />
-          )}
         </div>
 
-        {/* STATS */}
-        <div style={styles.stats}>
-          <div style={styles.statCard}>
-            <p>Total Donations Received</p>
-            <h3>{totalDonations}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Main Details (Spans 2 cols) */}
+          <div className="md:col-span-2">
+            <div className="rounded-xl border bg-card shadow-sm h-full">
+              <div className="px-6 py-5 border-b bg-muted/30">
+                <h3 className="font-semibold text-foreground text-lg">Organization Details</h3>
+              </div>
+              
+              <div className="p-6 grid gap-6 sm:grid-cols-2">
+                {isEditing && (
+                  <>
+                    <div className="col-span-1 sm:col-span-2 space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Organization Name</label>
+                      <input 
+                        type="text" 
+                        value={formData.businessName}
+                        onChange={e => setFormData({...formData, businessName: e.target.value})}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div className="col-span-1 sm:col-span-2 space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Organization Type</label>
+                      <input 
+                        type="text" 
+                        value={formData.businessType}
+                        onChange={e => setFormData({...formData, businessType: e.target.value})}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Email</div>
+                    <div className="text-sm font-medium text-foreground">{ngo.email}</div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Phone</div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={formData.phone}
+                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    ) : (
+                      <div className="text-sm font-medium text-foreground">{ngo.phone}</div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 col-span-1 sm:col-span-2">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Home className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Address</div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        ref={setAddressInput}
+                        value={formData.address}
+                        onChange={e => setFormData({...formData, address: e.target.value})}
+                        placeholder="Start typing your address..."
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    ) : (
+                      <div className="text-sm font-medium text-foreground">{ngo.address}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div style={styles.statCard}>
-            <p>Last Donation Received</p>
-            <h3>{lastDonation}</h3>
+          {/* Quick Links (Spans 1 col) */}
+          <div className="md:col-span-1">
+            <div className="rounded-xl border bg-card overflow-hidden shadow-sm h-full">
+              <div className="px-6 py-5 border-b bg-muted/30">
+                <h3 className="font-semibold text-foreground text-lg">Account Links</h3>
+              </div>
+              <div className="divide-y">
+                <button className="w-full flex items-center gap-4 px-6 py-4 text-sm font-medium hover:bg-muted/50 transition-colors text-left text-foreground">
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  Preferences
+                </button>
+                <button className="w-full flex items-center gap-4 px-6 py-4 text-sm font-medium hover:bg-muted/50 transition-colors text-left text-foreground">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  Documentation
+                </button>
+                <button className="w-full flex items-center gap-4 px-6 py-4 text-sm font-medium hover:bg-muted/50 transition-colors text-left text-foreground">
+                  <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                  Support & FAQ
+                </button>
+              </div>
+            </div>
           </div>
+          
         </div>
-
-        {/* INFO */}
-        <div style={styles.grid}>
-          <Field label="Email" value={ngo.email} />
-          <Field label="Phone" value={ngo.phone} />
-          <Field label="Address" value={ngo.address} />
-          <Field label="Location" value={ngo.location} />
-        </div>
-
-        {/* HISTORY */}
-        <h3 style={{ marginTop: 20 }}>Donation Received History</h3>
-<div style={styles.history}>
-  {donations.map((d, i) => (
-    <div key={i} style={styles.historyItem}>
-
-      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-        {d.date}
-      </div>
-
-      <div style={{ fontWeight: 600, marginTop: 5 }}>
-        Donor: {d.donor}
-      </div>
-
-      <div style={{ fontWeight: 600, marginTop: 10 }}>
-        Items Donated:
-      </div>
-
-      <ul style={{ marginTop: 5, paddingLeft: 20 }}>
-        {d.items.map((item, index) => (
-          <li key={index}>{item}</li>
-        ))}
-      </ul>
-
-    </div>
-  ))}
-</div>
-
-        {/* BACK BUTTON */}
-        <div style={styles.backContainer}>
-          <button
-            className="btn-primary"
-            onClick={() => navigate({ to: '/ngo/explore' })}
-          >
-            Back to Dashboard
-          </button>
-        </div>
-
-      </div>
-
-      {/* BUTTON STYLES */}
-      <style>{`
-        .btn-primary {
-          padding: 10px 16px;
-          border-radius: 8px;
-          border: none;
-          background: #111827;
-          color: white;
-          cursor: pointer;
-          transition: background 0.2s ease;
-        }
-
-        .btn-primary:hover {
-          background: #374151;
-        }
-
-        .btn-edit {
-          padding: 6px 12px;
-          border-radius: 6px;
-          border: none;
-          background: #000;
-          color: white;
-          cursor: pointer;
-          transition: background 0.2s ease;
-        }
-
-        .btn-edit:hover {
-          background: #333333;
-        }
-      `}</style>
+      </main>
     </div>
   )
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.field}>
-      <div style={styles.label}>{label}</div>
-      <div style={styles.value}>{value}</div>
-    </div>
-  )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    padding: '24px',
-    display: 'flex',
-    justifyContent: 'center',
-    background: '#f3f4f6',
-    minHeight: '100vh',
-  },
-  card: {
-    width: '100%',
-    maxWidth: '800px',
-    background: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  },
-  pageTitle: {
-    fontSize: '26px',
-    fontWeight: 700,
-    marginBottom: '16px',
-    color: '#111827',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    margin: 0,
-    fontSize: '24px',
-    fontWeight: 700,
-  },
-  badge: {
-    marginLeft: 10,
-    fontSize: '12px',
-    color: 'green',
-  },
-  subtitle: {
-    color: '#6b7280',
-    marginBottom: 20,
-  },
-  profileSection: {
-    marginBottom: 20,
-  },
-  avatar: {
-    width: '120px',
-    height: '120px',
-    borderRadius: '50%',
-    background: '#e5e7eb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  stats: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 12,
-    marginTop: 20,
-  },
-  statCard: {
-    background: '#f9fafb',
-    padding: 12,
-    borderRadius: 8,
-    textAlign: 'center',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 16,
-    marginTop: 20,
-  },
-  field: {
-    background: '#f9fafb',
-    padding: 12,
-    borderRadius: 8,
-  },
-  label: {
-    fontSize: '12px',
-    color: '#6b7280',
-  },
-  value: {
-    fontSize: '14px',
-    fontWeight: 500,
-  },
-  history: {
-    marginTop: 10,
-    display: 'grid',
-    gap: 10,
-  },
-  historyItem: {
-    background: '#f3f4f6',
-    padding: 10,
-    borderRadius: 8,
-  },
-  backContainer: {
-    marginTop: 30,
-    display: 'flex',
-    justifyContent: 'center',
-  },
 }

@@ -33,7 +33,21 @@ export function useNgoVerification() {
 
         const metadata = currentUser.user_metadata || {};
         const isNgo = metadata.role === "ngo";
-        const verified = Boolean(metadata.is_verified);
+        
+        let verified = false;
+        if (isNgo) {
+          const { data, error } = await supabase
+            .from("ngos")
+            .select("is_verified")
+            .eq("id", currentUser.id)
+            .single();
+            
+          if (!error && data) {
+            verified = Boolean(data.is_verified);
+          } else {
+            verified = Boolean(metadata.is_verified);
+          }
+        }
 
         if (!isNgo) {
           if (isMounted) {
@@ -50,7 +64,7 @@ export function useNgoVerification() {
         }
 
         // If NGO is NOT verified and attempts to access protected routes, redirect to /ngo/dashboard
-        if (!verified && location.pathname !== "/ngo/dashboard") {
+        if (!verified && location.pathname !== "/ngo/dashboard" && location.pathname !== "/ngo/verification" && location.pathname !== "/ngo/profile") {
           navigate({ to: "/ngo/dashboard" });
           return;
         }

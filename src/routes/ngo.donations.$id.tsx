@@ -12,15 +12,19 @@ import imgMeat from "@/assets/images/meat.jpeg";
 import imgMixed from "@/assets/images/mixed-donation.jpg";
 import imgPreparedGoods from "@/assets/images/prepared-goods.jpeg";
 import imgSnacks from "@/assets/images/snacks.jpeg";
+import imgBakery from "@/assets/images/bakery.png";
 
-function getImageForCategory(type: string) {
-  const t = (type || "").toLowerCase();
-  if (t.includes("beverage") || t.includes("drink")) return imgBeverages;
-  if (t.includes("can")) return imgCannedGoods;
-  if (t.includes("dairy") || t.includes("milk") || t.includes("cheese")) return imgDairy;
-  if (t.includes("meat") || t.includes("poultry") || t.includes("fish")) return imgMeat;
-  if (t.includes("prepared") || t.includes("meal")) return imgPreparedGoods;
-  if (t.includes("snack") || t.includes("chip") || t.includes("candy")) return imgSnacks;
+function getImageForCategory(typeOrCategories: string | string[]) {
+  const types = Array.isArray(typeOrCategories) ? typeOrCategories : [typeOrCategories];
+  const combined = types.join(" ").toLowerCase();
+  
+  if (combined.includes("beverage") || combined.includes("drink")) return imgBeverages;
+  if (combined.includes("can")) return imgCannedGoods;
+  if (combined.includes("dairy") || combined.includes("milk") || combined.includes("cheese")) return imgDairy;
+  if (combined.includes("meat") || combined.includes("poultry") || combined.includes("fish")) return imgMeat;
+  if (combined.includes("prepared") || combined.includes("meal")) return imgPreparedGoods;
+  if (combined.includes("snack") || combined.includes("chip") || combined.includes("candy")) return imgSnacks;
+  if (combined.includes("bakery") || combined.includes("bread") || combined.includes("pastry")) return imgBakery;
   return imgMixed; // Fallback
 } 
 
@@ -357,7 +361,7 @@ function DonationDetail() {
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <div className="aspect-square rounded-xl border bg-secondary overflow-hidden">
                 <img 
-                  src={getImageForCategory(batch?.batch_type || "")} 
+                  src={getImageForCategory([batch?.batch_type || "", ...itemCategories])} 
                   alt={batch?.batch_type || "Donation"} 
                   className="h-full w-full object-cover"
                 />

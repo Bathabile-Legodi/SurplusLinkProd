@@ -41,7 +41,7 @@ function resolveInitials(name: string): string {
  *   navigates to /login.
  * - Exposes displayName and initials derived from user_metadata.
  */
-export function useAuth() {
+export function useAuth(requiredRole?: "donor" | "ngo") {
   const router = useRouter();
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -79,6 +79,22 @@ export function useAuth() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!state.isLoading) {
+      const pathname = router.state.location.pathname;
+      const inferredRole = pathname.startsWith("/donor") ? "donor" : pathname.startsWith("/ngo") ? "ngo" : undefined;
+      const effectiveRequiredRole = requiredRole || inferredRole;
+
+      if (!state.user) {
+        // Not logged in
+        router.navigate({ to: "/login" });
+      } else if (effectiveRequiredRole && state.role !== effectiveRequiredRole) {
+        // Logged in but wrong role
+        router.navigate({ to: "/login" });
+      }
+    }
+  }, [state.isLoading, state.user, state.role, requiredRole, router]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();

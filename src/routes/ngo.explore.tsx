@@ -5,6 +5,7 @@ import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
 import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/ngo/explore")({
   beforeLoad: () => requireRole("ngo"),
@@ -417,7 +418,18 @@ function ExplorePage() {
         </h2>
 
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading available donations...</div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="rounded-xl border bg-card p-5">
+                <Skeleton className="h-6 w-3/4 mb-4" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : sortedDonations.length === 0 ? (
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
             {searchQuery || selectedCategory

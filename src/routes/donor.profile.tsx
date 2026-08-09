@@ -1,6 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { requireRole } from '@/lib/auth-guard'
+import { AppHeader, donorNav } from '@/components/AppHeader'
+import { useAuth } from '@/hooks/useAuth'
+import { Mail, Phone, Home, Settings, HelpCircle, FileText } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { usePlacesAutocomplete } from '@/hooks/usePlacesAutocomplete'
 
 export const Route = createFileRoute('/donor/profile')({
   beforeLoad: () => requireRole('donor'),
@@ -9,452 +14,253 @@ export const Route = createFileRoute('/donor/profile')({
 
 function DonorProfile() {
   const navigate = useNavigate()
+  const { user, displayName, initials, signOut } = useAuth()
+  
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    businessName: '',
+    businessType: '',
+    phone: '',
+    address: '',
+    city: '',
+  })
 
-  const [editMode, setEditMode] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(null)
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        businessName: displayName || '',
+        businessType: (user.user_metadata?.business_type as string) || '',
+        phone: (user.user_metadata?.phone as string) || '',
+        address: (user.user_metadata?.address as string) || '',
+        city: (user.user_metadata?.city as string) || '',
+      })
+    }
+  }, [user, displayName])
 
-  const donor = {
-    email: 'walescake@gmail.com',
-    businessName: 'Wales Bakery',
-    businessType: 'Bakery',
-    phone: '+27 123 456 789',
-    address: '897 Second St, Johannesburg',
-    location: 'Johannesburg, South Africa',
-    totalDonations: 3,
-    lastDonation: '12 June 2026',
-  }
+  const [addressInput, setAddressInput] = useState<HTMLInputElement | null>(null)
+  
+  usePlacesAutocomplete(addressInput, (formattedAddress, city) => {
+    setFormData(prev => ({
+      ...prev,
+      address: formattedAddress,
+      city: city || prev.city
+    }))
+  })
 
-  const donationHistory = [
-  {
-    date: '12 June 2026',
-    ngo: 'Hope Foundation',
-  },
-  {
-    date: '5 June 2026',
-    ngo: 'Food For All NGO',
-  },
-  {
-    date: '28 May 2026',
-    ngo: 'Community Care Centre',
-  },
-]
-  function handleImageUpload(
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const file = e.target.files?.[0]
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          business_name: formData.businessName,
+          business_type: formData.businessType,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+        }
+      })
+      if (authError) throw authError
 
-    if (file) {
-      setProfileImage(URL.createObjectURL(file))
+      if (user?.id) {
+        const { error: dbError } = await supabase
+          .from('donors')
+          .update({
+            organization_name: formData.businessName,
+            address: formData.address,
+          })
+          .eq('id', user.id)
+          
+        if (dbError) {
+          await supabase.from('donors').upsert({
+            id: user.id,
+            organization_name: formData.businessName,
+            address: formData.address,
+          })
+        }
+      }
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      alert('Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
     }
   }
 
+  const donor = {
+    email: user?.email || 'No email provided',
+    businessName: displayName,
+    businessType: (user?.user_metadata?.business_type as string) || 'Food Donor',
+    phone: (user?.user_metadata?.phone as string) || 'No phone provided',
+    address: (user?.user_metadata?.address as string) || 'No address provided',
+  }
+  
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-
-        {/* Header */}
-        <div style={styles.header}>
-          <div>
-            <h2 style={styles.title}>Donor Profile</h2>
-
-            <div style={styles.businessRow}>
-              <h3 style={styles.businessName}>
-                {donor.businessName}
-              </h3>
-
-              <span style={styles.verified}>
-                ✓ Verified
-              </span>
-            </div>
-
-            <p style={styles.businessType}>
-              {donor.businessType}
-            </p>
-          </div>
-
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader nav={donorNav} userLabel={initials} />
+      
+      <main className="mx-auto flex-1 w-full max-w-5xl px-4 sm:px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Donor Profile</h1>
           <button
-            style={styles.editBtn}
-            onClick={() => setEditMode(!editMode)}
+            onClick={() => navigate({ to: '/donor/dashboard' })}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            {editMode ? 'Save' : 'Edit Profile'}
+            &larr; Back to Dashboard
           </button>
         </div>
 
-        {/* Profile Image */}
-        <div style={styles.profileSection}>
-          <div style={styles.avatar}>
-            {profileImage ? (
-              <img
-                src={profileImage}
-                alt="Profile"
-                style={styles.avatarImg}
-              />
+        {/* Top Profile Banner */}
+        <div className="rounded-xl border bg-card p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 mb-6">
+          <div className="h-28 w-28 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-4xl font-bold text-primary">
+            {initials}
+          </div>
+          <div className="flex-1 text-center md:text-left space-y-3">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">{donor.businessName}</h2>
+              <p className="text-muted-foreground mt-0.5">{donor.businessType}</p>
+            </div>
+          </div>
+          <div className="w-full md:w-48 space-y-3 shrink-0 pt-2 md:pt-0">
+            <button 
+              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+              disabled={saving}
+              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : (isEditing ? 'Save Profile' : 'Edit Profile')}
+            </button>
+            {isEditing ? (
+              <button 
+                onClick={() => setIsEditing(false)}
+                disabled={saving}
+                className="w-full rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Cancel
+              </button>
             ) : (
-              <span>Profile Image</span>
+              <button 
+                onClick={signOut}
+                className="w-full rounded-md border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/20 transition-colors"
+              >
+                Log Out
+              </button>
             )}
           </div>
-
-          {editMode && (
-            <label style={styles.uploadLabel}>
-              Change Profile Image
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={styles.fileInput}
-              />
-            </label>
-          )}
         </div>
 
-        {/* Statistics */}
-        <div style={styles.statsGrid}>
-
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>
-              Total Donations
-            </div>
-
-            <div style={styles.statValue}>
-              {donor.totalDonations}
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>
-              Last Donation
-            </div>
-
-            <div style={styles.statValue}>
-              {donor.lastDonation}
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>
-              Location
-            </div>
-
-            <button
-              style={styles.mapButton}
-              onClick={() => {
-                // Map functionality can be connected here later
-              }}
-            >
-              View Map
-            </button>
-          </div>
-
-        </div>
-
-        {/* Contact Information */}
-        <div style={styles.infoGrid}>
-
-          <Field
-            label="Email"
-            value={donor.email}
-          />
-
-          <Field
-            label="Phone"
-            value={donor.phone}
-          />
-
-          <Field
-            label="Address"
-            value={donor.address}
-          />
-
-          <Field
-            label="Location"
-            value={donor.location}
-          />
-
-        </div>
-
-        {/* Donation History */}
-        <section style={styles.historySection}>
-          <h3 style={styles.historyTitle}>
-            Donation History
-          </h3>
-
-          <div style={styles.historyList}>
-            {donationHistory.map((donation, index) => (
-              <div
-                key={index}
-                style={styles.historyItem}
-              >
-                <div style={styles.historyDate}>
-                  {donation.date}
-                </div>
-
-                <div style={styles.historyItemName}>
-               {donation.ngo}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Main Details (Spans 2 cols) */}
+          <div className="md:col-span-2">
+            <div className="rounded-xl border bg-card shadow-sm h-full">
+              <div className="px-6 py-5 border-b bg-muted/30">
+                <h3 className="font-semibold text-foreground text-lg">Contact Information</h3>
               </div>
-            ))}
+              
+              <div className="p-6 grid gap-6 sm:grid-cols-2">
+                {isEditing && (
+                  <>
+                    <div className="col-span-1 sm:col-span-2 space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Business Name</label>
+                      <input 
+                        type="text" 
+                        value={formData.businessName}
+                        onChange={e => setFormData({...formData, businessName: e.target.value})}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div className="col-span-1 sm:col-span-2 space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Business Type</label>
+                      <input 
+                        type="text" 
+                        value={formData.businessType}
+                        onChange={e => setFormData({...formData, businessType: e.target.value})}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Email</div>
+                    <div className="text-sm font-medium text-foreground">{donor.email}</div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Phone</div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={formData.phone}
+                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    ) : (
+                      <div className="text-sm font-medium text-foreground">{donor.phone}</div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 col-span-1 sm:col-span-2">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Home className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Address</div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        ref={setAddressInput}
+                        value={formData.address}
+                        onChange={e => setFormData({...formData, address: e.target.value})}
+                        placeholder="Start typing your address..."
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    ) : (
+                      <div className="text-sm font-medium text-foreground">{donor.address}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
 
-        {/* Back Button */}
-        <div style={styles.bottomButtonContainer}>
-          <button
-            style={styles.backBtn}
-            onClick={() =>
-              navigate({ to: '/donor/dashboard' })
-            }
-          >
-            ← Back to Donor Dashboard
-          </button>
+          {/* Quick Links (Spans 1 col) */}
+          <div className="md:col-span-1">
+            <div className="rounded-xl border bg-card overflow-hidden shadow-sm h-full">
+              <div className="px-6 py-5 border-b bg-muted/30">
+                <h3 className="font-semibold text-foreground text-lg">Account Links</h3>
+              </div>
+              <div className="divide-y">
+                <button className="w-full flex items-center gap-4 px-6 py-4 text-sm font-medium hover:bg-muted/50 transition-colors text-left text-foreground">
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  Preferences
+                </button>
+                <button className="w-full flex items-center gap-4 px-6 py-4 text-sm font-medium hover:bg-muted/50 transition-colors text-left text-foreground">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  Tax Certificates
+                </button>
+                <button className="w-full flex items-center gap-4 px-6 py-4 text-sm font-medium hover:bg-muted/50 transition-colors text-left text-foreground">
+                  <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                  Support & FAQ
+                </button>
+              </div>
+            </div>
+          </div>
+          
         </div>
-
-      </div>
+      </main>
     </div>
   )
-}
-
-function Field({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div style={styles.field}>
-      <div style={styles.label}>
-        {label}
-      </div>
-
-      <div style={styles.value}>
-        {value}
-      </div>
-    </div>
-  )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    padding: '24px',
-    display: 'flex',
-    justifyContent: 'center',
-    background: '#f3f4f6',
-    minHeight: '100vh',
-    boxSizing: 'border-box',
-  },
-
-  card: {
-    width: '100%',
-    maxWidth: '1000px',
-    background: 'white',
-    borderRadius: '16px',
-    padding: '30px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-    boxSizing: 'border-box',
-  },
-
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '25px',
-  },
-
-  title: {
-    margin: 0,
-    fontSize: '32px',
-    fontWeight: 700,
-    color: '#111827',
-  },
-
-  businessRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginTop: '28px',
-  },
-
-  businessName: {
-    margin: 0,
-    fontSize: '28px',
-    fontWeight: 700,
-    color: '#111827',
-  },
-
-  verified: {
-    color: '#16a34a',
-    fontSize: '14px',
-    fontWeight: 600,
-  },
-
-  businessType: {
-    margin: '8px 0 0',
-    color: '#6b7280',
-    fontSize: '16px',
-  },
-
-  editBtn: {
-    padding: '12px 18px',
-    borderRadius: '8px',
-    border: 'none',
-    background: '#000000',
-    color: 'white',
-    fontSize: '16px',
-    cursor: 'pointer',
-    marginTop: '69px',
-  },
-
-  profileSection: {
-    marginBottom: '25px',
-  },
-
-  avatar: {
-    width: '150px',
-    height: '150px',
-    borderRadius: '50%',
-    backgroundColor: '#e5e7eb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '16px',
-    color: '#374151',
-    overflow: 'hidden',
-  },
-
-  avatarImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-
-  uploadLabel: {
-    display: 'inline-block',
-    marginTop: '12px',
-    padding: '8px 12px',
-    background: '#f3f4f6',
-    borderRadius: '6px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    color: '#111827',
-  },
-
-  fileInput: {
-    display: 'none',
-  },
-
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
-    gap: '16px',
-    marginBottom: '25px',
-  },
-
-  statCard: {
-    background: '#f8f9fb',
-    padding: '20px',
-    borderRadius: '10px',
-    textAlign: 'center',
-    minHeight: '70px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-
-  statLabel: {
-    fontSize: '17px',
-    color: '#111827',
-    marginBottom: '8px',
-  },
-
-  statValue: {
-    fontSize: '18px',
-    color: '#111827',
-    fontWeight: 500,
-  },
-
-  mapButton: {
-    border: 'none',
-    background: 'transparent',
-    color: '#111827',
-    fontSize: '18px',
-    cursor: 'pointer',
-    padding: 0,
-  },
-
-  infoGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
-    marginBottom: '28px',
-  },
-
-  field: {
-    background: '#f8f9fb',
-    padding: '16px',
-    borderRadius: '10px',
-    minHeight: '48px',
-  },
-
-  label: {
-    fontSize: '14px',
-    color: '#6b7280',
-    marginBottom: '6px',
-  },
-
-  value: {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: '#111827',
-  },
-
-  historySection: {
-    marginTop: '5px',
-  },
-
-  historyTitle: {
-    fontSize: '20px',
-    fontWeight: 500,
-    color: '#111827',
-    margin: '0 0 14px',
-  },
-
-  historyList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-  },
-
-  historyItem: {
-    background: '#f3f4f6',
-    padding: '16px',
-    borderRadius: '10px',
-  },
-
-  historyDate: {
-    fontSize: '14px',
-    color: '#6b7280',
-    marginBottom: '8px',
-  },
-
-  historyItemName: {
-    fontSize: '17px',
-    fontWeight: 700,
-    color: '#111827',
-  },
-
-  bottomButtonContainer: {
-    marginTop: '30px',
-    paddingTop: '20px',
-    borderTop: '1px solid #e5e7eb',
-  },
-
-  backBtn: {
-    padding: '11px 16px',
-    borderRadius: '8px',
-    border: '1px solid #d1d5db',
-    background: 'white',
-    color: '#111827',
-    fontSize: '15px',
-    cursor: 'pointer',
-  },
 }

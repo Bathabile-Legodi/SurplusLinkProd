@@ -4,6 +4,7 @@ import { AppHeader, donorNav } from "@/components/AppHeader";
 import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
 import { supabase } from "@/lib/supabase";
 import { requireRole } from "@/lib/auth-guard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
@@ -139,14 +140,14 @@ function DonorDashboard() {
               </thead>
               <tbody className="divide-y">
                 {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-sm text-muted-foreground"
-                    >
-                      Loading your donations…
-                    </td>
-                  </tr>
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={`skeleton-${i}`}>
+                      <td className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
+                      <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-4 py-4"><Skeleton className="h-4 w-32" /></td>
+                      <td className="px-4 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                    </tr>
+                  ))
                 ) : error ? (
                   <tr>
                     <td

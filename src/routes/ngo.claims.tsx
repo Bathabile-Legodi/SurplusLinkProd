@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Package, ArrowRight, CheckCircle2, Clock, Truck, MapPin, Eye } from "lucide-react";
 import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/ngo/claims")({
   beforeLoad: () => requireRole("ngo"),
@@ -101,7 +102,7 @@ function MyClaims() {
 
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl border bg-card animate-pulse" />)}
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
           </div>
         ) : claims.length === 0 ? (
           <div className="rounded-xl border bg-card py-16 text-center">

@@ -180,11 +180,11 @@ function Hero() {
   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
 </Link>
                <Link
-  to="/donor/funds"
+  to="/community-wallet"
   className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
 >
   <HeartHandshake className="h-4 w-4" />
-  Support an NGO
+  Community Wallet
   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
 </Link>
               

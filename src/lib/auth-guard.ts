@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
  * different role. Returns { user, role } on success.
  */
 export async function requireRole(required: "donor" | "ngo") {
+  if (typeof document === "undefined") return { user: null, role: required };
+
   const {
     data: { user },
     error,
@@ -32,6 +34,8 @@ export async function requireRole(required: "donor" | "ngo") {
  * without caring about role (e.g. shared pages).
  */
 export async function requireAuth() {
+  if (typeof document === "undefined") return { user: null, role: undefined };
+
   const {
     data: { user },
     error,
@@ -49,6 +53,8 @@ export async function requireAuth() {
  * users straight to their dashboard.
  */
 export async function redirectIfAuthenticated() {
+  if (typeof document === "undefined") return;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
