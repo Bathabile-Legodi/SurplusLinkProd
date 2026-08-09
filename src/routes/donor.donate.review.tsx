@@ -10,18 +10,14 @@ import {
 } from "@/lib/donations";
 import { DateTimePicker } from "@/components/ScrollPicker";
 import { supabase } from "@/lib/supabase";
-import { requireRole } from "@/lib/auth-guard";
-import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/donate/review")({
-  beforeLoad: () => requireRole("donor"),
   head: () => ({ meta: [{ title: "Review Batch — SurplusLink" }] }),
   component: ReviewBatch,
 });
 
 function ReviewBatch() {
   const navigate = useNavigate();
-  const { initials } = useAuth();
   const [items, setItems] = useState<DonationItem[]>([]);
   const [collectionDateTime, setCollectionDateTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,10 +80,12 @@ function ReviewBatch() {
                 "Generous Donor",
               donation_id: result.id,
               quantity: formattedQuantity,
-              collection_address: "Provided upon claim",
-              collection_deadline: result.collectionDateTime || collectionDateTime || "Not specified",
+              collection_address:
+                (result as any).collection_address || "Provided upon claim",
+              collection_deadline: collectionDateTime || "Not specified",
               submission_date: new Date().toLocaleDateString(),
-              collection_method: "NGO Pick-up",
+              collection_method:
+                (result as any).collection_method || "NGO Pick-up",
             },
             import.meta.env.VITE_EMAILJS_PUBLIC_KEY
           );
@@ -102,32 +100,14 @@ function ReviewBatch() {
         search: { batchId: result.id },
       });
     } catch (err) {
-      const raw = getErrorMessage(err);
-      // Don't expose raw DB/Supabase internals to the user, but do surface
-      // actionable messages (like profile-not-found) as-is.
-      const isDatabaseError =
-        (raw.includes("violates") ||
-          raw.includes("constraint") ||
-          raw.includes("duplicate key") ||
-          raw.includes("foreign key") ||
-          raw.includes("syntax error") ||
-          raw.includes("supabase") ||
-          raw.includes("postgres")) &&
-        // Don't sanitize user-actionable messages
-        !raw.includes("sign out") &&
-        !raw.includes("donor profile");
-      setError(
-        isDatabaseError
-          ? "Something went wrong while saving your donation. Please try again."
-          : raw
-      );
+      setError(getErrorMessage(err));
       setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel={initials} />
+      <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">
