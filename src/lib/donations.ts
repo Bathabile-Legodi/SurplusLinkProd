@@ -105,10 +105,10 @@ export function mapBatchRow(row: any): RecentDonation {
     typeof row.display_id === "number"
       ? row.display_id
       : Math.abs(
-          String(row.id)
-            .split("")
-            .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
-        ) % 1000;
+        String(row.id)
+          .split("")
+          .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
+      ) % 1000;
   return {
     id: displayId,
     batchId: row.id,

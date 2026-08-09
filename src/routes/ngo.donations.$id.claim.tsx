@@ -46,9 +46,9 @@ function ClaimProcessing() {
         }
 
         if (batch.status === "claimed") {
-          navigate({ 
-            to: "/ngo/donations/$id/unavailable", 
-            params: { id } 
+          navigate({
+            to: "/ngo/donations/$id/unavailable",
+            params: { id }
           });
           return;
         }
@@ -83,9 +83,9 @@ function ClaimProcessing() {
         }
 
         setTimeout(() => {
-          navigate({ 
-            to: "/ngo/donations/$id/success", 
-            params: { id } 
+          navigate({
+            to: "/ngo/donations/$id/success",
+            params: { id }
           });
         }, 600);
 
@@ -120,9 +120,8 @@ function ClaimProcessing() {
           {CHECKS.map((c, i) => (
             <li key={c} className="flex items-center gap-2">
               <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                  i <= step ? "bg-success/20 text-[color:var(--success)]" : "bg-secondary text-muted-foreground"
-                }`}
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${i <= step ? "bg-success/20 text-[color:var(--success)]" : "bg-secondary text-muted-foreground"
+                  }`}
               >
                 {i < step ? "✓" : i + 1}
               </span>

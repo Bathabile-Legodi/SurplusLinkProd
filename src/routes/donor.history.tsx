@@ -59,16 +59,18 @@ function formatDonationTime(dateStr: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
   const styles: Record<string, string> = {
-    Pending:   "bg-amber-100 text-amber-700 border-amber-200",
-    Claimed:   "bg-blue-100 text-blue-700 border-blue-200",
-    Delivered: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    Expired:   "bg-neutral-100 text-neutral-500 border-neutral-200",
-    Cancelled: "bg-red-100 text-red-600 border-red-200",
+    pending:   "bg-amber-100 text-amber-700 border-amber-200",
+    claimed:   "bg-blue-100 text-blue-700 border-blue-200",
+    delivered: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    expired:   "bg-neutral-100 text-neutral-500 border-neutral-200",
+    cancelled: "bg-red-100 text-red-600 border-red-200",
+    unclaimed: "bg-neutral-100 text-neutral-500 border-neutral-200",
   };
-  const cls = styles[status] ?? "bg-neutral-100 text-neutral-500 border-neutral-200";
+  const cls = styles[normalized] ?? "bg-neutral-100 text-neutral-500 border-neutral-200";
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${cls}`}>
       {status}
     </span>
   );

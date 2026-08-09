@@ -152,4 +152,44 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+
+  gmp-place-autocomplete {
+    background-color: var(--color-background);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-input);
+    color: var(--color-foreground);
+    width: 100%;
+    box-sizing: border-box;
+    color-scheme: light;
+    --gmp-color-background: var(--color-background);
+    --gmp-font-family: inherit;
+    --pac-background-color: var(--color-background);
+    --pac-color: var(--color-foreground);
+  }
+
+  .dark gmp-place-autocomplete {
+    color-scheme: dark;
+  }
+
+  .pac-container {
+    background-color: var(--color-background) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-foreground) !important;
+    font-family: inherit !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  }
+  .pac-item {
+    border-top-color: var(--color-border) !important;
+    color: var(--color-foreground) !important;
+  }
+  .pac-item:hover {
+    background-color: var(--color-muted) !important;
+  }
+  .pac-item-query {
+    color: var(--color-foreground) !important;
+  }
+  .pac-matched {
+    color: var(--color-primary) !important;
+  }
 }

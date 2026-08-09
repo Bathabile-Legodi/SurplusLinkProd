@@ -172,15 +172,16 @@ function DonorDashboard() {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
   const tone =
-    status === "Claimed"
+    normalized === "claimed"
       ? "bg-warning/20 text-warning-foreground"
-      : status === "Delivered"
+      : normalized === "delivered"
         ? "bg-success/15 text-[color:var(--success)]"
         : "bg-secondary text-muted-foreground";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tone}`}
     >
       {status}
     </span>

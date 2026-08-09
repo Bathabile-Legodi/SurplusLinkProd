@@ -155,9 +155,9 @@ function ClaimCard({ claim }: { claim: ClaimedBatch }) {
 
   const deadline = claim.collection_datetime
     ? new Date(claim.collection_datetime).toLocaleString("en-ZA", {
-        weekday: "short", month: "short", day: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      })
+      weekday: "short", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    })
     : "No deadline set";
 
   const isSelfCollect = claim.collection_type === "pickup";

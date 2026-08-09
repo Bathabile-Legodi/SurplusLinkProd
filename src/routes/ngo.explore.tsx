@@ -414,11 +414,11 @@ function ExplorePage() {
                       ? new Date(d.collection_datetime) < now
                       : false;
                     return isExpired ? (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200 capitalize">
                         Expired
                       </span>
                     ) : (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600 capitalize">
                         {d.status}
                       </span>
                     );

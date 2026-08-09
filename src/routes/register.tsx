@@ -572,7 +572,7 @@ function RegisterPage() {
             disabled={isSubmitting}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Creating Account…" : "Create Account"}
+            {isSubmitting ? "Creating Account…" : "Create Account"}
           </button>
         </form>
 
