@@ -5,6 +5,8 @@ import { AppHeader, donorNav } from "@/components/AppHeader";
 import { DatePicker } from "@/components/ScrollPicker";
 import { Field } from "@/components/Field";
 import {loadCurrentBatch, makeItemId, saveCurrentBatch, type DonationItem } from "@/lib/donations";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BatchItem extends DonationItem {
   status: "Active" | "Expired";
@@ -298,12 +300,14 @@ function BatchItemRow({
 }
 
 export const Route = createFileRoute("/donor/donate/batch")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({ meta: [{ title: "Create Donation Batch — SurplusLink" }] }),
   component: CreateBatch,
 });
 
 function CreateBatch() {
   const navigate = useNavigate();
+  const { initials } = useAuth();
 
   const [items, setItems] = useState<BatchItem[]>([]);
   const [draft, setDraft] = useState<DraftState>(EMPTY_DRAFT);
@@ -368,7 +372,7 @@ function CreateBatch() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" />
+      <AppHeader nav={donorNav} userLabel={initials} />
 
       <main className="mx-auto max-w-3xl px-6 py-10">
         <p className="mt-1 text-sm text-muted-foreground">

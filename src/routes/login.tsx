@@ -4,8 +4,10 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
 import { toast } from "sonner";
+import { redirectIfAuthenticated } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
 });
 

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
 import { toast } from "sonner";
+import { redirectIfAuthenticated } from "@/lib/auth-guard";
 
 interface AddressComponents {
   streetNumber: string;
@@ -36,11 +37,13 @@ const emptyAddress = (): AddressComponents => ({
 
 
 export const Route = createFileRoute("/register")({
+  beforeLoad: () => redirectIfAuthenticated(),
   head: () => ({
     meta: [{ title: "Create Account — SurplusLink" }],
   }),
   component: RegisterPage,
 });
+
 
 
 function useGoogleMaps() {

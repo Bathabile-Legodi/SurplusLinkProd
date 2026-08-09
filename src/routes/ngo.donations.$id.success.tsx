@@ -11,8 +11,11 @@ import {
 } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/donations/$id/success")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({
     meta: [{ title: "Donation Claimed — SurplusLink" }],
   }),
@@ -27,6 +30,7 @@ interface BatchSummary {
 
 function ClaimSuccess() {
   const { id } = Route.useParams();
+  const { initials } = useAuth();
   const navigate = useNavigate();
 
   const [batch, setBatch] = useState<BatchSummary | null>(null);
@@ -99,9 +103,9 @@ function ClaimSuccess() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
+      <AppHeader nav={ngoNav} userLabel={initials} />
 
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main className="mx-auto max-w-2xl px-6 py-16">
 
         {/* Success banner */}
         <div className="mb-8 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 shadow-sm">

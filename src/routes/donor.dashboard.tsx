@@ -2,14 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
-import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
 }
 
 export const Route = createFileRoute("/donor/dashboard")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({
     meta: [{ title: "Donor Dashboard — SurplusLink" }],
   }),
@@ -80,7 +81,6 @@ function DonorDashboard() {
               Thank you for helping fight food waste in your community.
             </p>
           </div>
-          <PushSubscriptionManager />
         </div>
 
         {/* Quick Impact Summary */}

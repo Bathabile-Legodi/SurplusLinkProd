@@ -10,8 +10,11 @@ import {
 } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/collection/instructions/$id")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({
     meta: [{ title: "Collection Instructions — SurplusLink" }],
   }),
@@ -30,6 +33,7 @@ interface BatchSummary {
 function CollectionInstructions() {
   const { id } = Route.useParams();
   const { from } = Route.useSearch();
+  const { initials } = useAuth();
   const navigate = useNavigate();
   const showConfirmButton = from !== 'claims';
 
@@ -109,10 +113,9 @@ function CollectionInstructions() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
-
-      <main className="mx-auto max-w-5xl px-6 py-10">
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader nav={ngoNav} userLabel={initials} />
+      <main className="mx-auto flex-1 w-full max-w-3xl px-6 py-10">
 
         {/* Page header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

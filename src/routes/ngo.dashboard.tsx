@@ -1,15 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { useNgoVerification } from "@/hooks/useNgoVerification";
-import PushSubscriptionManager from "@/components/PushSubscriptionManager";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/dashboard")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "NGO Dashboard — SurplusLink" }] }),
   component: NgoDashboard,
 });
 
 function NgoDashboard() {
   const { isAuthorized, isChecking } = useNgoVerification();
+  const { signOut, initials, displayName } = useAuth();
 
   if (isChecking) {
     return (
@@ -26,14 +29,13 @@ function NgoDashboard() {
   
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
+      <AppHeader nav={ngoNav} userLabel={initials} />
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">NGO Dashboard</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Welcome back, Hope Shelter.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Welcome back, {displayName}.</p>
           </div>
-          <PushSubscriptionManager />
         </div>
 
         <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
@@ -46,12 +48,12 @@ function NgoDashboard() {
             <button className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
               View Status
             </button>
-            <Link
-              to="/register"
+            <button
+              onClick={signOut}
               className="rounded-md border px-4 py-1.5 text-xs font-medium hover:bg-secondary"
             >
               Log Out
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -81,4 +83,4 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>
   );
-}
+}

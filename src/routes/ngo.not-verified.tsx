@@ -1,15 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/not-verified")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "Account Not Verified — SurplusLink" }] }),
   component: NotVerified,
 });
 
 function NotVerified() {
+  const { initials } = useAuth();
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
+      <AppHeader nav={ngoNav} userLabel={initials} />
       <main className="mx-auto max-w-md px-6 py-16 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
           <span className="text-2xl">⊘</span>

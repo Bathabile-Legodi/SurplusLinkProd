@@ -20,8 +20,11 @@ import {
   type SimulatedDriver,
 } from "@/lib/delivery-sim";
 import { useDeliveryMap } from "@/lib/useDeliveryMap";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/track/$id")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "Track Delivery — SurplusLink" }] }),
   component: TrackDelivery,
 });
@@ -43,6 +46,7 @@ interface BatchInfo {
 
 function TrackDelivery() {
   const { id } = Route.useParams();
+  const { initials } = useAuth();
 
   const [batch,      setBatch]      = useState<BatchInfo | null>(null);
   const [ngoAddress, setNgoAddress] = useState("");
@@ -268,14 +272,13 @@ function TrackDelivery() {
     ? getSimulatedDriver(batch.id)
     : null;
 
-  const userInitials = ngoName ? ngoName.substring(0, 2).toUpperCase() : "NG";
+  // 4) Render -------------------------------------------------------------------
 
-  // ── Render: loading ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={userInitials} />
-        <main className="mx-auto max-w-5xl px-6 py-10">
+        <AppHeader nav={ngoNav} userLabel={initials} />
+        <main className="mx-auto max-w-3xl px-6 py-10">
           <div className="h-5 w-40 rounded bg-muted animate-pulse" />
           <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
             <div className="space-y-3">
@@ -294,8 +297,8 @@ function TrackDelivery() {
   if (notFound || !batch) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={userInitials} />
-        <main className="mx-auto max-w-5xl px-6 py-10 text-center">
+        <AppHeader nav={ngoNav} userLabel={initials} />
+        <main className="mx-auto max-w-3xl px-6 py-10 text-center">
           <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-4 text-sm font-medium">Donation not found</p>
           <Link
@@ -312,7 +315,8 @@ function TrackDelivery() {
   // ── Render: main ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={userInitials} />
+      <AppHeader nav={ngoNav} userLabel={initials} />
+
       <main className="mx-auto max-w-5xl px-6 py-10">
 
         {/* Back link */}

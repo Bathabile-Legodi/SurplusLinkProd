@@ -175,8 +175,10 @@ export async function submitDonationBatch(
 
   // Ensure the user has a row in the donors table (satisfies the FK constraint).
   // This is a no-op for existing donors; it only inserts on first donation.
+  // The DB trigger `handle_new_user` should create this row on signup — this
+  // is a safety-net for accounts created before the trigger existed.
   const userMeta = userData.user.user_metadata ?? {};
-  await supabase.from("donors").upsert(
+  const { error: upsertError } = await supabase.from("donors").upsert(
     {
       id: userData.user.id,
       organization_name: userMeta.business_name ?? userMeta.organization_name ?? "Unknown Donor",
@@ -184,6 +186,27 @@ export async function submitDonationBatch(
     },
     { onConflict: "id" }
   );
+
+  if (upsertError) {
+    // RLS may block this upsert for users whose donor row was created by the
+    // DB trigger (which runs as SECURITY DEFINER). Check if the row already
+    // exists before treating this as a hard failure.
+    const { data: existingDonor } = await supabase
+      .from("donors")
+      .select("id")
+      .eq("id", userData.user.id)
+      .maybeSingle();
+
+    if (!existingDonor) {
+      // Donor row truly doesn't exist and we can't create it — surface this clearly.
+      console.error("[donations] donors upsert failed and row not found:", upsertError);
+      throw new Error(
+        "Your donor profile could not be found. Please sign out, sign back in, and try again."
+      );
+    }
+    // Row exists — RLS just blocked the upsert write. Safe to continue.
+    console.warn("[donations] donors upsert blocked by RLS (row already exists, continuing):", upsertError.message);
+  }
 
   // Perform parent batch insert
   const { data: batchRow, error: batchError } = await supabase
@@ -199,7 +222,7 @@ export async function submitDonationBatch(
     .single();
 
   if (batchError || !batchRow) {
-    console.error("Batch insert error:", batchError);
+    console.error("[donations] Batch insert error:", batchError);
     throw new Error("Failed to submit your donation. Please try again.");
   }
 
@@ -219,7 +242,7 @@ export async function submitDonationBatch(
     .select();
 
   if (itemsError) {
-    console.error("Items insert error:", itemsError);
+    console.error("[donations] Items insert error:", itemsError);
     throw new Error("Failed to save donation items. Please try again.");
   }
 

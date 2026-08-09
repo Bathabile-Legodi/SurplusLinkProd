@@ -1,8 +1,10 @@
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { requireRole } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/ngo/profile')({
+  beforeLoad: () => requireRole('ngo'),
   component: NgoProfile,
 })
 

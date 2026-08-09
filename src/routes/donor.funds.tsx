@@ -11,8 +11,10 @@ import {
   AlertCircle,
   HeartHandshake,
 } from 'lucide-react'
+import { requireRole } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/donor/funds')({
+  beforeLoad: () => requireRole('donor'),
   component: DonorFundsPage,
 })
 

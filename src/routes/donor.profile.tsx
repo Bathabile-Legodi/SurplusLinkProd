@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { requireRole } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/donor/profile')({
+  beforeLoad: () => requireRole('donor'),
   component: DonorProfile,
 })
 

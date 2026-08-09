@@ -10,8 +10,11 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/history")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({ meta: [{ title: "Donation History — SurplusLink" }] }),
   component: DonorHistory,
 });
@@ -194,6 +197,7 @@ function Meta({ label, value }: { label: string; value: string }) {
 const STATUS_OPTIONS = ["All", "Pending", "Claimed", "Delivered", "Expired", "Cancelled"];
 
 function DonorHistory() {
+  const { initials } = useAuth();
   const [donations, setDonations] = useState<DBBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -308,8 +312,8 @@ function DonorHistory() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" />
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <AppHeader nav={donorNav} userLabel={initials} />
+      <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">Donation History</h1>
           <p className="mt-1 text-sm text-muted-foreground">

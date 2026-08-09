@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate, Outlet, useLocation } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 import imgBeverages from "@/assets/images/beverages.jpeg";
 import imgCannedGoods from "@/assets/images/canned-goods.jpeg";
@@ -23,6 +25,7 @@ function getImageForCategory(type: string) {
 } 
 
 export const Route = createFileRoute("/ngo/donations/$id")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "Donation Details — SurplusLink" }] }),
   component: DonationDetail,
 });
@@ -151,6 +154,7 @@ export async function getRealDrivingDistance(
 
 function DonationDetail() {
   const { id } = Route.useParams();
+  const { initials } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isMapsReady = useGoogleMaps(); 
@@ -318,7 +322,7 @@ function DonationDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel="HS" />
+        <AppHeader nav={ngoNav} userLabel={initials} />
         <main className="mx-auto max-w-3xl px-6 py-10 text-sm text-muted-foreground">
           Loading donation details...
         </main>
@@ -329,7 +333,7 @@ function DonationDetail() {
   if (!batch) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel="HS" />
+        <AppHeader nav={ngoNav} userLabel={initials} />
         <main className="mx-auto max-w-3xl px-6 py-10 text-sm text-muted-foreground">
           Donation batch not found.
           <div className="mt-4">
@@ -344,7 +348,7 @@ function DonationDetail() {
     <>
       {!isChildRoute && (
         <div className="min-h-screen bg-background">
-          <AppHeader nav={ngoNav} userLabel={ngoName.substring(0, 2).toUpperCase()} />
+          <AppHeader nav={ngoNav} userLabel={initials} />
           <main className="mx-auto max-w-3xl px-6 py-10">
             <Link to="/ngo/explore" className="text-sm text-muted-foreground hover:text-foreground">
               ← Back to Available Donations

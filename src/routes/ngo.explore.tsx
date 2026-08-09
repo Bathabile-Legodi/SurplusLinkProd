@@ -1,18 +1,13 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, redirect, Link } from "@tanstack/react-router";
+import { useEffect, useState, useMemo } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Search, Filter, ArrowUpDown, Clock, MapPin, Package, Heart } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/explore")({
-  // Guard the route before rendering: Redirect to login if no valid session
-  beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw redirect({
-        to: "/login", // Adjust to match your login route path
-      });
-    }
-  },
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "Explore Donations — SurplusLink" }] }),
   component: ExplorePage,
 });
@@ -127,6 +122,7 @@ export async function getBatchDrivingDistances(
 }
 
 function ExplorePage() {
+  const { initials } = useAuth();
   const isMapsReady = useGoogleMaps();
   const [rawDonations, setRawDonations] = useState<DonationUI[]>([]);
   const [distancesMap, setDistancesMap] = useState<Record<string, string>>({});
@@ -325,9 +321,9 @@ function ExplorePage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={ngoName.substring(0, 2).toUpperCase()} />
-      <main className="mx-auto max-w-5xl px-6 py-10">
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader nav={ngoNav} userLabel={initials} />
+      <main className="mx-auto flex-1 w-full max-w-7xl px-6 py-8">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome, {ngoName}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Here's surplus food from verified donors near you.

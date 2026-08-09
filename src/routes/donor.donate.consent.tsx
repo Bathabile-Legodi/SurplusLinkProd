@@ -1,7 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/donate/consent")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({ meta: [{ title: "Donation Consent — SurplusLink" }] }),
   component: ConsentPage,
 });
@@ -9,13 +12,14 @@ export const Route = createFileRoute("/donor/donate/consent")({
 function ConsentPage() {
   const [agreed, setAgreed] = useState(false);
   const navigate = useNavigate();
+  const { displayName } = useAuth();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-foreground/40 px-4 py-10">
       <div className="w-full max-w-lg rounded-xl border bg-card p-8 shadow-xl">
         <div className="mb-6">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">SurplusLink</p>
-          <h1 className="mt-1 text-lg font-semibold">Welcome, Fresh Market</h1>
+          <h1 className="mt-1 text-lg font-semibold">Welcome, {displayName}</h1>
         </div>
 
         <h2 className="text-base font-semibold">Donation Consent & Declaration Form</h2>

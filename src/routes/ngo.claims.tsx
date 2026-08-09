@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
 import { Package, ArrowRight, CheckCircle2, Clock, Truck, MapPin, Eye } from "lucide-react";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/claims")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "My Claimed Donations — SurplusLink" }] }),
   component: MyClaims,
 });
@@ -34,6 +37,7 @@ function statusMeta(status: string) {
 }
 
 function MyClaims() {
+  const { initials } = useAuth();
   const [claims, setClaims] = useState<ClaimedBatch[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -86,8 +90,8 @@ function MyClaims() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <AppHeader nav={ngoNav} userLabel={initials} />
+      <main className="mx-auto max-w-4xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">My Claimed Donations</h1>
           <p className="mt-1 text-sm text-muted-foreground">
