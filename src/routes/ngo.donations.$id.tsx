@@ -107,11 +107,13 @@ export async function getRealDrivingDistance(
       );
 
       const response: any = await Promise.race([modernCall, timeout]);
-      const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
+      const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0] || (Array.isArray(response) ? response[0] : null);
 
       if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
         const meters = element.distanceMeters;
-        if (typeof meters === "number") {
+        if (typeof meters === "number" && !isNaN(meters)) {
+          if (meters === 0) return "Same location";
+          if (meters < 100) return "< 0.1 km away";
           const km = (meters / 1000).toFixed(1);
           return `${km} km away`;
         }
