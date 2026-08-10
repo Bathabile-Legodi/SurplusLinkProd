@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { AppHeader, ngoNav } from '@/components/AppHeader'
 import { useNgoVerification } from '@/hooks/useNgoVerification'
-import { UploadCloud, CheckCircle, FileText, Clock } from 'lucide-react'
+import { UploadCloud, CheckCircle, FileText, Clock, Check } from 'lucide-react'
 
 export const Route = createFileRoute('/ngo/verification')({
   head: () => ({ meta: [{ title: 'Verification Status — SurplusLink' }] }),
@@ -54,6 +54,30 @@ function NgoVerification() {
     }, 2000)
   }
 
+  // Determine current active step index:
+  // Step 1: Submit Documents
+  // Step 2: Under Review
+  // Step 3: Account Approved
+  const currentStep = isVerified ? 3 : hasUploaded ? 2 : 1
+
+  const steps = [
+    {
+      step: 1,
+      title: 'Submit Documents',
+      desc: 'Upload official NPO/NGO registration certificates.',
+    },
+    {
+      step: 2,
+      title: 'Under Review',
+      desc: 'Our team reviews your application (takes 3–7 working days).',
+    },
+    {
+      step: 3,
+      title: 'Account Approved',
+      desc: 'Receive confirmation and start claiming surplus donations.',
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader nav={ngoNav} userLabel={initials} />
@@ -88,15 +112,9 @@ function NgoVerification() {
                   <Clock className="h-8 w-8" />
                 </div>
                 <h2 className="text-xl font-bold mb-2">Documents Received</h2>
-                <p className="text-muted-foreground text-sm max-w-sm leading-relaxed mb-6">
+                <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
                   Thank you for submitting your registration documents. Our team is currently reviewing your application.
                 </p>
-                <div className="bg-muted/50 w-full p-4 rounded-lg text-left border">
-                  <p className="text-xs font-semibold text-foreground uppercase tracking-widest mb-1">What happens next?</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Please allow 3-7 working days for processing. You will receive an email notification as soon as your account has been approved and you can start claiming donations.
-                  </p>
-                </div>
               </div>
             ) : (
               <div className="p-8">
@@ -145,6 +163,57 @@ function NgoVerification() {
                 </form>
               </div>
             )}
+
+            {/* What Happens Next Steps */}
+            <div className="border-t bg-muted/30 p-6 md:p-8">
+              <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest mb-6">
+                What Happens Next
+              </h3>
+              
+              <div className="space-y-6">
+                {steps.map((item) => {
+                  const isCompleted = currentStep > item.step
+                  const isCurrent = currentStep === item.step
+
+                  return (
+                    <div key={item.step} className="flex items-start gap-4">
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                          isCompleted
+                            ? 'bg-emerald-500 text-white'
+                            : isCurrent
+                            ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                            : 'bg-muted border text-muted-foreground'
+                        }`}
+                      >
+                        {isCompleted ? <Check className="h-4 w-4" /> : item.step}
+                      </div>
+
+                      <div className="pt-0.5">
+                        <div className="flex items-center gap-2">
+                          <p
+                            className={`text-sm font-semibold ${
+                              isCurrent || isCompleted ? 'text-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            {item.title}
+                          </p>
+                          {isCurrent && (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+                              Current Step
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
           </div>
         </div>
       </main>

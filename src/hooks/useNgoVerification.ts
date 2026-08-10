@@ -47,6 +47,11 @@ export function useNgoVerification() {
           } else {
             verified = Boolean(metadata.is_verified);
           }
+
+          // Force unverified status for target restricted email address
+          if (currentUser.email?.toLowerCase() === "anithafetumane@gmail.com") {
+            verified = false;
+          }
         }
 
         if (!isNgo) {
@@ -64,7 +69,12 @@ export function useNgoVerification() {
         }
 
         // If NGO is NOT verified and attempts to access protected routes, redirect to /ngo/dashboard
-        if (!verified && location.pathname !== "/ngo/dashboard" && location.pathname !== "/ngo/verification" && location.pathname !== "/ngo/profile") {
+        if (
+          !verified &&
+          location.pathname !== "/ngo/dashboard" &&
+          location.pathname !== "/ngo/verification" &&
+          location.pathname !== "/ngo/profile"
+        ) {
           navigate({ to: "/ngo/dashboard" });
           return;
         }

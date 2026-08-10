@@ -207,9 +207,10 @@ function ExplorePage() {
   const isMapsReady = useGoogleMaps();
   
   const { data: queryData } = useSuspenseQuery(exploreQueryOptions);
-  const rawDonations = queryData.donations;
-  const ngoAddress = queryData.ngoAddress;
-  const ngoName = queryData.ngoName;
+
+  const [rawDonations, setRawDonations] = useState<DonationUI[]>(queryData.donations);
+  const [ngoAddress, setNgoAddress] = useState<string>(queryData.ngoAddress);
+  const [ngoName, setNgoName] = useState<string>(queryData.ngoName);
 
   const [distancesMap, setDistancesMap] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
