@@ -181,7 +181,7 @@ function ExplorePage() {
             collection_datetime,
             status,
             claimed_by,
-            donors (
+            donors!donor_id (
               organization_name,
               address
             ),

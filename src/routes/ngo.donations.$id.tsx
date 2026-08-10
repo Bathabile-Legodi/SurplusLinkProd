@@ -209,7 +209,7 @@ function DonationDetail() {
             batch_type,
             collection_datetime,
             status,
-            donors (
+            donors!donor_id (
               organization_name,
               address
             ),

@@ -102,7 +102,7 @@ function TrackDelivery() {
             claimed_at,
             claimed_by,
             donor_id,
-            donors (
+            donors!donor_id (
               organization_name,
               address
             )

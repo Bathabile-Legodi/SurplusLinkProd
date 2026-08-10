@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import emailjs from "@emailjs/browser";
 import { AppHeader, donorNav } from "@/components/AppHeader";
 import {
   loadCurrentBatch,
@@ -9,7 +8,6 @@ import {
   type DonationItem,
 } from "@/lib/donations";
 import { DateTimePicker } from "@/components/ScrollPicker";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/donor/donate/review")({
   head: () => ({ meta: [{ title: "Review Batch — SurplusLink" }] }),
@@ -41,24 +39,13 @@ function ReviewBatch() {
     return "Mixed Donation";
   })();
 
-  // Format total items/quantities into a clean string for the email summary
-  const formattedQuantity = items
-    .map((item) => `${item.name} (${item.quantity} ${item.unit})`)
-    .join(", ");
-
   const handleSubmit = async () => {
     if (items.length === 0) return;
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // 1. Get logged-in user details from Supabase Auth
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const currentUserEmail = user?.email;
-
-      // 2. Submit batch to database
+      // 1. Submit batch to database
       const result = await submitDonationBatch(
         items,
         batchType,
@@ -66,35 +53,7 @@ function ReviewBatch() {
         new Date().toISOString()
       );
 
-      // 3. Send Confirmation Email via EmailJS
-      if (currentUserEmail) {
-        try {
-          await emailjs.send(
-            import.meta.env.VITE_EMAILJS_SERVICE_ID,
-            import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-            {
-              to_email: currentUserEmail,
-              donor_name:
-                user?.user_metadata?.full_name ||
-                currentUserEmail.split("@")[0] ||
-                "Generous Donor",
-              donation_id: result.id,
-              quantity: formattedQuantity,
-              collection_address:
-                (result as any).collection_address || "Provided upon claim",
-              collection_deadline: collectionDateTime || "Not specified",
-              submission_date: new Date().toLocaleDateString(),
-              collection_method:
-                (result as any).collection_method || "NGO Pick-up",
-            },
-            import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-          );
-        } catch (emailErr) {
-          console.error("Failed to send confirmation email:", emailErr);
-        }
-      }
-
-      // 4. Navigate to success page
+      // 2. Navigate to success page
       navigate({
         to: "/donor/donate/success",
         search: { batchId: result.id },

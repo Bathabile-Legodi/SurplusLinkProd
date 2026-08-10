@@ -56,7 +56,7 @@ function MyClaims() {
           collection_datetime,
           claimed_at,
           collection_type,
-          donors (
+          donors!donor_id (
             organization_name,
             address
           )

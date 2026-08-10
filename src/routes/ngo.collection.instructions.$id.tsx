@@ -59,7 +59,7 @@ function CollectionInstructions() {
         .select(`
           batch_type,
           collection_datetime,
-          donors (
+          donors!donor_id (
             organization_name
           )
         `)
