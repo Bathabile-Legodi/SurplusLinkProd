@@ -32,109 +32,6 @@ function formatDuration(totalMinutes: number): string {
   return `${hours} hr${hours === 1 ? "" : "s"} ${remainingMins} min${remainingMins === 1 ? "" : "s"}`;
 }
 
-// ── Pure TS Encoded Polyline Decoder ──────────────────────────────────────
-function decodeEncodedPolyline(encoded: string): { lat: number; lng: number }[] {
-  const points: { lat: number; lng: number }[] = [];
-  let index = 0;
-  const len = encoded.length;
-  let lat = 0;
-  let lng = 0;
-
-  while (index < len) {
-    let b: number;
-    let shift = 0;
-    let result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
-    lat += dlat;
-
-    shift = 0;
-    result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
-    lng += dlng;
-
-    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
-  }
-
-  return points;
-}
-
-// ── Universal Deep Extraction Engine ──────────────────────────────────────
-function extractPathFromRoute(
-  obj: any,
-  gw: any,
-  depth = 0,
-  visited = new Set<any>()
-): any[] {
-  if (!obj || depth > 6 || visited.has(obj)) return [];
-  if (typeof obj === "object") visited.add(obj);
-
-  // 1. Direct array of LatLng or LatLngLiterals
-  if (Array.isArray(obj) && obj.length > 0) {
-    const first = obj[0];
-    if (
-      first &&
-      (typeof first.lat === "function" ||
-        typeof first.lat === "number" ||
-        typeof first.latitude === "number")
-    ) {
-      return obj
-        .map((pt: any) => {
-          if (typeof pt.lat === "function") return pt;
-          const lat = typeof pt.lat === "number" ? pt.lat : pt.latitude;
-          const lng = typeof pt.lng === "number" ? pt.lng : pt.longitude;
-          return new gw.google.maps.LatLng(lat, lng);
-        })
-        .filter(Boolean);
-    }
-  }
-
-  // 2. Encoded polyline string
-  if (typeof obj === "string" && obj.length > 10) {
-    try {
-      const decoded = decodeEncodedPolyline(obj);
-      if (decoded.length > 1) {
-        return decoded.map((pt) => new gw.google.maps.LatLng(pt.lat, pt.lng));
-      }
-    } catch {
-      // Ignored if not a valid polyline string
-    }
-  }
-
-  // 3. Inspect object properties and prototype getters
-  const keys = new Set<string>();
-  let currentObj = obj;
-  while (currentObj && currentObj !== Object.prototype) {
-    Object.getOwnPropertyNames(currentObj).forEach((k) => keys.add(k));
-    currentObj = Object.getPrototypeOf(currentObj);
-  }
-
-  for (const key of keys) {
-    if (key === "map" || key === "parent" || key.startsWith("__")) continue;
-    try {
-      let val = obj[key];
-      if (typeof val === "function" && val.length === 0) {
-        val = val.call(obj);
-      }
-      const res = extractPathFromRoute(val, gw, depth + 1, visited);
-      if (res.length > 0) return res;
-    } catch {
-      // Ignore getter execution errors
-    }
-  }
-
-  return [];
-}
-
 // ── Internal Maps SDK readiness hook ──────────────────────────────────────
 function useGoogleMapsCore(): boolean {
   const [ready, setReady] = useState<boolean>(
@@ -226,31 +123,14 @@ async function geocodeAddress(address: string): Promise<any | null> {
 // ── Pin Element Factory ───────────────────────────────────────────────────
 function createCustomPin(gw: any, color: string, labelText: string) {
   const pinContainer = document.createElement("div");
-  pinContainer.style.position = "relative";
-  pinContainer.style.display = "flex";
-  pinContainer.style.alignItems = "center";
-  pinContainer.style.justifyContent = "center";
-
-  const pin = new gw.google.maps.marker.PinElement({
-    background: color,
-    borderColor: "#ffffff",
-    glyphColor: "#ffffff",
-    glyphText: labelText,
-    scale: 1.1,
-  });
-
-  pinContainer.appendChild(pin);
-  return pinContainer;
+  pinContainer.innerHTML = `<div style="background-color: ${color}; color: white; border: 2px solid white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${labelText}</div>`;
+  return pinContainer.firstElementChild as HTMLElement;
 }
 
 function createCourierPin(gw: any) {
-  return new gw.google.maps.marker.PinElement({
-    background: "#f59e0b",
-    borderColor: "#ffffff",
-    glyphColor: "#ffffff",
-    glyphText: "🚚",
-    scale: 1.2,
-  });
+  const pinContainer = document.createElement("div");
+  pinContainer.innerHTML = `<div style="background-color: #f59e0b; color: white; border: 2px solid white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">🚚</div>`;
+  return { element: pinContainer.firstElementChild as HTMLElement };
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
@@ -358,28 +238,30 @@ export function useDeliveryMap(
       let decodedPath: any[] = [];
 
       try {
-        const originLiteral = { lat: originLL.lat(), lng: originLL.lng() };
-        const destLiteral = { lat: destLL.lat(), lng: destLL.lng() };
-
+        const directionsService = new gw.google.maps.DirectionsService();
         const request = {
-          origin: originLiteral,
-          destination: destLiteral,
-          travelMode: "DRIVING",
-          fields: ["*"],
+          origin: originLL,
+          destination: destLL,
+          travelMode: gw.google.maps.TravelMode.DRIVING,
         };
 
-        const response = await gw.google.maps.routes.Route.computeRoutes(request);
-        decodedPath = extractPathFromRoute(response, gw);
-
-        if (decodedPath.length > 1) {
-          const meters = gw.google.maps.geometry.spherical.computeLength(decodedPath);
-          setDistanceText(`${(meters / 1000).toFixed(1)} km`);
+        const response = await new Promise<any>((resolve, reject) => {
+          directionsService.route(request, (res: any, status: string) => {
+            if (status === "OK") resolve(res);
+            else reject(new Error(status));
+          });
+        });
+        if (response.routes && response.routes.length > 0) {
+          const route = response.routes[0];
+          decodedPath = route.overview_path;
           
-          const rawMins = Math.max(1, (meters / 1000 / 35) * 60);
-          setDurationText(formatDuration(rawMins));
+          if (route.legs && route.legs.length > 0) {
+            setDistanceText(route.legs[0].distance.text);
+            setDurationText(route.legs[0].duration.text);
+          }
         }
       } catch (routesErr) {
-        console.error("[useDeliveryMap] computeRoutes error:", routesErr);
+        console.error("[useDeliveryMap] DirectionsService error:", routesErr);
       }
 
       // Hard Fallback: Straight path between origin and destination
@@ -420,7 +302,7 @@ export function useDeliveryMap(
         position: initPos,
         map,
         title: "Courier",
-        content: createCourierPin(gw),
+        content: createCourierPin(gw).element,
         zIndex: 999,
       });
       courierMarkerRef.current = courierMarker;

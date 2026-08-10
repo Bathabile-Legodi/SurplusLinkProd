@@ -2,7 +2,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import webPush from "web-push";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { z } from "zod";
 
 // Set VAPID details on the server side
@@ -52,7 +52,7 @@ export const sendPushNotification = createServerFn({ method: "POST" })
       return { success: true, mocked: true };
     }
 
-    // 1. Fetch all push subscriptions for this user
+    const supabase = createSupabaseServerClient();
     const { data: subscriptions, error } = await supabase
       .from("push_subscriptions")
       .select("*")
@@ -111,7 +111,7 @@ export const notifyNGOsOfNewDonation = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { batchType } = data;
 
-    // Fetch all verified NGOs
+    const supabase = createSupabaseServerClient();
     const { data: ngos } = await supabase
       .from("ngos")
       .select("id")

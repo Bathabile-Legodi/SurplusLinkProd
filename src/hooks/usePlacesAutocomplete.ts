@@ -45,7 +45,7 @@ export function usePlacesAutocomplete(
     const autocomplete = new (window as any).google.maps.places.Autocomplete(inputElement, {
       fields: ["formatted_address", "address_components"],
       types: ["address"],
-      componentRestrictions: { country: "za" }
+      componentRestrictions: { country: "ZA" }
     });
 
     const listener = autocomplete.addListener("place_changed", () => {

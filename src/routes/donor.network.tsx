@@ -5,8 +5,11 @@ import { MapPin, ChevronRight, X, HeartHandshake, Loader2 } from "lucide-react";
 import CommunityMap from "@/components/CommunityMap";
 import { supabase } from "@/lib/supabase";
 import { useGoogleMaps, getBatchDrivingDistances, parseDistance } from "@/lib/distance";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/network")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({
     meta: [{ title: "Community Network — Developing digital projects" }],
   }),
@@ -76,6 +79,7 @@ function buildNeedsAndImpact(items: ItemAgg[]): {
 
 function DonorNetwork() {
   const isMapsReady = useGoogleMaps();
+  const { initials } = useAuth();
 
   const [selectedNgo, setSelectedNgo] = useState<NGO | null>(null);
   const [ngos, setNgos] = useState<NGO[]>([]);
@@ -239,7 +243,7 @@ function DonorNetwork() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={donorNav} userLabel="FM" />
+      <AppHeader nav={donorNav} userLabel={initials} />
       <main className="mx-auto flex-1 w-full max-w-7xl px-6 py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Community Network</h1>
@@ -253,7 +257,7 @@ function DonorNetwork() {
           <div className="relative flex-1 bg-muted/30 overflow-hidden flex items-center justify-center p-2">
             <div className="w-full h-full overflow-hidden rounded-lg bg-white">
               {loggedInDonorId ? (
-                <CommunityMap loggedInDonorId={loggedInDonorId} />
+                <CommunityMap loggedInDonorId={loggedInDonorId} donorAddress={donorAddress} />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   {error ?? "Loading…"}
