@@ -103,7 +103,7 @@ function AddressAutocomplete({
     }
 
     const placeAutocomplete = new gPlaces.PlaceAutocompleteElement({
-      includedRegionCodes: ["za"],
+      componentRestrictions: { country: "ZA" },
       types: ["address"],
     });
 

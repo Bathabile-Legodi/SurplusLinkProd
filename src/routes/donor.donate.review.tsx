@@ -142,7 +142,7 @@ function ReviewBatch() {
         {/* Collection window */}
         <section className="mb-8 rounded-xl border bg-card p-5">
           <h2 className="mb-1 text-sm font-semibold">
-            Collection Deadline (optional)
+            Collection Deadline
           </h2>
           <p className="mb-3 text-xs text-muted-foreground">
             Set a date by which NGOs should collect this batch.
