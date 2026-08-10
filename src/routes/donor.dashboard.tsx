@@ -1,74 +1,70 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader";
-import { loadRecentDonations, type RecentDonation } from "@/lib/donations";
-import { supabase } from "@/lib/supabase";
+import { mapBatchRow, type RecentDonation } from "@/lib/donations";
 import { requireRole } from "@/lib/auth-guard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
 }
+
+export const getDonorDashboardStats = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("business_name, organization_name, name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const resolvedName =
+    profile?.business_name ||
+    profile?.organization_name ||
+    profile?.name ||
+    user.user_metadata?.business_name ||
+    user.user_metadata?.organization_name ||
+    user.user_metadata?.full_name ||
+    user.email?.split("@")[0] ||
+    "Partner";
+
+  const { data, error } = await supabase
+    .from("donation_batches")
+    .select("*, donation_items(*)")
+    .eq("donor_id", user.id)
+    .order("submitted_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error("Failed to load donations:", error);
+  }
+
+  return {
+    displayName: resolvedName,
+    recent: (data || []).map(mapBatchRow),
+  };
+});
+
+export const donorDashboardQueryOptions = queryOptions({
+  queryKey: ["donor", "dashboard"],
+  queryFn: () => getDonorDashboardStats(),
+});
 
 export const Route = createFileRoute("/donor/dashboard")({
   beforeLoad: () => requireRole("donor"),
   head: () => ({
     meta: [{ title: "Donor Dashboard — SurplusLink" }],
   }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(donorDashboardQueryOptions),
   component: DonorDashboard,
 });
 
 function DonorDashboard() {
-  const [recent, setRecent] = useState<RecentDonation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState<string>("Partner");
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        // 1. Fetch current authenticated user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          // Attempt to fetch profile row from your database
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("business_name, organization_name, name")
-            .eq("id", user.id)
-            .maybeSingle();
-
-          // Determine name priority: business_name -> organization_name -> metadata -> email prefix
-          const resolvedName =
-            profile?.business_name ||
-            profile?.organization_name ||
-            profile?.name ||
-            user.user_metadata?.business_name ||
-            user.user_metadata?.organization_name ||
-            user.user_metadata?.full_name ||
-            user.email?.split("@")[0];
-
-          if (resolvedName) {
-            setDisplayName(resolvedName);
-          }
-        }
-
-        // 2. Fetch recent donations
-        const donations = await loadRecentDonations();
-        setRecent(donations);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load your donations."
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
+  const { data: { displayName, recent } } = useSuspenseQuery(donorDashboardQueryOptions);
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,25 +135,7 @@ function DonorDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {isLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <tr key={`skeleton-${i}`}>
-                      <td className="px-4 py-4"><Skeleton className="h-4 w-16" /></td>
-                      <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
-                      <td className="px-4 py-4"><Skeleton className="h-4 w-32" /></td>
-                      <td className="px-4 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
-                    </tr>
-                  ))
-                ) : error ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-sm text-destructive"
-                    >
-                      {error}
-                    </td>
-                  </tr>
-                ) : recent.length === 0 ? (
+                {recent.length === 0 ? (
                   <tr>
                     <td
                       colSpan={4}
@@ -194,15 +172,16 @@ function DonorDashboard() {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
   const tone =
-    status === "Claimed"
+    normalized === "claimed"
       ? "bg-warning/20 text-warning-foreground"
-      : status === "Delivered"
+      : normalized === "delivered"
         ? "bg-success/15 text-[color:var(--success)]"
         : "bg-secondary text-muted-foreground";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tone}`}
     >
       {status}
     </span>

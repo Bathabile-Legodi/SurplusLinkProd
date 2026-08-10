@@ -15,6 +15,7 @@ import {
   Clock,
   HeartHandshake,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 // this is a temporarily at the very top of main.tsx to ignore extension noise
 if (typeof window !== "undefined") {
@@ -62,11 +63,13 @@ function Nav() {
   ];
   return (
     <header className="sticky top-0 z-50 border-b border-black/10 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <a href="#top" onClick={smoothScroll("top")} className="text-xl font-black tracking-tight">
-          Surplus<span className="text-neutral-400">·</span>Link
-        </a>
-        <nav className="hidden items-center gap-8 md:flex">
+      <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
+        <div className="flex flex-1 justify-start">
+          <a href="#top" onClick={smoothScroll("top")} className="flex items-center shrink-0">
+            <Logo className="h-8" />
+          </a>
+        </div>
+        <nav className="hidden items-center justify-center gap-8 md:flex">
           {links.map((l) => (
             <a
               key={l.id}
@@ -78,7 +81,7 @@ function Nav() {
             </a>
           ))}
         </nav>
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden flex-1 items-center justify-end gap-3 md:flex">
           <Link
             to="/login"
             className="inline-flex h-10 items-center justify-center rounded-full border border-black bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
@@ -92,7 +95,7 @@ function Nav() {
             Register as Donor or NGO
           </Link>
         </div>
-        <div className="flex items-center gap-3 md:hidden">
+        <div className="flex flex-1 items-center justify-end gap-3 md:hidden">
           <Link
             to="/login"
             className="inline-flex h-9 items-center justify-center rounded-full border border-black bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
@@ -432,7 +435,7 @@ function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
-            <div className="text-xl font-black tracking-tight">Surplus·Link</div>
+            <Logo className="h-8 mb-4" />
             <p className="mt-4 max-w-sm text-sm text-neutral-600">
               A real-time bridge between food donors and vetted NGOs. Built to move faster than
               waste.

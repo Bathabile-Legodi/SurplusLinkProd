@@ -6,9 +6,89 @@ import { supabase } from "@/lib/supabase";
 import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+export const getAvailableDonations = createServerFn({ method: "GET" }).handler(async () => {
+  const supabaseServer = createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: ngoProfile } = await supabaseServer
+    .from("ngos")
+    .select("id, organization_name, address")
+    .eq("id", user.id)
+    .single();
+
+  const { data, error } = await supabaseServer
+    .from("donation_batches")
+    .select(`
+      id,
+      donor_id,
+      batch_type,
+      collection_datetime,
+      status,
+      claimed_by,
+      donors (
+        organization_name,
+        address
+      ),
+      donation_items (
+        quantity,
+        unit
+      )
+    `)
+    .or("status.eq.unclaimed,status.eq.Unclaimed") 
+    .limit(25);
+
+  if (error) throw error;
+
+  const formattedData: DonationUI[] = (data || []).map((batch: any) => {
+    const donorInfo = Array.isArray(batch.donors) ? batch.donors[0] : batch.donors;
+    const donorAddress = donorInfo?.address || "";
+    const donorName = donorInfo?.organization_name || "Anonymous Donor";
+
+    const itemQuantities = (batch.donation_items ?? [])
+      .map((item: any) => {
+        if (item.quantity === null || item.quantity === undefined) return null;
+        const quantity = String(item.quantity).trim();
+        const unit = item.unit ? String(item.unit).trim() : "items";
+        if (!quantity) return null;
+        return unit ? `${quantity} ${unit}` : quantity;
+      })
+      .filter(Boolean) as string[];
+
+    const quantityText = itemQuantities.length > 0 ? itemQuantities.join(" • ") : "1 Batch";
+
+    return {
+      id: batch.id,
+      title: batch.batch_type || "General Batch",
+      quantity: quantityText,
+      pickup: donorAddress || "Location not specified",
+      donor: donorName,
+      distance: "Calculating...",
+      status: batch.status || "Unclaimed",
+      created_at: batch.created_at,
+      collection_datetime: batch.collection_datetime
+    };
+  });
+
+  return {
+    ngoAddress: ngoProfile?.address || "",
+    ngoName: ngoProfile?.organization_name || "Hope Shelter",
+    donations: formattedData
+  };
+});
+
+export const exploreQueryOptions = queryOptions({
+  queryKey: ["donations", "available"],
+  queryFn: () => getAvailableDonations(),
+});
 
 export const Route = createFileRoute("/ngo/explore")({
   beforeLoad: () => requireRole("ngo"),
+  loader: ({ context }) => context.queryClient.ensureQueryData(exploreQueryOptions),
   head: () => ({ meta: [{ title: "Explore Donations — SurplusLink" }] }),
   component: ExplorePage,
 });
@@ -125,10 +205,13 @@ export async function getBatchDrivingDistances(
 function ExplorePage() {
   const { initials } = useAuth();
   const isMapsReady = useGoogleMaps();
-  const [rawDonations, setRawDonations] = useState<DonationUI[]>([]);
+  
+  const { data: queryData } = useSuspenseQuery(exploreQueryOptions);
+  const rawDonations = queryData.donations;
+  const ngoAddress = queryData.ngoAddress;
+  const ngoName = queryData.ngoName;
+
   const [distancesMap, setDistancesMap] = useState<Record<string, string>>({});
-  const [ngoAddress, setNgoAddress] = useState<string>("");
-  const [ngoName, setNgoName] = useState<string>("NGO");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showSort, setShowSort] = useState<boolean>(false);
@@ -417,20 +500,7 @@ function ExplorePage() {
           {showExpired ? "All Donations" : "Active Donations Near You"} ({sortedDonations.length})
         </h2>
 
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="rounded-xl border bg-card p-5">
-                <Skeleton className="h-6 w-3/4 mb-4" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : sortedDonations.length === 0 ? (
+        {sortedDonations.length === 0 ? (
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
             {searchQuery || selectedCategory
               ? "No donations matching your filters found."
@@ -454,11 +524,11 @@ function ExplorePage() {
                       ? new Date(d.collection_datetime) < now
                       : false;
                     return isExpired ? (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200 capitalize">
                         Expired
                       </span>
                     ) : (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600 capitalize">
                         {d.status}
                       </span>
                     );

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { FormEvent } from "react";
+import type { FormEvent  } from "react";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
@@ -14,6 +14,8 @@ interface AddressComponents {
   postalCode: string;
   country: string;
   formatted: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 const BUSINESS_TYPES = [
@@ -30,15 +32,11 @@ const BUSINESS_TYPES = [
 ];
 
 const emptyAddress = (): AddressComponents => ({
-  streetNumber: "",
-  streetName: "",
-  suburb: "",
-  city: "",
-  province: "",
-  postalCode: "",
-  country: "",
-  formatted: "",
+  streetNumber: "", streetName: "", suburb: "",
+  city: "", province: "", postalCode: "", country: "", formatted: "",
+  lat: null, lng: null,
 });
+
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -46,6 +44,7 @@ export const Route = createFileRoute("/register")({
   }),
   component: RegisterPage,
 });
+
 
 function useGoogleMaps() {
   const [ready, setReady] = useState(false);
@@ -117,23 +116,34 @@ function AddressAutocomplete({
 
       const place = placePrediction.toPlace();
 
+      // "location" is required here — without requesting this field, Google
+      // never returns coordinates, only text address components. This is
+      // what feeds ngos.address_components->>'lat' / ->>'lng', which
+      // donor_community_network and CommunityMap.tsx depend on for pins.
       await place.fetchFields({
-        fields: ["addressComponents", "formattedAddress"],
+        fields: ["addressComponents", "formattedAddress", "location"],
       });
 
       const get = (type: string) =>
         place.addressComponents?.find((c: any) => c.types.includes(type))
           ?.longText ?? "";
 
+      // place.location is a google.maps.LatLng object — lat()/lng() are
+      // methods, not plain properties, so they must be called as functions.
+      const lat = typeof place.location?.lat === "function" ? place.location.lat() : null;
+      const lng = typeof place.location?.lng === "function" ? place.location.lng() : null;
+
       onChange({
         streetNumber: get("street_number"),
-        streetName: get("route"),
-        suburb: get("sublocality") || get("neighborhood"),
-        city: get("locality"),
-        province: get("administrative_area_level_1"),
-        postalCode: get("postal_code"),
-        country: get("country"),
-        formatted: place.formattedAddress ?? "",
+        streetName:   get("route"),
+        suburb:       get("sublocality") || get("neighborhood"),
+        city:         get("locality"),
+        province:     get("administrative_area_level_1"),
+        postalCode:   get("postal_code"),
+        country:      get("country"),
+        formatted:    place.formattedAddress ?? "",
+        lat,
+        lng,
       });
     });
 
@@ -160,13 +170,7 @@ function AddressAutocomplete({
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground disabled:opacity-50"
         />
       )}
-      <div
-        ref={containerRef}
-        className={!mapsReady ? "hidden" : ""}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.preventDefault();
-        }}
-      />
+      <div ref={containerRef} className={!mapsReady ? "hidden" : ""} />
     </div>
   );
 }
@@ -205,9 +209,7 @@ function ComboField({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
+  useEffect(() => { setQuery(value); }, [value]);
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -218,19 +220,14 @@ function ComboField({
         <input
           type="text"
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
-            setOpen(true);
-          }}
+          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={onBlur}
           placeholder={placeholder}
           className={`w-full rounded-md border bg-background px-3 py-2 pr-8 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
-            ${
-              error
-                ? "border-destructive focus:ring-destructive"
-                : "border-input focus:border-ring focus:ring-ring"
+            ${error
+              ? "border-destructive focus:ring-destructive"
+              : "border-input focus:border-ring focus:ring-ring"
             }`}
         />
         <button
@@ -239,15 +236,7 @@ function ComboField({
           tabIndex={-1}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
@@ -258,11 +247,7 @@ function ComboField({
           {filtered.map((opt) => (
             <li
               key={opt}
-              onMouseDown={() => {
-                setQuery(opt);
-                onChange(opt);
-                setOpen(false);
-              }}
+              onMouseDown={() => { setQuery(opt); onChange(opt); setOpen(false); }}
               className="cursor-pointer px-3 py-2 text-sm hover:bg-secondary"
             >
               {opt}
@@ -270,14 +255,11 @@ function ComboField({
           ))}
         </ul>
       )}
-      {error && (
-        <p className="mt-1 text-[11px] text-destructive leading-tight">
-          {error}
-        </p>
-      )}
+      {error && <p className="mt-1 text-[11px] text-destructive leading-tight">{error}</p>}
     </div>
   );
 }
+
 
 function PasswordField({
   label,
@@ -305,10 +287,9 @@ function PasswordField({
           placeholder="••••••••"
           autoComplete="new-password"
           className={`w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
-            ${
-              error
-                ? "border-destructive focus:ring-destructive"
-                : "border-input focus:border-ring focus:ring-ring"
+            ${error
+              ? "border-destructive focus:ring-destructive"
+              : "border-input focus:border-ring focus:ring-ring"
             }`}
         />
         <button
@@ -317,38 +298,20 @@ function PasswordField({
           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
         >
           {show ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
               <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
               <line x1="1" y1="1" x2="23" y2="23" />
             </svg>
           ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
           )}
         </button>
       </div>
-      {error && (
-        <p className="text-[11px] text-destructive leading-tight">{error}</p>
-      )}
+      {error && <p className="text-[11px] text-destructive leading-tight">{error}</p>}
     </div>
   );
 }
@@ -366,28 +329,17 @@ function RegisterPage() {
 
   const [tab, setTab] = useState<"donor" | "ngo">("donor");
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const [donorData, setDonorData] = useState({
-    name: "",
-    type: "",
-    email: "",
-    phone: "",
-    address: emptyAddress(),
-    password: "",
-    confirmPassword: "",
+    name: "", type: "", email: "", phone: "",
+    address: emptyAddress(), password: "", confirmPassword: "",
   });
   const [ngoData, setNgoData] = useState({
-    org: "",
-    reg: "",
-    email: "",
-    phone: "",
-    address: emptyAddress(),
-    password: "",
-    confirmPassword: "",
+    org: "", reg: "", email: "", phone: "",
+    address: emptyAddress(), password: "", confirmPassword: "",
   });
 
+  // Per-field errors and touched flags (shared key space for both forms)
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -399,14 +351,11 @@ function RegisterPage() {
     else if (!isValidEmail(d.email)) e.email = "Enter a valid email address.";
     if (!d.phone.trim()) e.phone = "Phone number is required.";
     else if (!isValidPhone(d.phone)) e.phone = "Enter a valid phone number.";
-    if (!d.address.formatted)
-      e.address = "Please select an address from the suggestions.";
+    if (!d.address.formatted) e.address = "Please select an address from the suggestions.";
     if (!d.password) e.password = "Password is required.";
     else if (d.password.length < 8) e.password = "Must be at least 8 characters.";
-    if (!d.confirmPassword)
-      e.confirmPassword = "Please confirm your password.";
-    else if (d.password !== d.confirmPassword)
-      e.confirmPassword = "Passwords do not match.";
+    if (!d.confirmPassword) e.confirmPassword = "Please confirm your password.";
+    else if (d.password !== d.confirmPassword) e.confirmPassword = "Passwords do not match.";
     return e;
   }
 
@@ -418,14 +367,11 @@ function RegisterPage() {
     else if (!isValidEmail(d.email)) e.email = "Enter a valid email address.";
     if (!d.phone.trim()) e.phone = "Phone number is required.";
     else if (!isValidPhone(d.phone)) e.phone = "Enter a valid phone number.";
-    if (!d.address.formatted)
-      e.address = "Please select an address from the suggestions.";
+    if (!d.address.formatted) e.address = "Please select an address from the suggestions.";
     if (!d.password) e.password = "Password is required.";
     else if (d.password.length < 8) e.password = "Must be at least 8 characters.";
-    if (!d.confirmPassword)
-      e.confirmPassword = "Please confirm your password.";
-    else if (d.password !== d.confirmPassword)
-      e.confirmPassword = "Passwords do not match.";
+    if (!d.confirmPassword) e.confirmPassword = "Please confirm your password.";
+    else if (d.password !== d.confirmPassword) e.confirmPassword = "Passwords do not match.";
     return e;
   }
 
@@ -443,43 +389,25 @@ function RegisterPage() {
     return touched[field] ? errors[field] : undefined;
   }
 
+  // Live re-validate on data change for already-touched fields
   function onDonorChange(key: string, value: string) {
-    setDonorData((prev) => {
-      const next = { ...prev, [key]: value };
-      if (touched[key]) setErrors(validateDonor(next));
-      return next;
-    });
+    const next = { ...donorData, [key]: value };
+    setDonorData(next);
+    if (touched[key]) setErrors(validateDonor(next));
   }
 
   function onNgoChange(key: string, value: string) {
-    setNgoData((prev) => {
-      const next = { ...prev, [key]: value };
-      if (touched[key]) setErrors(validateNgo(next));
-      return next;
-    });
+    const next = { ...ngoData, [key]: value };
+    setNgoData(next);
+    if (touched[key]) setErrors(validateNgo(next));
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const allDonorKeys = [
-      "name",
-      "type",
-      "email",
-      "phone",
-      "address",
-      "password",
-      "confirmPassword",
-    ];
-    const allNgoKeys = [
-      "org",
-      "reg",
-      "email",
-      "phone",
-      "address",
-      "password",
-      "confirmPassword",
-    ];
+    // Touch everything and validate
+    const allDonorKeys = ["name", "type", "email", "phone", "address", "password", "confirmPassword"];
+    const allNgoKeys = ["org", "reg", "email", "phone", "address", "password", "confirmPassword"];
     const keys = tab === "donor" ? allDonorKeys : allNgoKeys;
     const allTouched = Object.fromEntries(keys.map((k) => [k, true]));
     setTouched(allTouched);
@@ -491,9 +419,7 @@ function RegisterPage() {
     const data = tab === "donor" ? donorData : ngoData;
     const addressString = data.address.formatted;
 
-    const isVerifiedNgo = /^NGO-REG009\d{5}$/.test(ngoData.reg.trim());
-
-    const { data: signUpData, error: supabaseError } = await supabase.auth.signUp({
+    const { error: supabaseError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
@@ -514,7 +440,6 @@ function RegisterPage() {
                 phone: ngoData.phone,
                 address: addressString,
                 address_components: ngoData.address,
-                is_verified: isVerifiedNgo,
               },
       },
     });
@@ -532,51 +457,8 @@ function RegisterPage() {
       return;
     }
 
-    // If session is absent, Supabase sent a confirmation email to the user
-    if (signUpData.user && !signUpData.session) {
-      setRegisteredEmail(data.email);
-      setEmailSent(true);
-      toast.success("Check your email to confirm your account!");
-    } else {
-      toast.success("Account created successfully!");
-      navigate({ to: tab === "donor" ? "/donor/dashboard" : "/ngo/dashboard" });
-    }
-  }
-
-  if (emailSent) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-        <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-sm text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <rect width="20" height="16" x="2" y="4" rx="2" />
-              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-semibold tracking-tight">Check your email</h1>
-          <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-            We sent a confirmation link to <span className="font-medium text-foreground">{registeredEmail}</span>.
-            Please confirm your email address to activate your account and access the dashboard.
-          </p>
-          <div className="mt-6">
-            <Link
-              to="/login"
-              className="inline-block w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              Go to Login
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
+    toast.success("Account created successfully!");
+    navigate({ to: tab === "donor" ? "/donor/dashboard" : "/ngo/dashboard" });
   }
 
   return (
@@ -589,31 +471,15 @@ function RegisterPage() {
         <div className="mb-6 grid grid-cols-2 rounded-md bg-secondary p-1 text-sm">
           <button
             type="button"
-            onClick={() => {
-              setTab("donor");
-              setErrors({});
-              setTouched({});
-            }}
-            className={`rounded py-1.5 transition ${
-              tab === "donor"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
-            }`}
+            onClick={() => { setTab("donor"); setErrors({}); setTouched({}); }}
+            className={`rounded py-1.5 transition ${tab === "donor" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
           >
             Donor
           </button>
           <button
             type="button"
-            onClick={() => {
-              setTab("ngo");
-              setErrors({});
-              setTouched({});
-            }}
-            className={`rounded py-1.5 transition ${
-              tab === "ngo"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
-            }`}
+            onClick={() => { setTab("ngo"); setErrors({}); setTouched({}); }}
+            className={`rounded py-1.5 transition ${tab === "ngo" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
           >
             NGO
           </button>
@@ -625,11 +491,9 @@ function RegisterPage() {
               values={donorData}
               onChange={onDonorChange}
               setAddress={(addr) => {
-                setDonorData((prev) => {
-                  const next = { ...prev, address: addr };
-                  if (touched.address) setErrors(validateDonor(next));
-                  return next;
-                });
+                const next = { ...donorData, address: addr };
+                setDonorData(next);
+                if (touched.address) setErrors(validateDonor(next));
               }}
               err={err}
               touch={touch}
@@ -639,11 +503,9 @@ function RegisterPage() {
               values={ngoData}
               onChange={onNgoChange}
               setAddress={(addr) => {
-                setNgoData((prev) => {
-                  const next = { ...prev, address: addr };
-                  if (touched.address) setErrors(validateNgo(next));
-                  return next;
-                });
+                const next = { ...ngoData, address: addr };
+                setNgoData(next);
+                if (touched.address) setErrors(validateNgo(next));
               }}
               err={err}
               touch={touch}
@@ -725,9 +587,7 @@ function DonorFields({ values, onChange, setAddress, err, touch }: DonorProps) {
           onChange={(addr) => setAddress(addr)}
         />
         {err("address") && (
-          <p className="mt-1 text-[11px] text-destructive leading-tight">
-            {err("address")}
-          </p>
+          <p className="mt-1 text-[11px] text-destructive leading-tight">{err("address")}</p>
         )}
       </div>
 
@@ -776,7 +636,7 @@ function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
         value={values.reg}
         onChange={(v) => onChange("reg", v)}
         onBlur={() => touch("reg")}
-        placeholder="NGO-REG00912345"
+        placeholder="REG-12345"
         error={err("reg")}
       />
 
@@ -805,9 +665,7 @@ function NgoFields({ values, onChange, setAddress, err, touch }: NgoProps) {
           onChange={(addr) => setAddress(addr)}
         />
         {err("address") && (
-          <p className="mt-1 text-[11px] text-destructive leading-tight">
-            {err("address")}
-          </p>
+          <p className="mt-1 text-[11px] text-destructive leading-tight">{err("address")}</p>
         )}
       </div>
 

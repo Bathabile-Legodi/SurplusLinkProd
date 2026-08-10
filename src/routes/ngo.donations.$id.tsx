@@ -369,7 +369,7 @@ function DonationDetail() {
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 capitalize
                     ${batch.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
                     ${batch.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
                     ${batch.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}

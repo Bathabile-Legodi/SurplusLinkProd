@@ -4,6 +4,7 @@ import { Menu, X, User, HeartHandshake, Settings, LogOut, Moon, Bell } from "luc
 import { useAuth } from "@/hooks/useAuth";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { CommunityWalletForm } from "@/components/CommunityWalletForm";
+import { Logo } from "@/components/Logo";
 
 type NavItem = { to: string; label: string };
 
@@ -35,14 +36,16 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-card">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center px-4 sm:px-6">
         {/* Logo */}
-        <Link to="/" className="font-semibold tracking-tight text-foreground shrink-0">
-          SurplusLink
-        </Link>
+        <div className="flex flex-1 justify-start">
+          <Link to="/" className="flex items-center shrink-0">
+            <Logo className="h-10" />
+          </Link>
+        </div>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+        <nav className="hidden items-center justify-center gap-6 text-sm text-muted-foreground md:flex">
           {nav.map((n) => (
             <Link
               key={n.to}
@@ -57,7 +60,7 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
           
           {/* Avatar Dropdown Container */}
           {user && (
