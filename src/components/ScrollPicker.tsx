@@ -3,12 +3,15 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 
 /* ─── Helpers ─── */
 
-export function generateDates() {
+export function generateDates(maxDate?: string) {
   const dates: Date[] = [];
   const today = new Date();
+  const latestDate = maxDate ? new Date(`${maxDate}T00:00:00`) : null;
   for (let i = 0; i <= 7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    if (latestDate && d > latestDate) break;
     dates.push(d);
   }
   return dates;
@@ -471,8 +474,8 @@ function to24(hour12: number, period: "AM" | "PM") {
   return h;
 }
 
-export function DateTimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const dates = useMemo(() => generateDates(), []);
+export function DateTimePicker({ value, onChange, maxDate }: { value: string; onChange: (v: string) => void; maxDate?: string }) {
+  const dates = useMemo(() => generateDates(maxDate), [maxDate]);
   const todayIdx = 0;
   const nowParts = useMemo(() => getNowParts(), []);
 

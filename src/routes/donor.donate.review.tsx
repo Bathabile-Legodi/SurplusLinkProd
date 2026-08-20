@@ -39,6 +39,11 @@ function ReviewBatch() {
     return "Mixed Donation";
   })();
 
+  const earliestExpiryDate = items
+    .map((item) => item.expiry?.split("T")[0])
+    .filter(Boolean)
+    .sort()[0] ?? undefined;
+
   const handleSubmit = async () => {
     if (items.length === 0) return;
     setIsSubmitting(true);
@@ -150,6 +155,7 @@ function ReviewBatch() {
           <DateTimePicker
             value={collectionDateTime}
             onChange={setCollectionDateTime}
+            maxDate={earliestExpiryDate}
           />
         </section>
 

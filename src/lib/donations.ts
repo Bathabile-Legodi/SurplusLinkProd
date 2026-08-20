@@ -75,6 +75,14 @@ function getEarliestExpiry(items: DonationItem[]): Date | null {
   return new Date(Math.min(...expiries.map((date) => date.getTime())));
 }
 
+function getEarliestExpiryDate(items: DonationItem[]): string | null {
+  const expiryDates = items
+    .map((item) => item.expiry?.split("T")[0])
+    .filter((date): date is string => Boolean(date));
+
+  return expiryDates.length > 0 ? expiryDates.sort()[0] : null;
+}
+
 function pruneExpiredRecentDonations(donations: RecentDonation[]): RecentDonation[] {
   const now = new Date();
 
@@ -156,6 +164,12 @@ export async function submitDonationBatch(
   collectionDateTime: string,
   submittedAt: string
 ): Promise<RecentDonation> {
+  const earliestExpiryDate = getEarliestExpiryDate(items);
+  const collectionDate = collectionDateTime.split("T")[0];
+  if (earliestExpiryDate && collectionDate > earliestExpiryDate) {
+    throw new Error("The collection date must be on or before the earliest item expiry date.");
+  }
+
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
     throw new Error("You must be signed in to submit a donation.");
