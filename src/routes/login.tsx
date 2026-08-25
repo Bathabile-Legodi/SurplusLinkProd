@@ -70,8 +70,12 @@ function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-sm">
+    <main className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden px-4 py-10">
+      {/* Abstract animated background blobs */}
+      <div className="pointer-events-none absolute top-0 -left-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/20 blur-[120px] [animation-duration:8s]" />
+      <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/10 blur-[150px] [animation-duration:12s]" />
+
+      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-background/60 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-500 ease-out">
         <div className="mb-6 text-center">
           <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
         </div>

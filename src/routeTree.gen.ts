@@ -10,9 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UpdatePasswordRouteImport } from './routes/update-password'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CommunityWalletRouteImport } from './routes/community-wallet'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NgoVerificationRouteImport } from './routes/ngo.verification'
@@ -43,9 +46,19 @@ const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
   path: '/update-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -56,6 +69,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityWalletRoute = CommunityWalletRouteImport.update({
@@ -184,9 +202,12 @@ const NgoCollectionInstructionsIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/community-wallet': typeof CommunityWalletRoute
+  '/cookies': typeof CookiesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/terms': typeof TermsRoute
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
@@ -214,9 +235,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/community-wallet': typeof CommunityWalletRoute
+  '/cookies': typeof CookiesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/terms': typeof TermsRoute
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
@@ -245,9 +269,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/community-wallet': typeof CommunityWalletRoute
+  '/cookies': typeof CookiesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/terms': typeof TermsRoute
   '/update-password': typeof UpdatePasswordRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/donor/dashboard': typeof DonorDashboardRoute
@@ -277,9 +304,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/community-wallet'
+    | '/cookies'
     | '/forgot-password'
     | '/login'
+    | '/privacy'
     | '/register'
+    | '/terms'
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
@@ -307,9 +337,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/community-wallet'
+    | '/cookies'
     | '/forgot-password'
     | '/login'
+    | '/privacy'
     | '/register'
+    | '/terms'
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
@@ -337,9 +370,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/community-wallet'
+    | '/cookies'
     | '/forgot-password'
     | '/login'
+    | '/privacy'
     | '/register'
+    | '/terms'
     | '/update-password'
     | '/admin/verification'
     | '/donor/dashboard'
@@ -368,9 +404,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CommunityWalletRoute: typeof CommunityWalletRoute
+  CookiesRoute: typeof CookiesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
+  TermsRoute: typeof TermsRoute
   UpdatePasswordRoute: typeof UpdatePasswordRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
   DonorDashboardRoute: typeof DonorDashboardRoute
@@ -402,11 +441,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpdatePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -421,6 +474,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community-wallet': {
@@ -613,9 +673,12 @@ const NgoDonationsIdRouteWithChildren = NgoDonationsIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CommunityWalletRoute: CommunityWalletRoute,
+  CookiesRoute: CookiesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
+  TermsRoute: TermsRoute,
   UpdatePasswordRoute: UpdatePasswordRoute,
   AdminVerificationRoute: AdminVerificationRoute,
   DonorDashboardRoute: DonorDashboardRoute,

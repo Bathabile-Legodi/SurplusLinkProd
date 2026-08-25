@@ -59,7 +59,7 @@ export function CommunityWalletForm({ onSuccess }: { onSuccess?: () => void }) {
         </div>
       )}
 
-      <div className="rounded-xl border bg-card shadow-2xl overflow-hidden">
+      <div className="rounded-3xl border border-white/10 bg-card/60 shadow-2xl backdrop-blur-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
         <form onSubmit={handleSubmit}>
           <div className="p-8 md:p-12">
             

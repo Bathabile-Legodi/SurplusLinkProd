@@ -466,11 +466,10 @@ function Footer() {
               { label: "For NGOs", to: "/register" },
             ]}
           />
-          <FooterCol title="Company" links={[
-            { label: "About", to: null },
-            { label: "Impact Report", to: null },
-            { label: "Press", to: null },
-            { label: "Careers", to: null },
+          <FooterCol title="Legal" links={[
+            { label: "Privacy Policy", to: "/privacy" },
+            { label: "Terms of Service", to: "/terms" },
+            { label: "Cookie Policy", to: "/cookies" },
           ]} />
           <FooterCol title="Contact" links={[
             { label: "hello@surpluslink.org", to: "mailto:hello@surpluslink.org" },
