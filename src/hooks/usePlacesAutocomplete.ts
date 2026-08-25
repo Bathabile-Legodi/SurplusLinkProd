@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export function usePlacesAutocomplete(
-  inputElement: HTMLInputElement | null,
+  containerElement: HTMLDivElement | null,
   onPlaceSelect: (formattedAddress: string, city: string) => void
 ) {
   const [isReady, setIsReady] = useState(false);
+  const onSelectRef = useRef(onPlaceSelect);
 
+  // Keep callback reference updated without triggering re-renders
+  useEffect(() => {
+    onSelectRef.current = onPlaceSelect;
+  }, [onPlaceSelect]);
+
+  // Load Google Maps API with loading=async
   useEffect(() => {
     if ((window as any).google?.maps?.places) {
       setIsReady(true);
@@ -28,7 +35,8 @@ export function usePlacesAutocomplete(
 
     const script = document.createElement("script");
     script.id = "google-places-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places,routes`;
+    // Includes loading=async parameter to satisfy console warnings
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places,routes&loading=async`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
@@ -39,33 +47,54 @@ export function usePlacesAutocomplete(
     document.head.appendChild(script);
   }, []);
 
+  // Initialize PlaceAutocompleteElement
   useEffect(() => {
-    if (!isReady || !inputElement) return;
+    if (!isReady || !containerElement || !(window as any).google?.maps?.places) return;
 
-    const autocomplete = new (window as any).google.maps.places.Autocomplete(inputElement, {
-      fields: ["formatted_address", "address_components"],
-      types: ["address"],
-      componentRestrictions: { country: "ZA" }
+    // Instantiate modern PlaceAutocompleteElement web component
+    const autocompleteElement = new (window as any).google.maps.places.PlaceAutocompleteElement({
+      componentRestrictions: { country: 'ZA' },
     });
 
-    const listener = autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      if (place.formatted_address) {
-        let city = "";
-        place.address_components?.forEach((component: any) => {
-          if (component.types.includes("locality") || component.types.includes("administrative_area_level_2")) {
-            city = component.long_name;
+    // Clear previous children and mount web component
+    containerElement.innerHTML = '';
+    containerElement.appendChild(autocompleteElement);
+
+    // Listen for place selection via gmp-placeselect event
+    const handlePlaceSelect = async (event: any) => {
+      const place = event.place;
+      if (!place) return;
+
+      // Fetch required fields explicitly
+      await place.fetchFields({
+        fields: ['formattedAddress', 'addressComponents'],
+      });
+
+      let city = '';
+      if (place.addressComponents) {
+        for (const comp of place.addressComponents) {
+          if (
+            comp.types.includes('locality') ||
+            comp.types.includes('administrative_area_level_2')
+          ) {
+            city = comp.longText || comp.shortText || '';
+            break;
           }
-        });
-        
-        onPlaceSelect(place.formatted_address, city);
+        }
       }
-    });
+
+      onSelectRef.current(place.formattedAddress || '', city);
+    };
+
+    autocompleteElement.addEventListener('gmp-placeselect', handlePlaceSelect);
 
     return () => {
-      (window as any).google.maps.event.removeListener(listener);
+      autocompleteElement.removeEventListener('gmp-placeselect', handlePlaceSelect);
+      if (containerElement) {
+        containerElement.innerHTML = '';
+      }
     };
-  }, [isReady, inputElement, onPlaceSelect]);
+  }, [isReady, containerElement]);
 
   return isReady;
 }
