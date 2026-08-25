@@ -59,18 +59,14 @@ function LoginPage() {
       return;
     }
 
-    const userRole = authData.user.user_metadata.role;
-
-    if (userRole !== tab) {
-      await supabase.auth.signOut();
-      toast.error(
-        `This account is registered as a ${userRole.toUpperCase()}, not a ${tab.toUpperCase()}.`
-      );
-      return;
-    }
-
+    // Navigate based on role stored in metadata — ignore the UI tab selection.
+    const userRole = authData.user.user_metadata?.role as string | undefined;
     toast.success("Successfully logged in!");
-    navigate({ to: tab === "donor" ? "/donor/dashboard" : "/ngo/dashboard" });
+    if (userRole === "ngo") {
+      navigate({ to: "/ngo/dashboard" });
+    } else {
+      navigate({ to: "/donor/dashboard" });
+    }
   }
 
   return (
@@ -156,6 +152,7 @@ function LoginPage() {
           </div>
 
           <button
+            type="submit"
             disabled={isSubmitting}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >

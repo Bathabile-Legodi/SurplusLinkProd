@@ -1,14 +1,14 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, Filter, ArrowUpDown, Clock, MapPin, Package, Heart } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { supabase } from "@/lib/supabase";
 import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { useGoogleMaps } from "@/hooks/useGoogleMaps";
 
 export const getAvailableDonations = createServerFn({ method: "GET" }).handler(async () => {
   const supabaseServer = createSupabaseServerClient();
@@ -105,49 +105,7 @@ interface DonationUI {
   collection_datetime: string | null;
 }
 
-function useGoogleMaps() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if ((window as any).google?.maps?.routes) {
-      setReady(true);
-      return;
-    }
-
-    if (!(window as any)._mapsReadyCallbacks) {
-      (window as any)._mapsReadyCallbacks = [];
-    }
-
-    (window as any)._mapsReadyCallbacks.push(() => setReady(true));
-
-    (window as any).initGoogleMaps = () => {
-      if ((window as any)._mapsReadyCallbacks) {
-        (window as any)._mapsReadyCallbacks.forEach((cb: () => void) => cb());
-      }
-    };
-
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if ((window as any).google?.maps?.routes) setReady(true);
-      });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&callback=initGoogleMaps&loading=async&libraries=routes`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {};
-  }, []);
-
-  return ready;
-}
+// useGoogleMaps is now imported from @/hooks/useGoogleMaps
 
 export async function getBatchDrivingDistances(
   origin: string,
@@ -204,13 +162,13 @@ export async function getBatchDrivingDistances(
 
 function ExplorePage() {
   const { initials } = useAuth();
-  const isMapsReady = useGoogleMaps();
-  
+  const isMapsReady = useGoogleMaps("routes");
+
   const { data: queryData } = useSuspenseQuery(exploreQueryOptions);
 
   const [rawDonations, setRawDonations] = useState<DonationUI[]>(queryData.donations);
-  const [ngoAddress, setNgoAddress] = useState<string>(queryData.ngoAddress);
-  const [ngoName, setNgoName] = useState<string>(queryData.ngoName);
+  const [ngoAddress] = useState<string>(queryData.ngoAddress);
+  const [ngoName] = useState<string>(queryData.ngoName);
 
   const [distancesMap, setDistancesMap] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -219,116 +177,24 @@ function ExplorePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [showExpired, setShowExpired] = useState(false);
-  const [loading, setLoading] = useState<boolean>(true);
+
+  // Click-outside refs for the sort/filter dropdowns
+  const sortRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function fetchDonationsAndProfile() {
-      try {
-        setLoading(true);
-
-        // 1. Verify active session prior to requesting auth user data
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError || !session) {
-          if (isMounted) {
-            console.warn("No active auth session detected or session has expired.");
-          }
-        } else {
-          // 2. Fetch authenticated user data safely using active session
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-          if (userError) {
-            console.error("User retrieval error:", userError.message);
-          } else if (user && isMounted) {
-            const { data: ngoProfile } = await supabase
-              .from("ngos")
-              .select("id, organization_name, address")
-              .eq("id", user.id)
-              .single();
-
-            if (ngoProfile && isMounted) {
-              setNgoAddress(ngoProfile.address || "");
-              setNgoName(ngoProfile.organization_name || "Hope Shelter");
-            }
-          }
-        }
-
-        // 3. Fetch unclaimed donation batches
-        const { data, error } = await supabase
-          .from("donation_batches")
-          .select(`
-            id,
-            donor_id,
-            batch_type,
-            collection_datetime,
-            status,
-            claimed_by,
-            donors!donor_id (
-              organization_name,
-              address
-            ),
-            donation_items (
-              quantity,
-              unit
-            )
-          `)
-          .or("status.eq.unclaimed,status.eq.Unclaimed") 
-          .limit(25);
-
-        if (error) throw error;
-
-        if (data && isMounted) {
-          const formattedData: DonationUI[] = data.map((batch: any) => {
-            const donorInfo = Array.isArray(batch.donors) ? batch.donors[0] : batch.donors;
-            const donorAddress = donorInfo?.address || "";
-            const donorName = donorInfo?.organization_name || "Anonymous Donor";
-
-            const itemQuantities = (batch.donation_items ?? [])
-              .map((item: any) => {
-                if (item.quantity === null || item.quantity === undefined) return null;
-                const quantity = String(item.quantity).trim();
-                const unit = item.unit ? String(item.unit).trim() : "items";
-
-                if (!quantity) return null;
-
-                return unit ? `${quantity} ${unit}` : quantity;
-              })
-              .filter(Boolean) as string[];
-
-            const quantityText = itemQuantities.length > 0
-              ? itemQuantities.join(" • ")
-              : "1 Batch";
-
-            return {
-              id: batch.id,
-              title: batch.batch_type || "General Batch",
-              quantity: quantityText,
-              pickup: donorAddress || "Location not specified",
-              donor: donorName,
-              distance: "Calculating...",
-              status: batch.status || "Unclaimed",
-              created_at: batch.created_at,
-              collection_datetime: batch.collection_datetime
-            };
-          });
-
-          setRawDonations(formattedData);
-        }
-      } catch (error) {
-        if (isMounted) console.error("Error fetching data:", error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+    function handleClickOutside(e: MouseEvent) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setShowSort(false);
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowFilters(false);
     }
-
-    fetchDonationsAndProfile();
-
-    return () => {
-      isMounted = false;
-    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Keep raw donations in sync if queryData changes (e.g. after manual invalidation)
+  useEffect(() => {
+    setRawDonations(queryData.donations);
+  }, [queryData.donations]);
 
   useEffect(() => {
     if (!isMapsReady || rawDonations.length === 0 || !ngoAddress) return;
@@ -423,7 +289,7 @@ function ExplorePage() {
             className="flex-1 rounded-md border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <div className="flex gap-2">
-            <div className="relative">
+            <div className="relative" ref={sortRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -454,7 +320,7 @@ function ExplorePage() {
               )}
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
                 type="button"
                 onClick={() => {

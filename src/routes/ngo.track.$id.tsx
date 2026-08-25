@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Loader2,
   MapPin,
+  FlaskConical,
 } from "lucide-react";
 import {
   getSimulatedDriver,
@@ -326,6 +327,16 @@ function TrackDelivery() {
         >
           ← Back to Claims
         </Link>
+
+        {/* ── Simulation disclosure ─────────────────────────────────────── */}
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-200">
+          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            <span className="font-semibold">Simulated tracking — </span>
+            Driver details, progress, and ETA shown here are estimated and not sourced from a
+            live courier system. Coordinate directly with your donor for real-time updates.
+          </p>
+        </div>
 
         {/* Page header */}
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

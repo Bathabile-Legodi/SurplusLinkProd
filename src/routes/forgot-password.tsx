@@ -36,8 +36,9 @@ function ForgotPassword() {
     setSuccessMsg("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-      redirectTo: "http://localhost:3000/update-password",
+      redirectTo: `${import.meta.env.VITE_APP_URL ?? window.location.origin}/update-password`,
     });
+
 
     if (error) {
       setErrorMsg(error.message);

@@ -36,14 +36,20 @@ export async function sendClaimNotificationEmail({
     fulfillmentType?.toLowerCase().includes("pickup") ||
     fulfillmentType?.toLowerCase().includes("pick-up");
 
-  // EmailJS Configuration Keys
-  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_rxeqr8i";
-  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "Aw_JSB7nEtJgH6HOJ";
+  // EmailJS Configuration Keys — must come from environment variables only.
+  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string | undefined;
+  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string | undefined;
+  const pickupTemplateId = import.meta.env.VITE_EMAILJS_PICKUP_TEMPLATE_ID as string | undefined;
+  const deliveryTemplateId = import.meta.env.VITE_EMAILJS_DELIVERY_TEMPLATE_ID as string | undefined;
 
-  const pickupTemplateId =
-    import.meta.env.VITE_EMAILJS_PICKUP_TEMPLATE_ID || "template_xpidvmj";
-  const deliveryTemplateId =
-    import.meta.env.VITE_EMAILJS_DELIVERY_TEMPLATE_ID || "template_tanjhsp";
+  if (!serviceId || !publicKey || !pickupTemplateId || !deliveryTemplateId) {
+    console.warn(
+      "[EmailJS] One or more required environment variables are missing " +
+        "(VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_PUBLIC_KEY, VITE_EMAILJS_PICKUP_TEMPLATE_ID, " +
+        "VITE_EMAILJS_DELIVERY_TEMPLATE_ID). Email not sent.",
+    );
+    return { success: false, error: new Error("EmailJS environment variables not configured.") };
+  }
 
   const templateId = isPickup ? pickupTemplateId : deliveryTemplateId;
 
@@ -73,4 +79,4 @@ export async function sendClaimNotificationEmail({
     console.error("[EmailJS] Error sending claim email:", error);
     return { success: false, error };
   }
-}
+}

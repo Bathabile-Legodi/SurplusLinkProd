@@ -4,6 +4,7 @@ import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
 import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
+import { useGoogleMaps } from "@/hooks/useGoogleMaps";
 
 import imgBeverages from "@/assets/images/beverages.jpeg";
 import imgCannedGoods from "@/assets/images/canned-goods.jpeg";
@@ -44,50 +45,7 @@ interface DonationDetailState {
   status: string;
 }
 
-function useGoogleMaps() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const globalWin = window as any;
-    if (globalWin.google?.maps?.routes) {
-      setReady(true);
-      return;
-    }
-
-    if (!globalWin._mapsReadyCallbacks) {
-      globalWin._mapsReadyCallbacks = [];
-    }
-
-    globalWin._mapsReadyCallbacks.push(() => setReady(true));
-
-    globalWin.initGoogleMaps = () => {
-      if (globalWin._mapsReadyCallbacks) {
-        globalWin._mapsReadyCallbacks.forEach((cb: () => void) => cb());
-      }
-    };
-
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if (globalWin.google?.maps?.routes) setReady(true);
-      });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=routes&callback=initGoogleMaps&loading=async`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {};
-  }, []);
-
-  return ready;
-}
+// useGoogleMaps is now imported from @/hooks/useGoogleMaps
 
 export async function getRealDrivingDistance(
   origin: string, 

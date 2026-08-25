@@ -322,9 +322,24 @@ function CreateBatch() {
     }
   }, []);
 
+  // Persist batch on every change
   useEffect(() => {
     saveCurrentBatch(items);
   }, [items]);
+
+  // Cross-tab sync: if another tab updates the batch, reload it here
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === "surpluslink-current-donation-batch" && e.newValue) {
+        try {
+          const synced = JSON.parse(e.newValue) as BatchItem[];
+          setItems(synced.map(item => ({ ...item, status: getItemStatus(item.expiry) })));
+        } catch { /* ignore parse errors */ }
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const handleSaveType = useCallback((name: string) => {
     setSavedTypes(prev => {

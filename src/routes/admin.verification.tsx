@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { requireAuth } from "@/lib/auth-guard";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/verification")({
+  beforeLoad: () => requireAuth(),
   head: () => ({ meta: [{ title: "Admin Verification — SurplusLink" }] }),
   component: AdminVerificationPage,
 });
@@ -33,8 +36,10 @@ function AdminVerificationPage() {
 
       if (error) throw error;
       setPendingNGOs(data || []);
-    } catch (error: any) {
-      console.error("Error fetching pending NGOs:", error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      console.error("Error fetching pending NGOs:", msg);
+      toast.error("Failed to load pending NGOs.");
     } finally {
       setIsLoading(false);
     }
@@ -50,9 +55,11 @@ function AdminVerificationPage() {
       if (error) throw error;
 
       setPendingNGOs((prev) => prev.filter((ngo) => ngo.id !== id));
-    } catch (error: any) {
-      console.error(`Error updating status to ${newStatus}:`, error.message);
-      alert("Failed to update status. Check console.");
+      toast.success(`NGO ${newStatus === "verified" ? "approved" : "rejected"} successfully.`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      console.error(`Error updating status to ${newStatus}:`, msg);
+      toast.error("Failed to update NGO status. Please try again.");
     }
   };
 
@@ -103,3 +110,4 @@ function AdminVerificationPage() {
     </div>
   );
 }
+

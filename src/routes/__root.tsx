@@ -34,12 +34,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "SurplusLink" },
       { name: "description", content: "Connect surplus food with verified NGOs. Reduce waste, feed communities." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "SurplusLink — Connecting Excess to Impact" },
+      { property: "og:description", content: "Connect surplus food with verified NGOs. Reduce waste, feed communities." },
+      { property: "og:image", content: "/images/surpluslink1.png" },
+      { property: "og:url", content: import.meta.env.VITE_APP_URL ?? "" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/images/surpluslink1.png" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
       },
     ],
   }),
@@ -47,6 +57,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
+
+import { SupportChat } from "@/components/SupportChat";
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
@@ -56,6 +68,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <SupportChat />
         <Toaster position="bottom-right" richColors />
         <Scripts />
       </body>

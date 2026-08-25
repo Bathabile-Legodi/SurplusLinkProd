@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppHeader } from '@/components/AppHeader'
 import { CommunityWalletForm } from '@/components/CommunityWalletForm'
+import { requireAuth } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/community-wallet')({
+  beforeLoad: () => requireAuth(),
   component: CommunityWalletPage,
 })
 

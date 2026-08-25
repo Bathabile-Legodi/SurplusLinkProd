@@ -95,7 +95,16 @@ function pruneExpiredRecentDonations(donations: RecentDonation[]): RecentDonatio
   });
 }
 
-function mapItemRow(row: any): DonationItem {
+interface RawDonationItemRow {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number | string;
+  unit: string;
+  expiry: string;
+}
+
+function mapItemRow(row: RawDonationItemRow): DonationItem {
   return {
     id: row.id,
     name: row.name,
@@ -106,7 +115,17 @@ function mapItemRow(row: any): DonationItem {
   };
 }
 
-export function mapBatchRow(row: any): RecentDonation {
+interface RawBatchRow {
+  id: string;
+  display_id?: number;
+  batch_type?: string;
+  submitted_at?: string;
+  status?: string;
+  collection_datetime?: string;
+  donation_items?: RawDonationItemRow[];
+}
+
+export function mapBatchRow(row: RawBatchRow): RecentDonation {
   // display_id is a generated sequence column; fall back to a stable
   // numeric hash of the UUID so formatBatchId never receives undefined.
   const displayId =
@@ -123,7 +142,7 @@ export function mapBatchRow(row: any): RecentDonation {
     category: row.batch_type ?? "Donation",
     time: row.submitted_at ? formatDonationTime(row.submitted_at) : "—",
     status: row.status ?? "Pending",
-    submittedAt: row.submitted_at,
+    submittedAt: row.submitted_at ?? "",
     collectionDateTime: row.collection_datetime,
     items: (row.donation_items ?? []).map(mapItemRow),
   };
@@ -136,7 +155,18 @@ export function loadCurrentBatch(): DonationItem[] {
 
 export function saveCurrentBatch(items: DonationItem[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CURRENT_BATCH_KEY, JSON.stringify(items));
+  const json = JSON.stringify(items);
+  window.localStorage.setItem(CURRENT_BATCH_KEY, json);
+  // Notify other tabs that the in-progress batch changed
+  try {
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: CURRENT_BATCH_KEY,
+      newValue: json,
+      storageArea: window.localStorage,
+    }));
+  } catch {
+    // StorageEvent dispatch is best-effort
+  }
 }
 
 export function clearCurrentBatch() {

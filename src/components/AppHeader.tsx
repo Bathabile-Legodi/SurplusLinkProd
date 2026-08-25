@@ -141,9 +141,9 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
 
                   {/* Footer Links */}
                   <div className="mt-3 mb-2 flex justify-center gap-2 text-[10px] text-muted-foreground">
-                    <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
+                    <span className="cursor-default" title="Coming soon">Privacy Policy</span>
                     <span>·</span>
-                    <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+                    <span className="cursor-default" title="Coming soon">Terms of Service</span>
                   </div>
                 </div>
               )}

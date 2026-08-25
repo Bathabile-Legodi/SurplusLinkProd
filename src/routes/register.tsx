@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
 import { toast } from "sonner";
+import { useGoogleMaps } from "@/hooks/useGoogleMaps";
 
 interface AddressComponents {
   streetNumber: string;
@@ -51,47 +52,7 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
-function useGoogleMaps() {
-  const [ready, setReady] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return Boolean((window as any).google?.maps?.places);
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if ((window as any).google?.maps?.places) {
-      setReady(true);
-      return;
-    }
-
-    (window as any).initGoogleMaps = () => {
-      if ((window as any).google?.maps?.places) {
-        setReady(true);
-      }
-    };
-
-    const existing = document.getElementById("google-maps-script") as HTMLScriptElement | null;
-    if (existing) {
-      const handleLoad = () => {
-        if ((window as any).google?.maps?.places) setReady(true);
-      };
-      existing.addEventListener("load", handleLoad);
-      return () => existing.removeEventListener("load", handleLoad);
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=places&v=weekly&callback=initGoogleMaps&loading=async`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
-
-  return ready;
-}
+// useGoogleMaps is now imported from @/hooks/useGoogleMaps
 
 function AddressAutocomplete({
   value,
@@ -102,7 +63,7 @@ function AddressAutocomplete({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const elementRef = useRef<any>(null);
-  const mapsReady = useGoogleMaps();
+  const mapsReady = useGoogleMaps("places");
 
   // Ref prevents stale closure when gmp-select fires
   const onChangeRef = useRef(onChange);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   ArrowRight,
   Camera,
@@ -16,15 +17,6 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-
-// this is a temporarily at the very top of main.tsx to ignore extension noise
-if (typeof window !== "undefined") {
-  window.addEventListener("unhandledrejection", (event) => {
-    if (event.reason?.message?.includes("A listener indicated an asynchronous response")) {
-      event.preventDefault();
-    }
-  });
-}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -216,7 +208,7 @@ function ImageCarousel() {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % images.length), 1500);
+    const t = setInterval(() => setIdx((i) => (i + 1) % images.length), 3000);
     return () => clearInterval(t);
   }, []);
 
@@ -224,7 +216,11 @@ function ImageCarousel() {
     <div className="relative">
       <div className="absolute -inset-4 rounded-3xl border border-black/10" />
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-900 text-white">
-        <img src={images[idx]} alt={`hero-${idx}`} className="h-full w-full object-cover" />
+        <img
+          src={images[idx]}
+          alt={`SurplusLink food rescue — image ${idx + 1} of ${images.length}`}
+          className="h-full w-full object-cover"
+        />
         <div className="absolute left-4 bottom-4 rounded-md bg-black/60 px-3 py-2 text-sm">
           <span className="font-semibold">SurplusLink</span>
         </div>
@@ -235,10 +231,10 @@ function ImageCarousel() {
 
 function Stats() {
   const items = [
-    { value: "2.48M", label: "Meals Rescued" },
-    { value: "640+", label: "Vetted NGOs Connected" },
-    { value: "1.2K Tonnes", label: "CO₂ Emissions Prevented" },
-    { value: "Real-Time", label: "Average Match Speed" },
+    { value: "2.48M", label: "Meals Rescued (Target)" },
+    { value: "640+",  label: "NGO Partnerships (Goal)" },
+    { value: "1.2K Tonnes", label: "CO₂ Prevented (Projected)" },
+    { value: "Real-Time",   label: "Average Match Speed" },
   ];
   return (
     <section className="border-b border-black/10 bg-black text-white">
@@ -441,7 +437,15 @@ function Footer() {
               waste.
             </p>
             <form
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const emailInput = form.querySelector<HTMLInputElement>('input[type="email"]');
+                const email = emailInput?.value?.trim();
+                if (!email) return;
+                toast.success("You're on the list! We'll be in touch soon.");
+                if (emailInput) emailInput.value = "";
+              }}
               className="mt-8 flex max-w-sm items-center gap-2 rounded-full border border-black p-1"
             >
               <input
@@ -456,10 +460,23 @@ function Footer() {
           </div>
           <FooterCol
             title="Platform"
-            links={["How It Works", "For Donors", "For NGOs"]}
+            links={[
+              { label: "How It Works", to: "/#how" },
+              { label: "For Donors", to: "/register" },
+              { label: "For NGOs", to: "/register" },
+            ]}
           />
-          <FooterCol title="Company" links={["About", "Impact Report", "Press", "Careers"]} />
-          <FooterCol title="Contact" links={["hello@surpluslink.org", "+27 21 000 0000", "Cape Town, ZA"]} />
+          <FooterCol title="Company" links={[
+            { label: "About", to: null },
+            { label: "Impact Report", to: null },
+            { label: "Press", to: null },
+            { label: "Careers", to: null },
+          ]} />
+          <FooterCol title="Contact" links={[
+            { label: "hello@surpluslink.org", to: "mailto:hello@surpluslink.org" },
+            { label: "+27 21 000 0000", to: "tel:+27210000000" },
+            { label: "Cape Town, ZA", to: null },
+          ]} />
         </div>
         <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-black/10 pt-8 text-xs text-neutral-500 md:flex-row md:items-center">
           <div>© {new Date().getFullYear()} SurplusLink. All rights reserved.</div>
@@ -473,7 +490,13 @@ function Footer() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: string[] }) {
+function FooterCol({
+  title,
+  links,
+}: {
+  title: string;
+  links: Array<{ label: string; to: string | null }>;
+}) {
   return (
     <div className="md:col-span-2">
       <div className="text-xs font-semibold uppercase tracking-widest text-neutral-500">
@@ -481,10 +504,22 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
       </div>
       <ul className="mt-4 space-y-2">
         {links.map((l) => (
-          <li key={l}>
-            <a href="#" className="text-sm text-neutral-800 hover:text-black hover:underline">
-              {l}
-            </a>
+          <li key={l.label}>
+            {l.to ? (
+              l.to.startsWith("/") ? (
+                <Link to={l.to as any} className="text-sm text-neutral-800 hover:text-black hover:underline">
+                  {l.label}
+                </Link>
+              ) : (
+                <a href={l.to} className="text-sm text-neutral-800 hover:text-black hover:underline">
+                  {l.label}
+                </a>
+              )
+            ) : (
+              <span className="text-sm text-neutral-500 cursor-default" title="Coming soon">
+                {l.label}
+              </span>
+            )}
           </li>
         ))}
       </ul>
