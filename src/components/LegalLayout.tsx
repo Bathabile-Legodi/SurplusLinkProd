@@ -16,9 +16,9 @@ export function LegalLayout({
       <AppHeader />
       
       <main className="relative flex min-h-[calc(100vh-56px)] flex-col items-center justify-start overflow-hidden px-4 py-12 sm:py-20">
-        {/* Animated Background Blobs */}
-        <div className="pointer-events-none absolute -top-1/4 left-0 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/10 blur-[150px] [animation-duration:15s]" />
-        <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-secondary/10 blur-[120px] [animation-duration:10s]" />
+        {/* Background blobs — navy blue family */}
+        <div className="pointer-events-none absolute -top-1/4 left-0 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/8 blur-[150px] [animation-duration:15s]" />
+        <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/5 blur-[120px] [animation-duration:10s]" />
 
         <div className="relative z-10 w-full max-w-4xl">
           <Link
@@ -42,8 +42,8 @@ export function LegalLayout({
             Back to Home
           </Link>
 
-          <div className="rounded-3xl border border-white/10 bg-card/60 p-8 shadow-2xl backdrop-blur-2xl sm:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
-            <header className="mb-10 border-b border-border/50 pb-8">
+          <div className="rounded-3xl glass-lg p-8 sm:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out" style={{boxShadow: '0 20px 60px oklch(0.22 0.18 264 / 0.12), 0 4px 16px oklch(0.22 0.18 264 / 0.06)'}}>
+            <header className="mb-10 border-b border-border/40 pb-8">
               <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl">
                 {title}
               </h1>

@@ -12,9 +12,10 @@ import {
   ShieldCheck,
   BadgeCheck,
   ClipboardCheck,
-  Search,
-  Clock,
   HeartHandshake,
+  Banknote,
+  Truck as TruckIcon,
+  Users,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
@@ -48,13 +49,28 @@ function smoothScroll(id: string) {
 
 function Nav() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const links = [
     { id: "how", label: "How It Works" },
     { id: "donors", label: "For Donors" },
     { id: "ngos", label: "For NGOs" },
   ];
+
   return (
-    <header className="sticky top-0 z-50 border-b border-black/10 bg-white/80 backdrop-blur-md">
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "glass-nav shadow-sm"
+          : "bg-white/60 backdrop-blur-lg border-b border-black/5"
+      }`}
+    >
       <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
         <div className="flex flex-1 justify-start">
           <a href="#top" onClick={smoothScroll("top")} className="flex items-center shrink-0">
@@ -67,7 +83,7 @@ function Nav() {
               key={l.id}
               href={`#${l.id}`}
               onClick={smoothScroll(l.id)}
-              className="text-sm font-medium text-neutral-700 transition-colors hover:text-black"
+              className="text-sm font-medium text-neutral-600 transition-colors hover:text-primary"
             >
               {l.label}
             </a>
@@ -76,13 +92,13 @@ function Nav() {
         <div className="hidden flex-1 items-center justify-end gap-3 md:flex">
           <Link
             to="/login"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-black bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-primary/30 bg-white/80 px-5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/20"
           >
             Sign In
           </Link>
           <Link
             to="/register"
-            className="group inline-flex h-10 items-center justify-center rounded-full border border-black bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+            className="group inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-md shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5"
           >
             Register as Donor or NGO
           </Link>
@@ -90,24 +106,25 @@ function Nav() {
         <div className="flex flex-1 items-center justify-end gap-3 md:hidden">
           <Link
             to="/login"
-            className="inline-flex h-9 items-center justify-center rounded-full border border-black bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-primary/30 bg-white/80 px-4 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white"
           >
             Sign In
           </Link>
           <button
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
+            className="flex items-center justify-center rounded-full w-9 h-9 bg-white/80 border border-black/10 shadow-sm"
           >
             <div className="space-y-1.5">
-              <span className="block h-0.5 w-6 bg-black" />
-              <span className="block h-0.5 w-6 bg-black" />
-              <span className="block h-0.5 w-6 bg-black" />
+              <span className="block h-0.5 w-5 bg-neutral-700" />
+              <span className="block h-0.5 w-5 bg-neutral-700" />
+              <span className="block h-0.5 w-5 bg-neutral-700" />
             </div>
           </button>
         </div>
       </div>
       {open && (
-        <div className="border-t border-black/10 bg-white px-6 py-4 md:hidden">
+        <div className="glass-nav border-t border-black/5 px-6 py-4 md:hidden">
           <div className="flex flex-col gap-3">
             {links.map((l) => (
               <a
@@ -117,20 +134,20 @@ function Nav() {
                   smoothScroll(l.id)(e);
                   setOpen(false);
                 }}
-                className="text-sm font-medium text-neutral-700"
+                className="text-sm font-medium text-neutral-700 hover:text-primary transition-colors"
               >
                 {l.label}
               </a>
             ))}
             <Link
               to="/login"
-              className="mt-2 inline-flex h-10 items-center justify-center rounded-full border border-black bg-white px-5 text-sm font-semibold text-black"
+              className="mt-2 inline-flex h-10 items-center justify-center rounded-full border border-primary/30 bg-white px-5 text-sm font-semibold text-primary"
             >
               Sign In
             </Link>
             <Link
               to="/register"
-              className="inline-flex h-10 items-center justify-center rounded-full bg-black px-5 text-sm font-semibold text-white"
+              className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-md shadow-primary/30"
             >
               Register
             </Link>
@@ -143,47 +160,40 @@ function Nav() {
 
 function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden border-b border-black/10 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-9 md:py-14">
+    <section id="top" className="relative overflow-hidden bg-background">
+      {/* Subtle background blobs for depth — light blue tints */}
+      <div className="pointer-events-none absolute -top-32 -left-32 h-[600px] w-[600px] rounded-full bg-primary/6 blur-[120px]" />
+      <div className="pointer-events-none absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[100px]" />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-sky-400/5 blur-[80px]" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-12 md:py-20">
         <div className="grid items-center gap-12 md:grid-cols-12">
           <div className="md:col-span-7">
+
             <h1 className="text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
               Connecting<br />
               Excess to<br />
-              <span className="italic font-serif">Impact.</span>
+              <span className="italic font-serif text-primary">Impact.</span>
             </h1>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-neutral-600">
               SurplusLink is the instant communication channel that bridges the gap between food
               donors and NGOs in real time — rescuing surplus food before it goes to waste.
             </p>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-10 flex items-center gap-4">
               <Link
                 to="/register"
-                className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
-                
-                
+                className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-8 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5"
               >
-                Post Available Food (Donors)
+                Join the Network
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
-              
-               <Link
-  to="/register"
-  className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
->
-  Request Food Alerts (NGOs)
-  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-</Link>
-               <Link
-  to="/community-wallet"
-  className="group inline-flex h-14 w-72 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-black bg-black text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
->
-  <HeartHandshake className="h-4 w-4" />
-  Community Wallet
-  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-</Link>
-              
-
+              <a
+                href="#how"
+                onClick={smoothScroll("how")}
+                className="text-sm font-medium text-neutral-500 transition-colors hover:text-primary"
+              >
+                See how it works
+              </a>
             </div>
           </div>
 
@@ -214,15 +224,26 @@ function ImageCarousel() {
 
   return (
     <div className="relative">
-      <div className="absolute -inset-4 rounded-3xl border border-black/10" />
-      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-900 text-white">
+      {/* Outer glass frame */}
+      <div className="absolute -inset-4 rounded-3xl glass opacity-60" />
+      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-2xl shadow-primary/15">
         <img
           src={images[idx]}
           alt={`SurplusLink food rescue — image ${idx + 1} of ${images.length}`}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-opacity duration-500"
         />
-        <div className="absolute left-4 bottom-4 rounded-md bg-black/60 px-3 py-2 text-sm">
+        <div className="absolute left-4 bottom-4 rounded-xl glass px-3 py-2 text-sm text-white border-white/20">
           <span className="font-semibold">SurplusLink</span>
+        </div>
+        {/* Dot indicators */}
+        <div className="absolute bottom-4 right-4 flex gap-1.5">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              className={`h-1.5 rounded-full transition-all ${i === idx ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -237,18 +258,22 @@ function Stats() {
     { value: "Real-Time",   label: "Average Match Speed" },
   ];
   return (
-    <section className="border-b border-black/10 bg-black text-white">
-      <div className="mx-auto max-w-7xl px-6 py-12 sm:py-16 md:py-20">
+    <section className="relative overflow-hidden bg-primary">
+      {/* Subtle texture blobs inside the navy banner */}
+      <div className="pointer-events-none absolute -top-10 -left-10 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full bg-white/5 blur-2xl" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-14 sm:py-18 md:py-22">
         <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
           {items.map((s, i) => (
             <div
               key={s.label}
               className={`${i !== 0 ? "md:border-l md:border-white/15 md:pl-6" : "md:pl-0"} flex flex-col justify-center text-center md:text-left py-6 sm:py-8`}
             >
-              <div className="font-black tracking-tight leading-tight break-words" style={{ fontSize: "clamp(1.5rem, 5.5vw, 3.25rem)" }}>
+              <div className="font-black tracking-tight leading-tight text-white break-words" style={{ fontSize: "clamp(1.5rem, 5.5vw, 3.25rem)" }}>
                 {s.value}
               </div>
-              <div className="mt-3 text-xs uppercase tracking-widest text-neutral-400">
+              <div className="mt-3 text-xs uppercase tracking-widest text-primary-foreground/60">
                 {s.label}
               </div>
             </div>
@@ -271,10 +296,13 @@ function HowItWorks() {
     { icon: PackageCheck, title: "Collect and distribute", desc: "Confirm collection, report impact." },
   ];
   return (
-    <section id="how" className="border-b border-black/10 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-24">
+    <section id="how" className="relative overflow-hidden bg-background">
+      {/* Background depth blobs */}
+      <div className="pointer-events-none absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-primary/4 blur-[100px]" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-24">
         <div className="mb-16 max-w-2xl">
-          <div className="text-xs font-medium uppercase tracking-widest text-neutral-500">
+          <div className="text-xs font-semibold uppercase tracking-widest text-primary">
             How it works
           </div>
           <h2 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
@@ -282,11 +310,9 @@ function HowItWorks() {
           </h2>
         </div>
 
-        <div className="grid gap-0 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Column id="donors" label="For Donors" heading="Have Surplus Food?" steps={donorSteps} />
-          <div className="border-t border-black/10 md:border-l md:border-t-0">
-            <Column id="ngos" label="For NGOs" heading="Need Supply?" steps={ngoSteps} dark />
-          </div>
+          <Column id="ngos" label="For NGOs" heading="Need Supply?" steps={ngoSteps} dark />
         </div>
       </div>
     </section>
@@ -309,11 +335,13 @@ function Column({
   return (
     <div
       id={id}
-      className={`p-10 md:p-12 ${dark ? "bg-neutral-950 text-white" : "bg-white text-black"}`}
+      className={`rounded-3xl p-10 md:p-12 ${
+        dark
+          ? "bg-primary text-white shadow-xl shadow-primary/20"
+          : "glass text-foreground"
+      }`}
     >
-      <div
-        className={`text-xs font-medium uppercase tracking-widest ${dark ? "text-neutral-400" : "text-neutral-500"}`}
-      >
+      <div className={`text-xs font-semibold uppercase tracking-widest ${dark ? "text-primary-foreground/60" : "text-primary"}`}>
         {label}
       </div>
       <h3 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">{heading}</h3>
@@ -321,20 +349,18 @@ function Column({
         {steps.map((s, i) => (
           <li key={s.title} className="flex gap-5">
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border ${dark ? "border-white/30" : "border-black/20"}`}
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border ${
+                dark ? "border-white/30 bg-white/10" : "border-primary/20 bg-primary/8"
+              }`}
             >
-              <s.icon className="h-5 w-5" />
+              <s.icon className={`h-5 w-5 ${dark ? "text-white" : "text-primary"}`} />
             </div>
             <div className="min-w-0">
-              <div
-                className={`text-xs uppercase tracking-widest ${dark ? "text-neutral-500" : "text-neutral-400"}`}
-              >
+              <div className={`text-xs uppercase tracking-widest ${dark ? "text-primary-foreground/50" : "text-primary/60"}`}>
                 Step 0{i + 1}
               </div>
               <div className="mt-1 text-lg font-bold">{s.title}</div>
-              <div
-                className={`mt-1 text-sm ${dark ? "text-neutral-400" : "text-neutral-600"}`}
-              >
+              <div className={`mt-1 text-sm ${dark ? "text-primary-foreground/70" : "text-neutral-600"}`}>
                 {s.desc}
               </div>
             </div>
@@ -345,17 +371,6 @@ function Column({
   );
 }
 
-type Alert = {
-  time: string;
-  item: string;
-  loc: string;
-  status: "Claimed" | "Available";
-  by?: string;
-  dist?: string;
-};
-
-
-
 function Trust() {
   const items = [
     { icon: ShieldCheck, title: "Vetted NGOs", desc: "Every NGO is fully registered and verified before joining the network." },
@@ -363,11 +378,13 @@ function Trust() {
     { icon: BadgeCheck, title: "Regulatory Compliance", desc: "Aligned with food safety regulations and safe-handling guidelines." },
   ];
   return (
-    <section className="border-b border-black/10 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-24">
+    <section className="relative overflow-hidden bg-background">
+      <div className="pointer-events-none absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[100px]" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-24">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
-            <div className="text-xs font-medium uppercase tracking-widest text-neutral-500">
+            <div className="text-xs font-semibold uppercase tracking-widest text-primary">
               Trust & Compliance
             </div>
             <h2 className="mt-3 text-4xl font-black leading-tight tracking-tight md:text-5xl">
@@ -379,11 +396,11 @@ function Trust() {
             </p>
           </div>
           <div className="md:col-span-7">
-            <div className="grid gap-px overflow-hidden rounded-2xl bg-black/10 md:grid-cols-1">
+            <div className="flex flex-col gap-4">
               {items.map((it) => (
-                <div key={it.title} className="flex gap-5 bg-white p-8">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-black/20">
-                    <it.icon className="h-5 w-5" />
+                <div key={it.title} className="glass rounded-2xl flex gap-5 p-7 transition-all hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
+                    <it.icon className="h-5 w-5 text-primary" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-lg font-bold">{it.title}</div>
@@ -401,21 +418,26 @@ function Trust() {
 
 function CTA() {
   return (
-    <section className="bg-black text-white">
-      <div className="mx-auto max-w-7xl px-6 py-24 text-center">
-        <h2 className="mx-auto max-w-3xl text-4xl font-black leading-tight tracking-tight md:text-6xl">
-          The next meal is already on the shelf. <span className="italic font-serif text-neutral-400">Don't let it expire.</span>
+    <section className="relative overflow-hidden bg-primary">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute top-0 left-1/4 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-48 w-48 rounded-full bg-white/5 blur-2xl" />
+      </div>
+      <div className="relative mx-auto max-w-7xl px-6 py-24 text-center">
+        <h2 className="mx-auto max-w-3xl text-4xl font-black leading-tight tracking-tight text-white md:text-6xl">
+          The next meal is already on the shelf.{" "}
+          <span className="italic font-serif text-primary-foreground/70">Don't let it expire.</span>
         </h2>
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             to="/register"
-            className="inline-flex h-14 items-center justify-center rounded-full border border-white bg-white px-8 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white hover:border-white"
+            className="inline-flex h-14 items-center justify-center rounded-full glass px-8 text-sm font-semibold text-white border-white/30 transition-all hover:bg-white/20 hover:shadow-lg"
           >
             I'm a Donor
           </Link>
           <Link
             to="/register"
-            className="inline-flex h-14 items-center justify-center rounded-full border border-white bg-transparent px-8 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black"
+            className="inline-flex h-14 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-primary shadow-lg transition-all hover:bg-white/90 hover:shadow-xl hover:-translate-y-0.5"
           >
             I'm an NGO
           </Link>
@@ -425,10 +447,109 @@ function CTA() {
   );
 }
 
+function CommunityWallet() {
+  const perks = [
+    {
+      icon: TruckIcon,
+      title: "Fuel collection runs",
+      desc: "Cover transport costs so NGOs can reach donors across the city.",
+    },
+    {
+      icon: Banknote,
+      title: "Sustain the platform",
+      desc: "Keep SurplusLink free for every NGO and donor on the network.",
+    },
+    {
+      icon: Users,
+      title: "Grow the network",
+      desc: "Fund outreach that onboards more donors and vetted NGOs.",
+    },
+  ];
+
+  return (
+    <section className="relative overflow-hidden bg-background">
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[500px] w-[700px] rounded-full bg-primary/5 blur-[120px]" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-24">
+        <div className="mb-16 flex flex-col items-center text-center">
+          <div className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Community Wallet
+          </div>
+          <h2 className="mt-3 max-w-2xl text-4xl font-black tracking-tight md:text-5xl">
+            Can't donate food? Donate to the cause.
+          </h2>
+          <p className="mt-5 max-w-xl text-neutral-600 leading-relaxed">
+            Every food rescue involves real costs — fuel, storage, coordination. Your financial
+            contribution keeps the logistics running so no edible meal goes to waste.
+          </p>
+        </div>
+
+        <div className="mx-auto max-w-4xl rounded-3xl glass-lg overflow-hidden" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.12), 0 4px 16px oklch(0.18 0.16 264 / 0.07)'}}>
+          <div className="grid md:grid-cols-2">
+            {/* Left — perks */}
+            <div className="p-10 md:p-12">
+              <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/15">
+                <HeartHandshake className="h-7 w-7 text-primary" />
+              </div>
+              <h3 className="text-2xl font-black tracking-tight">
+                Every rand moves food.
+              </h3>
+              <p className="mt-3 text-sm text-neutral-600 leading-relaxed">
+                The Community Wallet pools contributions from individuals and businesses to directly
+                subsidise collection logistics for registered NGOs on our network.
+              </p>
+              <ul className="mt-8 space-y-5">
+                {perks.map((p) => (
+                  <li key={p.title} className="flex items-start gap-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/8 border border-primary/12">
+                      <p.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold">{p.title}</div>
+                      <div className="mt-0.5 text-xs text-neutral-500">{p.desc}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Right — CTA panel */}
+            <div className="flex flex-col items-center justify-center gap-6 bg-primary/5 border-t md:border-t-0 md:border-l border-primary/10 p-10 md:p-12 text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 border border-primary/15">
+                <HeartHandshake className="h-9 w-9 text-primary" />
+              </div>
+              <div>
+                <div className="text-lg font-black tracking-tight">Make an impact today</div>
+                <p className="mt-2 text-sm text-neutral-600 max-w-xs">
+                  No food to spare? A financial contribution helps cover collection runs and gets
+                  surplus food to families who need it most.
+                </p>
+              </div>
+              <Link
+                to="/community-wallet"
+                className="group inline-flex items-center justify-center gap-2.5 rounded-full bg-primary px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5"
+              >
+                <HeartHandshake className="h-4 w-4" />
+                Contribute to the Wallet
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              <p className="text-xs text-neutral-400">
+                Secure payment · All contributions go directly to logistics costs
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Footer() {
   return (
-    <footer className="border-t border-black/10 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-16">
+    <footer className="relative overflow-hidden bg-background border-t border-black/5">
+      <div className="pointer-events-none absolute top-0 right-0 h-64 w-64 rounded-full bg-primary/4 blur-[80px]" />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
             <Logo className="h-8 mb-4" />
@@ -446,16 +567,16 @@ function Footer() {
                 toast.success("You're on the list! We'll be in touch soon.");
                 if (emailInput) emailInput.value = "";
               }}
-              className="mt-8 flex max-w-sm items-center gap-2 rounded-full border border-black p-1"
+              className="mt-8 flex max-w-sm items-center gap-2 rounded-full glass border border-primary/15 p-1 shadow-sm"
             >
               <input
-                  type="email"
-                  placeholder="Your email"
-                  className="h-10 w-full bg-transparent px-4 text-sm outline-none placeholder:text-neutral-500"
-                />
-                <button className="h-10 shrink-0 rounded-full bg-black px-5 text-xs font-semibold uppercase tracking-widest text-white text-center transition-colors hover:bg-white hover:text-black hover:ring-1 hover:ring-black">
-                  Subscribe
-                </button>
+                type="email"
+                placeholder="Your email"
+                className="h-10 w-full bg-transparent px-4 text-sm outline-none placeholder:text-neutral-400"
+              />
+              <button className="h-10 shrink-0 rounded-full bg-primary px-5 text-xs font-semibold uppercase tracking-widest text-white shadow-md shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-lg">
+                Subscribe
+              </button>
             </form>
           </div>
           <FooterCol
@@ -477,7 +598,7 @@ function Footer() {
             { label: "Cape Town, ZA", to: null },
           ]} />
         </div>
-        <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-black/10 pt-8 text-xs text-neutral-500 md:flex-row md:items-center">
+        <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-black/6 pt-8 text-xs text-neutral-500 md:flex-row md:items-center">
           <div>© {new Date().getFullYear()} SurplusLink. All rights reserved.</div>
           <div className="max-w-xl md:text-right">
             SurplusLink operates in accordance with national food safety and donation regulations.
@@ -498,7 +619,7 @@ function FooterCol({
 }) {
   return (
     <div className="md:col-span-2">
-      <div className="text-xs font-semibold uppercase tracking-widest text-neutral-500">
+      <div className="text-xs font-semibold uppercase tracking-widest text-primary">
         {title}
       </div>
       <ul className="mt-4 space-y-2">
@@ -506,16 +627,16 @@ function FooterCol({
           <li key={l.label}>
             {l.to ? (
               l.to.startsWith("/") ? (
-                <Link to={l.to as any} className="text-sm text-neutral-800 hover:text-black hover:underline">
+                <Link to={l.to as any} className="text-sm text-neutral-700 hover:text-primary hover:underline transition-colors">
                   {l.label}
                 </Link>
               ) : (
-                <a href={l.to} className="text-sm text-neutral-800 hover:text-black hover:underline">
+                <a href={l.to} className="text-sm text-neutral-700 hover:text-primary hover:underline transition-colors">
                   {l.label}
                 </a>
               )
             ) : (
-              <span className="text-sm text-neutral-500 cursor-default" title="Coming soon">
+              <span className="text-sm text-neutral-400 cursor-default" title="Coming soon">
                 {l.label}
               </span>
             )}
@@ -528,12 +649,13 @@ function FooterCol({
 
 function Landing() {
   return (
-    <main className="min-h-screen scroll-smooth bg-white text-black antialiased">
+    <main className="min-h-screen scroll-smooth bg-background text-foreground antialiased">
       <Nav />
       <Hero />
       <Stats />
       <HowItWorks />
       <Trust />
+      <CommunityWallet />
       <CTA />
       <Footer />
     </main>

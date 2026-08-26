@@ -6,6 +6,7 @@ import { redirectIfAuthenticated } from "@/lib/auth-guard";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => redirectIfAuthenticated(),
@@ -71,28 +72,29 @@ function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden px-4 py-10">
-      {/* Abstract animated background blobs */}
-      <div className="pointer-events-none absolute top-0 -left-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/20 blur-[120px] [animation-duration:8s]" />
-      <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/10 blur-[150px] [animation-duration:12s]" />
+      {/* Animated background blobs — navy blue family */}
+      <div className="pointer-events-none absolute top-0 -left-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/10 blur-[120px] [animation-duration:8s]" />
+      <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/7 blur-[150px] [animation-duration:12s]" />
+      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-sky-400/5 blur-[80px]" />
 
-      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-background/60 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-500 ease-out">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
+      <div className="relative w-full max-w-md rounded-3xl glass-lg p-8 animate-in fade-in zoom-in-95 duration-500 ease-out" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.18), 0 4px 16px oklch(0.18 0.16 264 / 0.10)'}}>
+        <div className="mb-6 flex justify-center">
+          <Logo className="h-10" />
         </div>
 
         {/* Role Switch */}
-        <div className="mb-6 grid grid-cols-2 rounded-md bg-secondary p-1 text-sm">
+        <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm">
           <button
             type="button"
             onClick={() => setTab("donor")}
-            className={`rounded py-1.5 transition ${tab === "donor" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            className={`rounded-lg py-2 font-medium transition-all ${tab === "donor" ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:text-foreground"}`}
           >
             Donor
           </button>
           <button
             type="button"
             onClick={() => setTab("ngo")}
-            className={`rounded py-1.5 transition ${tab === "ngo" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            className={`rounded-lg py-2 font-medium transition-all ${tab === "ngo" ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:text-foreground"}`}
           >
             NGO
           </button>
@@ -158,7 +160,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 transition-all"
           >
             {isSubmitting ? "Logging in…" : tab === "donor" ? "Login as Donor" : "Login as NGO"}
           </button>

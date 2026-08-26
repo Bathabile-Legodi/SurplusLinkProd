@@ -82,8 +82,8 @@ function DonorDashboard() {
 
         {/* Quick Impact Summary */}
         <div className="mb-6 grid grid-cols-2 gap-4">
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-2xl glass p-5 transition-all hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
               Estimated People Fed
             </p>
             <p className="mt-1.5 text-3xl font-bold tracking-tight text-foreground">
@@ -93,8 +93,8 @@ function DonorDashboard() {
               ↑ 18% vs last month
             </p>
           </div>
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-2xl glass p-5 transition-all hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
               Kilos of Food Saved
             </p>
             <p className="mt-1.5 text-3xl font-bold tracking-tight text-foreground">
@@ -109,7 +109,7 @@ function DonorDashboard() {
         {/* Log Donation Button */}
         <Link
           to="/donor/donate/consent"
-          className="mb-6 inline-flex items-center gap-3 rounded-lg bg-primary px-5 py-3 text-primary-foreground shadow-sm transition hover:opacity-90 hover:scale-[1.02]"
+          className="mb-6 inline-flex items-center gap-3 rounded-xl bg-primary px-5 py-3 text-primary-foreground shadow-md shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/35 hover:-translate-y-0.5"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
             +
@@ -124,7 +124,7 @@ function DonorDashboard() {
           <h2 className="mb-3 text-sm font-semibold text-foreground">
             Recent Donations
           </h2>
-          <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="overflow-hidden rounded-2xl glass">
             <table className="w-full text-sm">
               <thead className="bg-secondary text-xs uppercase text-muted-foreground">
                 <tr>

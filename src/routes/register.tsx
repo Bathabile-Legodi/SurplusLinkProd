@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Field } from "@/components/Field";
 import { toast } from "sonner";
 import { useGoogleMaps } from "@/hooks/useGoogleMaps";
+import { Logo } from "@/components/Logo";
 
 interface AddressComponents {
   streetNumber: string;
@@ -559,7 +560,7 @@ function RegisterPage() {
         <div className="pointer-events-none absolute -top-1/4 left-0 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/20 blur-[120px] [animation-duration:8s]" />
         <div className="pointer-events-none absolute -bottom-1/4 right-0 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/10 blur-[150px] [animation-duration:12s]" />
 
-        <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-background/60 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-500 ease-out text-center">
+        <div className="relative w-full max-w-md rounded-3xl glass-lg p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-500 ease-out text-center" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.18), 0 4px 16px oklch(0.18 0.16 264 / 0.10)'}}>
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -587,7 +588,7 @@ function RegisterPage() {
           <div className="mt-6">
             <Link
               to="/login"
-              className="inline-block w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-block w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-lg transition-all"
             >
               Go to Login
             </Link>
@@ -603,12 +604,12 @@ function RegisterPage() {
       <div className="pointer-events-none absolute -top-1/4 left-0 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/20 blur-[120px] [animation-duration:8s]" />
       <div className="pointer-events-none absolute -bottom-1/4 right-0 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/10 blur-[150px] [animation-duration:12s]" />
 
-      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-background/60 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-500 ease-out">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
+      <div className="relative w-full max-w-md rounded-3xl glass-lg p-8 animate-in fade-in zoom-in-95 duration-500 ease-out" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.18), 0 4px 16px oklch(0.18 0.16 264 / 0.10)'}}>
+        <div className="mb-6 flex justify-center">
+          <Logo className="h-10" />
         </div>
 
-        <div className="mb-6 grid grid-cols-2 rounded-md bg-secondary p-1 text-sm">
+        <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm">
           <button
             type="button"
             onClick={() => {
@@ -616,10 +617,10 @@ function RegisterPage() {
               setErrors({});
               setTouched({});
             }}
-            className={`rounded py-1.5 transition ${
+            className={`rounded-lg py-2 font-medium transition-all ${
               tab === "donor"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Donor
@@ -631,10 +632,10 @@ function RegisterPage() {
               setErrors({});
               setTouched({});
             }}
-            className={`rounded py-1.5 transition ${
+            className={`rounded-lg py-2 font-medium transition-all ${
               tab === "ngo"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             NGO

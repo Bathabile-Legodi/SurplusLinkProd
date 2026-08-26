@@ -13,9 +13,8 @@
  * The :root and .dark blocks define the actual color values using oklch.
  * All colors MUST use oklch format.
  *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * Accent colour: navy blue pulled from the SurplusLink logo (#031456 / #253368).
+ * Interactive blue uses a brighter mid-navy (oklch 0.46 0.22 264 ≈ #1e40af).
  */
 
 @theme inline {
@@ -67,80 +66,110 @@
 }
 
 :root {
-  /* SurplusLink palette — light gray surfaces, near-black primary, success green, warning amber, error red */
-  --radius: 0.5rem;
-  --background: oklch(0.985 0.002 247);   /* #F9FAFB page bg */
-  --foreground: oklch(0.21 0.03 264);     /* #111827 text */
-  --card: oklch(1 0 0);                    /* white card */
-  --card-foreground: oklch(0.21 0.03 264);
+  /* SurplusLink — light glass palette.
+   * Primary: deep navy blue from the logo (#031456 family).
+   * Interactive blue: oklch(0.46 0.22 264) ≈ #1e40af (mid-navy, readable on white).
+   */
+  --radius: 0.625rem;
+
+  /* Surfaces */
+  --background: oklch(0.975 0.006 247);   /* warm off-white */
+  --foreground: oklch(0.16 0.04 264);     /* very dark navy text */
+  --card: oklch(1 0 0);                    /* pure white card base */
+  --card-foreground: oklch(0.16 0.04 264);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.03 264);
-  --primary: oklch(0.21 0.03 264);         /* near-black #111827 */
-  --primary-foreground: oklch(0.985 0.002 247);
-  --secondary: oklch(0.968 0.007 247);     /* light gray surface */
-  --secondary-foreground: oklch(0.21 0.03 264);
-  --muted: oklch(0.968 0.007 247);
-  --muted-foreground: oklch(0.55 0.025 257); /* #6B7280 */
-  --accent: oklch(0.968 0.007 247);
-  --accent-foreground: oklch(0.21 0.03 264);
-  --destructive: oklch(0.55 0.22 27);      /* red */
+  --popover-foreground: oklch(0.16 0.04 264);
+
+  /* Primary = deep navy blue from the logo (#253368 family) */
+  --primary: oklch(0.28 0.18 264);        /* ≈ #253368 — logo navy  */
+  --primary-foreground: oklch(0.98 0.002 247);
+
+  /* Secondary / muted surfaces */
+  --secondary: oklch(0.94 0.012 247);
+  --secondary-foreground: oklch(0.25 0.04 264);
+  --muted: oklch(0.94 0.012 247);
+  --muted-foreground: oklch(0.52 0.025 257);
+
+  /* Accent (subtle blue tint for hover states, not interactive) */
+  --accent: oklch(0.94 0.025 264);
+  --accent-foreground: oklch(0.25 0.04 264);
+
+  /* Semantic */
+  --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.92 0.01 255);          /* #E5E7EB */
-  --input: oklch(0.92 0.01 255);
-  --ring: oklch(0.21 0.03 264);
-  --success: oklch(0.62 0.17 150);         /* green */
+  --success: oklch(0.62 0.17 150);
   --success-foreground: oklch(0.99 0 0);
-  --warning: oklch(0.82 0.16 85);          /* amber */
+  --warning: oklch(0.82 0.16 85);
   --warning-foreground: oklch(0.21 0.03 264);
-  --danger-bg: oklch(0.965 0.04 25);       /* light pink alert bg */
-  --chart-1: oklch(0.646 0.222 41.116);
+  --danger-bg: oklch(0.965 0.04 25);
+
+  /* Borders & inputs */
+  --border: oklch(0.88 0.015 255);
+  --input: oklch(0.88 0.015 255);
+  --ring: oklch(0.28 0.18 264);           /* matches primary */
+
+  /* Charts */
+  --chart-1: oklch(0.28 0.18 264);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Sidebar */
+  --sidebar: oklch(0.97 0.006 247);
+  --sidebar-foreground: oklch(0.16 0.04 264);
+  --sidebar-primary: oklch(0.28 0.18 264);
+  --sidebar-primary-foreground: oklch(0.98 0.002 247);
+  --sidebar-accent: oklch(0.94 0.025 264);
+  --sidebar-accent-foreground: oklch(0.25 0.04 264);
+  --sidebar-border: oklch(0.88 0.015 255);
+  --sidebar-ring: oklch(0.28 0.18 264);
+
+  /* Glass surface tokens */
+  --glass-bg: oklch(1 0 0 / 0.65);
+  --glass-border: oklch(1 0 0 / 0.70);
+  --glass-shadow: 0 8px 32px oklch(0.18 0.16 264 / 0.12), 0 2px 8px oklch(0.18 0.16 264 / 0.07);
+  --glass-shadow-lg: 0 20px 60px oklch(0.18 0.16 264 / 0.16), 0 4px 16px oklch(0.18 0.16 264 / 0.09);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --background: oklch(0.14 0.04 264);
+  --foreground: oklch(0.96 0.003 247);
+  --card: oklch(0.20 0.04 264);
+  --card-foreground: oklch(0.96 0.003 247);
+  --popover: oklch(0.20 0.04 264);
+  --popover-foreground: oklch(0.96 0.003 247);
+  --primary: oklch(0.60 0.20 264);
+  --primary-foreground: oklch(0.98 0.002 247);
+  --secondary: oklch(0.27 0.04 260);
+  --secondary-foreground: oklch(0.96 0.003 247);
+  --muted: oklch(0.27 0.04 260);
+  --muted-foreground: oklch(0.66 0.04 256);
+  --accent: oklch(0.27 0.04 260);
+  --accent-foreground: oklch(0.96 0.003 247);
+  --destructive: oklch(0.70 0.19 22);
+  --destructive-foreground: oklch(0.96 0.003 247);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
+  --ring: oklch(0.60 0.20 264);
+  --chart-1: oklch(0.55 0.24 264);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar: oklch(0.20 0.04 264);
+  --sidebar-foreground: oklch(0.96 0.003 247);
+  --sidebar-primary: oklch(0.55 0.24 264);
+  --sidebar-primary-foreground: oklch(0.98 0.002 247);
+  --sidebar-accent: oklch(0.27 0.04 260);
+  --sidebar-accent-foreground: oklch(0.96 0.003 247);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: oklch(0.55 0.024 264);
+
+  --glass-bg: oklch(0.22 0.05 264 / 0.60);
+  --glass-border: oklch(1 0 0 / 0.10);
+  --glass-shadow: 0 8px 32px oklch(0 0 0 / 0.40), 0 2px 8px oklch(0 0 0 / 0.20);
+  --glass-shadow-lg: 0 20px 60px oklch(0 0 0 / 0.50), 0 4px 16px oklch(0 0 0 / 0.30);
 }
 
 @layer base {
@@ -151,8 +180,40 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  /* ─── Glassmorphism utilities ─── */
+
+  /* Standard glass panel — white/65 with blur and navy shadow */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Large glass panel — stronger blur & shadow */
+  .glass-lg {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow-lg);
+  }
+
+  /* Dark-tinted glass (for nav bars, sticky elements) */
+  .glass-nav {
+    background: oklch(1 0 0 / 0.78);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border-bottom: 1px solid oklch(0.46 0.22 264 / 0.08);
+    box-shadow: 0 1px 0 oklch(0.46 0.22 264 / 0.06),
+                0 4px 16px oklch(0.22 0.18 264 / 0.06);
+  }
+
+  /* Google Maps autocomplete */
   gmp-place-autocomplete {
     background-color: var(--color-background);
     border-radius: var(--radius-md);
