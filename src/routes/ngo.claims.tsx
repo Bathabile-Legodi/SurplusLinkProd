@@ -2,7 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
-import { Package, ArrowRight, CheckCircle2, Clock, Truck, MapPin, Eye } from "lucide-react";
+import {
+  Package,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Truck,
+  MapPin,
+  Eye,
+  XCircle,
+  Navigation,
+} from "lucide-react";
 import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,18 +34,71 @@ interface ClaimedBatch {
   pickup: string;
 }
 
+// ─── Status helpers ───────────────────────────────────────────────────────────
+
+/**
+ * "Active" = the claim is still in progress and requires attention.
+ * Includes: claimed (awaiting collection) AND in_transit / in-transit (en route).
+ */
+function isActive(status: string) {
+  const s = status.toLowerCase().replace("-", "_");
+  return s === "claimed" || s === "in_transit";
+}
+
+/**
+ * "Completed" = the lifecycle is finished — delivered OR cancelled.
+ * Explicitly excludes in-transit so items still moving are never shown here.
+ */
+function isCompleted(status: string) {
+  const s = status.toLowerCase();
+  return s === "delivered" || s === "cancelled";
+}
+
 function statusMeta(status: string) {
-  switch (status.toLowerCase()) {
+  const s = status.toLowerCase().replace("-", "_");
+  switch (s) {
     case "claimed":
-      return { label: "Claimed", cls: "bg-blue-100 text-blue-700 border-blue-200" };
+      return {
+        label: "Awaiting Collection",
+        cls: "bg-blue-50 text-blue-700 border-blue-200",
+        icon: <Clock className="h-3 w-3" />,
+      };
+    case "in_transit":
+      return {
+        label: "In Transit",
+        cls: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: <Navigation className="h-3 w-3" />,
+      };
     case "delivered":
-      return { label: "Delivered", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+      return {
+        label: "Delivered",
+        cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: <CheckCircle2 className="h-3 w-3" />,
+      };
     case "cancelled":
-      return { label: "Cancelled", cls: "bg-red-100 text-red-600 border-red-200" };
+      return {
+        label: "Cancelled",
+        cls: "bg-red-50 text-red-600 border-red-200",
+        icon: <XCircle className="h-3 w-3" />,
+      };
     default:
-      return { label: status, cls: "bg-neutral-100 text-neutral-500 border-neutral-200" };
+      return {
+        label: status,
+        cls: "bg-neutral-100 text-neutral-500 border-neutral-200",
+        icon: null,
+      };
   }
 }
+
+function formatDateTime(dt: string | null) {
+  if (!dt) return "No deadline set";
+  return new Intl.DateTimeFormat("en-ZA", {
+    weekday: "short", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(dt));
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 function MyClaims() {
   const { initials } = useAuth();
@@ -64,9 +127,7 @@ function MyClaims() {
         .eq("claimed_by", user.id)
         .order("claimed_at", { ascending: false });
 
-      if (error) {
-        console.error("[MyClaims] Supabase fetch error:", error);
-      }
+      if (error) console.error("[MyClaims] fetch error:", error);
 
       if (data) {
         setClaims(data.map((b: any) => ({
@@ -85,129 +146,202 @@ function MyClaims() {
     fetchClaims();
   }, []);
 
-  // Normalise to lowercase for comparison so "claimed" and "Claimed" both match
-  const active = claims.filter((c) => c.status.toLowerCase() === "claimed");
-  const completed = claims.filter((c) => c.status.toLowerCase() !== "claimed");
+  const active    = claims.filter((c) => isActive(c.status));
+  const completed = claims.filter((c) => isCompleted(c.status));
+  // anything else (unknown statuses) stays hidden — not shown in completed
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background overflow-x-hidden">
+      {/* Background blobs */}
+      <div className="pointer-events-none absolute -top-32 -right-32 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[100px]" />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-primary/4 blur-[80px]" />
+
       <AppHeader nav={ngoNav} userLabel={initials} />
-      <main className="mx-auto max-w-4xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">My Claimed Donations</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Track the donations your organisation has claimed.
-          </p>
+
+      <main className="relative mx-auto max-w-4xl px-6 py-10">
+        {/* Page header */}
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">My Claimed Donations</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Track everything your organisation has claimed, in one place.
+            </p>
+          </div>
+          <Link
+            to="/ngo/explore"
+            className="group inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:-translate-y-0.5 shrink-0"
+          >
+            Explore Donations
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}
           </div>
         ) : claims.length === 0 ? (
-          <div className="rounded-xl border bg-card py-16 text-center">
-            <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
-            <p className="mt-3 text-sm font-medium">No claimed donations yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">Go explore available donations near you.</p>
-            <Link
-              to="/ngo/explore"
-              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Explore Donations
-            </Link>
-          </div>
+          <EmptyState />
         ) : (
-          <>
-            {active.length > 0 && (
-              <section className="mb-8">
-                <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" /> Active Claims ({active.length})
-                </h2>
+          <div className="space-y-10">
+            {/* ── Active ── */}
+            <section>
+              <SectionHeader
+                icon={<Clock className="h-4 w-4 text-blue-600" />}
+                label="Active Claims"
+                count={active.length}
+                colorClass="bg-blue-50 border-blue-200 text-blue-700"
+                description="Awaiting collection or currently in transit"
+              />
+              {active.length === 0 ? (
+                <EmptySection message="No active claims right now." />
+              ) : (
                 <ul className="space-y-3">
-                  {active.map((c) => (
-                    <ClaimCard key={c.id} claim={c} />
-                  ))}
+                  {active.map((c) => <ClaimCard key={c.id} claim={c} />)}
                 </ul>
-              </section>
-            )}
+              )}
+            </section>
 
-            {completed.length > 0 && (
-              <section>
-                <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Completed ({completed.length})
-                </h2>
+            {/* ── Completed ── */}
+            <section>
+              <SectionHeader
+                icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+                label="Completed"
+                count={completed.length}
+                colorClass="bg-emerald-50 border-emerald-200 text-emerald-700"
+                description="Delivered or cancelled — fully resolved"
+              />
+              {completed.length === 0 ? (
+                <EmptySection message="No completed claims yet." />
+              ) : (
                 <ul className="space-y-3">
-                  {completed.map((c) => (
-                    <ClaimCard key={c.id} claim={c} />
-                  ))}
+                  {completed.map((c) => <ClaimCard key={c.id} claim={c} muted />)}
                 </ul>
-              </section>
-            )}
-          </>
+              )}
+            </section>
+          </div>
         )}
       </main>
     </div>
   );
 }
 
-function ClaimCard({ claim }: { claim: ClaimedBatch }) {
-  const { label, cls } = statusMeta(claim.status);
+// ─── Section header ───────────────────────────────────────────────────────────
 
-  const deadline = claim.collection_datetime
-    ? new Date(claim.collection_datetime).toLocaleString("en-ZA", {
-      weekday: "short", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    })
-    : "No deadline set";
+function SectionHeader({
+  icon, label, count, colorClass, description,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  colorClass: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex items-center gap-2">
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${colorClass}`}>
+          {icon} {label}
+        </span>
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-xs font-bold text-foreground">
+          {count}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
 
-  const isSelfCollect = claim.collection_type === "pickup";
+// ─── Claim card ───────────────────────────────────────────────────────────────
+
+function ClaimCard({ claim, muted }: { claim: ClaimedBatch; muted?: boolean }) {
+  const { label, cls, icon: statusIcon } = statusMeta(claim.status);
+  const isPickup = claim.collection_type === "pickup";
+  const isDelivery = claim.collection_type === "delivery";
+  const deadline = formatDateTime(claim.collection_datetime);
 
   return (
-    <li className="flex items-center justify-between rounded-xl border bg-card p-4 gap-4">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Package className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-medium capitalize truncate">{claim.batch_type}</p>
-            {isSelfCollect && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border">
-                <Truck className="h-2.5 w-2.5" /> Self-collect
-              </span>
-            )}
-            {claim.collection_type === "delivery" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border">
-                <MapPin className="h-2.5 w-2.5" /> Delivery
-              </span>
+    <li className={`rounded-2xl transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/8 ${muted ? "glass opacity-80" : "glass"}`}
+      style={{ boxShadow: "0 4px 16px oklch(0.18 0.16 264 / 0.07)" }}>
+      <div className="flex items-stretch gap-0">
+
+        {/* Collection type stripe */}
+        <div className={`w-1.5 rounded-l-2xl shrink-0 ${isPickup ? "bg-primary" : isDelivery ? "bg-amber-400" : "bg-neutral-300"}`} />
+
+        <div className="flex flex-1 flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between min-w-0">
+          {/* Left: icon + details */}
+          <div className="flex items-center gap-4 min-w-0">
+            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${isPickup ? "bg-primary/10 border-primary/15 text-primary" : isDelivery ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-secondary text-muted-foreground border-border"}`}>
+              {isPickup ? <Truck className="h-5 w-5" /> : isDelivery ? <MapPin className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0">
+              {/* Collection type label */}
+              <div className="mb-1 flex items-center gap-2 flex-wrap">
+                <p className="font-semibold capitalize">{claim.batch_type}</p>
+                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide border ${isPickup ? "bg-primary/8 text-primary border-primary/15" : isDelivery ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-secondary text-muted-foreground border-border"}`}>
+                  {isPickup ? <><Truck className="h-2.5 w-2.5" /> Self-collect</> : isDelivery ? <><MapPin className="h-2.5 w-2.5" /> Delivery</> : "—"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground truncate">
+                From <span className="font-medium text-foreground">{claim.donor}</span>
+                {" · "}
+                {isPickup ? "Pickup by" : "Delivery by"} {deadline}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: status + action */}
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>
+              {statusIcon} {label}
+            </span>
+            {isPickup ? (
+              <Link
+                to="/ngo/collection/instructions/$id"
+                params={{ id: claim.id }}
+                search={{ from: "claims" }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-lg"
+              >
+                <Eye className="h-3 w-3" /> View
+              </Link>
+            ) : (
+              <Link
+                to="/ngo/track/$id"
+                params={{ id: claim.id }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-lg"
+              >
+                <Eye className="h-3 w-3" /> Track
+              </Link>
             )}
           </div>
-          <p className="text-xs text-muted-foreground truncate">{claim.donor} · Pickup by {deadline}</p>
         </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>
-          {label}
-        </span>
-        {claim.collection_type === 'pickup' ? (
-          <Link
-            to="/ngo/collection/instructions/$id"
-            params={{ id: claim.id }}
-            search={{ from: 'claims' }}
-            className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Eye className="h-3 w-3" /> View
-          </Link>
-        ) : (
-          <Link
-            to="/ngo/track/$id"
-            params={{ id: claim.id }}
-            className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Eye className="h-3 w-3" /> View
-          </Link>
-        )}
-      </div>
     </li>
+  );
+}
+
+// ─── Empty states ─────────────────────────────────────────────────────────────
+
+function EmptySection({ message }: { message: string }) {
+  return (
+    <div className="glass rounded-2xl px-6 py-6 text-center text-sm text-muted-foreground border border-dashed border-border/60">
+      {message}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="glass rounded-2xl py-20 text-center" style={{ boxShadow: "0 4px 16px oklch(0.18 0.16 264 / 0.07)" }}>
+      <Package className="mx-auto h-10 w-10 text-muted-foreground/30" />
+      <p className="mt-4 text-sm font-semibold">No claimed donations yet</p>
+      <p className="mt-1 text-xs text-muted-foreground">Explore available donations near your organisation.</p>
+      <Link
+        to="/ngo/explore"
+        className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90"
+      >
+        Explore Donations <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
   );
 }
