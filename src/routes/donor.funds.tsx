@@ -9,6 +9,7 @@ import {
   Lock,
   ArrowUpRight,
   AlertCircle,
+  Truck,
   HeartHandshake,
 } from 'lucide-react'
 
@@ -85,20 +86,6 @@ function AbsaLogo({ className = 'h-6 w-auto' }: { className?: string }) {
 
 // --- Data Structures ---
 
-const VERIFIED_NGOS = [
-  { id: 'ngo-1', name: 'Soweto Food Rescue & Care', location: 'Soweto, GP', reg: 'NPO-092-114', urgentNeed: 'Cold Storage' },
-  { id: 'ngo-2', name: 'Joburg Inner City Haven', location: 'Johannesburg, GP', reg: 'NPO-104-882', urgentNeed: 'Transport Fuel' },
-  { id: 'ngo-3', name: 'Ekurhuleni Community Kitchen', location: 'Germiston, GP', reg: 'NPO-055-310', urgentNeed: 'Packaging Supplies' },
-  { id: 'ngo-4', name: 'Cape Flats Surplus Distribution', location: 'Cape Town, WC', reg: 'NPO-121-009', urgentNeed: 'General Fleet' },
-]
-
-const FUND_PURPOSES = [
-  { id: 'logistics', label: 'Surplus Transport & Delivery' },
-  { id: 'storage', label: 'Cold Chain & Refrigeration' },
-  { id: 'packaging', label: 'Reusable Food Packaging' },
-  { id: 'general', label: 'General NGO Wallet Fund' },
-]
-
 const PRESET_AMOUNTS = [50, 100, 250, 500]
 
 type PaymentMethodType = 'card' | 'eft'
@@ -113,9 +100,7 @@ interface SavedPaymentMethod {
 }
 
 function DonorFundsPage() {
-  const [selectedNgoId, setSelectedNgoId] = useState(VERIFIED_NGOS[0].id)
-  const [selectedPurpose, setSelectedPurpose] = useState(FUND_PURPOSES[0].id)
-  const [amount, setAmount] = useState<number>(100)
+  const [amount, setAmount] = useState<number | ''>(100)
 
   // Checkout State
   const [paymentType, setPaymentType] = useState<PaymentMethodType>('card')
@@ -129,8 +114,6 @@ function DonorFundsPage() {
   const [cardNumber, setCardNumber] = useState<string>('')
   const [cardExpiry, setCardExpiry] = useState<string>('')
   const [cardCvv, setCardCvv] = useState<string>('')
-
-  const activeNgo = VERIFIED_NGOS.find((ngo) => ngo.id === selectedNgoId) || VERIFIED_NGOS[0]
 
   const savedMethods: SavedPaymentMethod[] = [
     {
@@ -183,9 +166,22 @@ function DonorFundsPage() {
     }
   }
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    if (val === '') {
+      setAmount('')
+    } else {
+      const parsed = parseFloat(val)
+      if (!isNaN(parsed)) {
+        setAmount(parsed)
+      }
+    }
+  }
+
   const handleSponsorSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!amount || amount <= 0) return
+    const numericAmount = typeof amount === 'number' ? amount : 0
+    if (numericAmount <= 0) return
 
     setIsProcessing(true)
     setSuccessMessage(null)
@@ -193,9 +189,7 @@ function DonorFundsPage() {
     setTimeout(() => {
       setIsProcessing(false)
       setSuccessMessage(
-        `Successfully sponsored R${amount.toFixed(2)} to ${activeNgo.name} for ${
-          FUND_PURPOSES.find((p) => p.id === selectedPurpose)?.label
-        }!`
+        `Successfully contributed R${numericAmount.toFixed(2)} to the SurplusLink Delivery & Logistics Wallet!`
       )
       setCardNumber('')
       setCardExpiry('')
@@ -204,18 +198,20 @@ function DonorFundsPage() {
     }, 1200)
   }
 
+  const displayAmount = typeof amount === 'number' ? amount : 0
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       {/* Header */}
-      <div className="mb-8 border-b pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">NGO Wallet Sponsorship</h1>
+      <div className="mb-8 border-b border-gray-200 pb-4">
+        <h1 className="text-2xl font-bold text-gray-900">SurplusLink Delivery Wallet Fund</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Fund operational wallets for partner NGOs to help them collect, transport, and preserve surplus food.
+          Fund the central logistics wallet used to cover transit and dispatch costs when food surplus is delivered to partner NGOs.
         </p>
       </div>
 
       {successMessage && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 transition-all">
           <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-600" />
           <span className="text-sm font-medium">{successMessage}</span>
         </div>
@@ -225,54 +221,24 @@ function DonorFundsPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Form Section */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Step 1: Select Verified NGO Dropdown */}
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-gray-800">
-                1. Select Recipient NGO
-              </label>
-              <p className="mb-3 text-xs text-gray-500">
-                Only verified organisations on SurplusLink are listed below.
-              </p>
-
-              <select
-                value={selectedNgoId}
-                onChange={(e) => setSelectedNgoId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm font-medium text-gray-900 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              >
-                {VERIFIED_NGOS.map((ngo) => (
-                  <option key={ngo.id} value={ngo.id}>
-                    {ngo.name} ({ngo.location}) — {ngo.reg}
-                  </option>
-                ))}
-              </select>
+            
+            {/* Delivery Purpose Banner */}
+            <div className="flex items-start gap-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-sm">
+              <div className="rounded-lg bg-emerald-600 p-2 text-white">
+                <Truck className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">Earmarked Purpose: Food Delivery & Transit</h2>
+                <p className="mt-1 text-xs text-gray-600 leading-relaxed">
+                  All financial contributions added here are strictly reserved for delivery fees. When an NGO requests surplus food, SurplusLink utilizes this wallet balance to request and fulfill driver dispatch directly.
+                </p>
+              </div>
             </div>
 
-            {/* Step 2: Select Earmarked Purpose Dropdown */}
+            {/* Step 1: Select Donation Amount */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-gray-800">
-                2. Allocate Fund Purpose
-              </label>
-              <p className="mb-3 text-xs text-gray-500">
-                Select what operational cost this donation will unlock for the NGO.
-              </p>
-
-              <select
-                value={selectedPurpose}
-                onChange={(e) => setSelectedPurpose(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm font-medium text-gray-900 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              >
-                {FUND_PURPOSES.map((purpose) => (
-                  <option key={purpose.id} value={purpose.id}>
-                    {purpose.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Step 3: Select Donation Amount */}
-            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-gray-800">
-                3. Select Donation Amount (ZAR)
+              <label htmlFor="amount-input" className="block text-sm font-semibold text-gray-800">
+                1. Select Delivery Contribution Amount (ZAR)
               </label>
 
               {/* Quick-select chips */}
@@ -282,7 +248,7 @@ function DonorFundsPage() {
                     key={val}
                     type="button"
                     onClick={() => setAmount(val)}
-                    className={`rounded-lg py-2.5 text-sm font-semibold transition ${
+                    className={`rounded-lg py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
                       amount === val
                         ? 'bg-emerald-600 text-white shadow'
                         : 'border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -300,11 +266,13 @@ function DonorFundsPage() {
                     <span className="text-sm font-bold text-gray-500">R</span>
                   </div>
                   <input
+                    id="amount-input"
                     type="number"
                     min="10"
                     step="10"
-                    value={amount || ''}
-                    onChange={(e) => setAmount(Number(e.target.value))}
+                    value={amount}
+                    onChange={handleAmountChange}
+                    placeholder="Enter custom amount"
                     className="w-full rounded-lg border border-gray-300 pl-8 pr-3 py-2.5 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
                     required
                   />
@@ -312,10 +280,10 @@ function DonorFundsPage() {
               </div>
             </div>
 
-            {/* Step 4: Checkout & Payment Methods */}
+            {/* Step 2: Checkout & Payment Methods */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <label className="block text-sm font-semibold text-gray-800">
-                4. Select Payment Checkout Method
+                2. Select Payment Checkout Method
               </label>
               <p className="mb-4 text-xs text-gray-500">
                 Transactions are processed securely via South African bank gateways.
@@ -328,7 +296,7 @@ function DonorFundsPage() {
                   onClick={() => setPaymentType('card')}
                   className={`flex items-center justify-center gap-2 rounded-xl border p-3.5 text-sm font-medium transition-all ${
                     paymentType === 'card'
-                      ? 'border-emerald-600 bg-emerald-50/60 text-emerald-700'
+                      ? 'border-emerald-600 bg-emerald-50/60 text-emerald-700 font-semibold shadow-sm'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -341,7 +309,7 @@ function DonorFundsPage() {
                   onClick={() => setPaymentType('eft')}
                   className={`flex items-center justify-center gap-2 rounded-xl border p-3.5 text-sm font-medium transition-all ${
                     paymentType === 'eft'
-                      ? 'border-emerald-600 bg-emerald-50/60 text-emerald-700'
+                      ? 'border-emerald-600 bg-emerald-50/60 text-emerald-700 font-semibold shadow-sm'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -413,7 +381,7 @@ function DonorFundsPage() {
                           onChange={() => setSelectedSavedId('new-card')}
                           className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                         />
-                        <div className="flex h-6 w-9 items-center justify-center rounded border border-dashed border-gray-300">
+                        <div className="flex h-6 w-9 items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50">
                           <Plus className="h-4 w-4 text-gray-400" />
                         </div>
                         <span className="text-sm font-medium text-gray-900">
@@ -434,7 +402,7 @@ function DonorFundsPage() {
                           type="text"
                           value={cardHolder}
                           onChange={(e) => setCardHolder(e.target.value)}
-                          placeholder="Palesa Hlongwane"
+                          placeholder="e.g. Jane Doe"
                           className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                           required={selectedSavedId === 'new-card'}
                         />
@@ -526,7 +494,7 @@ function DonorFundsPage() {
                   <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 p-3 text-amber-800">
                     <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
                     <p className="text-xs">
-                      Instant EFT connects directly to your SA banking portal. Funds clear instantly to the recipient NGO wallet.
+                      Instant EFT connects directly to your SA banking portal. Funds clear immediately into the central network wallet.
                     </p>
                   </div>
                 </div>
@@ -539,31 +507,33 @@ function DonorFundsPage() {
             <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                  Verified NGO
+                  Network Wallet
                 </span>
-                <span className="font-mono text-xs text-gray-500">{activeNgo.reg}</span>
+                <span className="font-mono text-xs text-gray-500">DELIVERY-ONLY</span>
               </div>
 
-              <h3 className="mt-3 text-lg font-bold text-gray-900">{activeNgo.name}</h3>
-              <p className="text-xs text-gray-600">{activeNgo.location}</p>
+              <h3 className="mt-3 text-lg font-bold text-gray-900">SurplusLink Transport Fund</h3>
+              <p className="text-xs text-gray-600">Central Logistics Management</p>
 
-              <div className="mt-4 space-y-1 border-t border-emerald-200/60 pt-3 text-xs text-gray-700">
-                <p>
-                  <span className="font-semibold">Urgent Support Area:</span> {activeNgo.urgentNeed}
-                </p>
-                <p>
-                  <span className="font-semibold">Selected Allocation:</span>{' '}
-                  {FUND_PURPOSES.find((p) => p.id === selectedPurpose)?.label}
-                </p>
+              <div className="mt-4 space-y-2 border-t border-emerald-200/60 pt-3 text-xs text-gray-700">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-600">Earmarked For:</span>
+                  <span className="font-medium text-emerald-800">Driver & Transit Fees</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-600">Managed By:</span>
+                  <span className="font-medium text-gray-800">SurplusLink Platform</span>
+                </div>
               </div>
 
               <div className="mt-6 border-t border-emerald-200/60 pt-4">
                 <div className="flex justify-between text-sm font-semibold text-gray-900">
-                  <span>Total Contribution</span>
+                  <span>Total Delivery Top-up</span>
                   <span className="text-emerald-700">
                     R
-                    {(amount || 0).toLocaleString('en-ZA', {
+                    {displayAmount.toLocaleString('en-ZA', {
                       minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
                     })}
                   </span>
                 </div>
@@ -571,8 +541,8 @@ function DonorFundsPage() {
 
               <button
                 type="submit"
-                disabled={isProcessing}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-center text-sm font-bold text-white shadow hover:bg-emerald-700 transition disabled:opacity-50"
+                disabled={isProcessing || displayAmount <= 0}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-center text-sm font-bold text-white shadow hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
                   <span className="flex items-center gap-2">
@@ -580,12 +550,14 @@ function DonorFundsPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Processing Sponsorship...
+                    Processing Payment...
                   </span>
                 ) : (
                   <>
                     <Lock className="h-4 w-4" />
-                    <span>Pay R{amount || 0} Now</span>
+                    <span>
+                      {paymentType === 'eft' ? 'Proceed with EFT' : `Pay R${displayAmount} Now`}
+                    </span>
                     <ArrowUpRight className="h-4 w-4" />
                   </>
                 )}
@@ -602,9 +574,9 @@ function DonorFundsPage() {
               <div className="flex items-start gap-3">
                 <HeartHandshake className="h-5 w-5 flex-shrink-0 text-emerald-600" />
                 <div>
-                  <h4 className="text-xs font-bold text-gray-900">100% Direct NGO Allocation</h4>
+                  <h4 className="text-xs font-bold text-gray-900">Automated Dispatch Top-up</h4>
                   <p className="mt-1 text-xs text-gray-500">
-                    Your contribution goes directly into {activeNgo.name}'s verified operational wallet to unlock logistics and food preservation capabilities.
+                    When verified NGOs claim food batches, SurplusLink automatically uses this wallet pool to dispatch delivery couriers to collect and transport the surplus.
                   </p>
                 </div>
               </div>
