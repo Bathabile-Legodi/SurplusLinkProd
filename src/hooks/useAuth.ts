@@ -85,20 +85,37 @@ export function useAuth(requiredRole?: "donor" | "ngo") {
       const pathname = router.state.location.pathname;
       const inferredRole = pathname.startsWith("/donor") ? "donor" : pathname.startsWith("/ngo") ? "ngo" : undefined;
       const effectiveRequiredRole = requiredRole || inferredRole;
+      
+      // Determine if the current route requires authentication
+      const isProtectedRoute = !!effectiveRequiredRole;
 
-      if (!state.user) {
-        // Not logged in
-        router.navigate({ to: "/login" });
-      } else if (effectiveRequiredRole && state.role !== effectiveRequiredRole) {
-        // Logged in but wrong role
-        router.navigate({ to: "/login" });
+      if (isProtectedRoute) {
+        if (!state.user) {
+          // Not logged in but accessing a protected route
+          router.navigate({ to: "/login" });
+        } else if (effectiveRequiredRole && state.role !== effectiveRequiredRole) {
+          // Logged in but wrong role
+          router.navigate({ to: "/login" });
+        }
       }
     }
   }, [state.isLoading, state.user, state.role, requiredRole, router]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    router.navigate({ to: "/login" });
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      // Clear cookies manually as a fallback just in case supabase.auth.signOut doesn't clear SSR cookies properly
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      // Force navigation
+      window.location.href = "/login";
+    }
   }, [router]);
 
   return { ...state, signOut };

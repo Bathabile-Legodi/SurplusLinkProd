@@ -4,7 +4,6 @@ import { CommunityWalletForm } from '@/components/CommunityWalletForm'
 import { requireAuth } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/community-wallet')({
-  beforeLoad: () => requireAuth(),
   component: CommunityWalletPage,
 })
 
@@ -15,21 +14,21 @@ function CommunityWalletPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader />
       
-      <main className="flex-1 w-full pb-20">
-        {/* Hero Banner Section */}
-        <div className="relative w-full h-[380px] bg-primary overflow-hidden flex items-center justify-center">
-          {/* Subtle gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/80 opacity-90" />
-          {/* Abstract pattern / blur */}
-          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-overlay" />
-          
-          <h1 className="relative z-10 text-5xl md:text-7xl font-black tracking-widest text-white uppercase mt-[-80px] drop-shadow-lg text-center px-4">
-            Community Wallet
-          </h1>
-        </div>
+      <main className="relative flex min-h-[calc(100vh-56px)] flex-col items-center justify-start overflow-hidden px-4 py-12 sm:py-20">
+        {/* Animated Background Blobs */}
+        <div className="pointer-events-none absolute -top-1/4 left-0 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/10 blur-[150px] [animation-duration:15s]" />
+        <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-secondary/10 blur-[120px] [animation-duration:10s]" />
 
-        {/* Floating Card */}
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 relative z-20 -mt-32">
+        <div className="relative z-10 w-full max-w-4xl">
+          <header className="mb-10 text-center">
+            <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl">
+              Community Wallet
+            </h1>
+            <p className="mt-4 text-sm font-medium text-muted-foreground uppercase tracking-widest">
+              Fund the logistics that rescue the food
+            </p>
+          </header>
+
           <CommunityWalletForm onSuccess={() => navigate({ to: '/' })} />
         </div>
       </main>

@@ -26,16 +26,20 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
   // Handle click outside to close dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (!dropdownRef.current) return;
+      // Use composedPath which is more reliable than Node.contains, especially for SVGs
+      const path = event.composedPath();
+      if (!path.includes(dropdownRef.current)) {
         setProfileOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // Listen on capture phase to ensure we evaluate before any bubbling stops
+    document.addEventListener("mousedown", handleClickOutside, { capture: true });
+    return () => document.removeEventListener("mousedown", handleClickOutside, { capture: true });
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-card">
+    <header className="relative z-[100] sticky top-0 glass-nav">
       <div className="mx-auto flex h-14 max-w-6xl items-center px-4 sm:px-6">
         {/* Logo */}
         <div className="flex flex-1 justify-start">
@@ -74,7 +78,7 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
 
               {/* Dropdown Menu */}
               {profileOpen && (
-                <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl bg-popover border border-border p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100 z-50">
+                <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl p-1.5 animate-in fade-in zoom-in-95 duration-100 z-[110]" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.18), 0 4px 16px oklch(0.18 0.16 264 / 0.10)'}}>
                   {/* Profile Header Block */}
                   <div className="flex flex-col items-center justify-center py-5 px-4 pb-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg mb-3">
@@ -140,10 +144,12 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
                   </div>
 
                   {/* Footer Links */}
-                  <div className="mt-3 mb-2 flex justify-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="cursor-default" title="Coming soon">Privacy Policy</span>
+                  <div className="mt-3 mb-2 flex flex-wrap justify-center gap-x-2 gap-y-1 px-2 text-[10px] text-muted-foreground text-center">
+                    <Link to="/privacy" className="hover:text-foreground hover:underline transition-colors">Privacy Policy</Link>
                     <span>·</span>
-                    <span className="cursor-default" title="Coming soon">Terms of Service</span>
+                    <Link to="/terms" className="hover:text-foreground hover:underline transition-colors">Terms of Service</Link>
+                    <span>·</span>
+                    <Link to="/cookies" className="hover:text-foreground hover:underline transition-colors">Cookie Policy</Link>
                   </div>
                 </div>
               )}
@@ -165,7 +171,7 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
 
       {/* Mobile drawer */}
       {open && nav.length > 0 && (
-        <div className="border-t bg-card px-4 pb-4 pt-3 md:hidden">
+        <div className="glass-nav border-t border-black/5 px-4 pb-4 pt-3 md:hidden">
           <nav className="flex flex-col gap-1">
             {nav.map((n) => (
               <Link
@@ -187,7 +193,7 @@ export function AppHeader({ nav = [] }: AppHeaderProps) {
 
       {/* Community Wallet Modal */}
       {walletModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
           <div className="relative w-full max-w-4xl my-auto animate-in fade-in zoom-in-95">
             <button 
               onClick={() => setWalletModalOpen(false)}

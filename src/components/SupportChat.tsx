@@ -23,13 +23,13 @@ export function SupportChat() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-6 right-6 z-[90] flex flex-col items-end pointer-events-none">
       {/* Chat Window */}
       <div
-        className={`mb-4 w-[350px] sm:w-[400px] overflow-hidden rounded-2xl border bg-background/80 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-out origin-bottom-right ${
+        className={`pointer-events-auto mb-4 w-[350px] sm:w-[400px] overflow-hidden rounded-2xl border bg-background/80 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-out origin-bottom-right ${
           isOpen
             ? "scale-100 opacity-100 translate-y-0"
-            : "scale-95 opacity-0 pointer-events-none translate-y-4"
+            : "scale-95 opacity-0 !pointer-events-none translate-y-4"
         }`}
       >
         {/* Header */}
@@ -127,7 +127,7 @@ export function SupportChat() {
       {/* Floating Action Button */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 ${
+        className={`pointer-events-auto group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 ${
           isOpen ? "rotate-90 bg-destructive hover:bg-destructive/90" : "rotate-0"
         }`}
       >
