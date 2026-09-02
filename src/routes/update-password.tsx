@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 export const Route = createFileRoute("/update-password")({
   head: () => ({
@@ -9,13 +12,31 @@ export const Route = createFileRoute("/update-password")({
   component: UpdatePassword,
 });
 
+const updatePasswordSchema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters."),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+
+type UpdatePasswordForm = z.infer<typeof updatePasswordSchema>;
+
 function UpdatePassword() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<UpdatePasswordForm>({
+    resolver: zodResolver(updatePasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
+  });
 
   useEffect(() => {
     // Check URL hash for direct Supabase recovery errors (e.g., expired token)
@@ -29,37 +50,13 @@ function UpdatePassword() {
     }
   }, []);
 
-  async function handleUpdatePassword(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleUpdatePassword(data: UpdatePasswordForm) {
     setErrorMsg("");
     setSuccessMsg("");
 
-    // 1. Frontend validation (8+ characters)
-    if (!password) {
-      setErrorMsg("Password is required.");
-      return;
-    }
-    if (password.length < 8) {
-      setErrorMsg("Password must be at least 8 characters.");
-      return;
-    }
-    if (!confirmPassword) {
-      setErrorMsg("Please confirm your password.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg("Passwords do not match.");
-      return;
-    }
-
-    setLoading(true);
-
-    // 2. Update password directly in Supabase Auth
     const { error } = await supabase.auth.updateUser({
-      password: password,
+      password: data.password,
     });
-
-    setLoading(false);
 
     if (error) {
       setErrorMsg(error.message);
@@ -97,19 +94,26 @@ function UpdatePassword() {
           </div>
         )}
 
-        <form onSubmit={handleUpdatePassword} className="space-y-4">
+        <form onSubmit={handleSubmit(handleUpdatePassword)} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">
               New Password
             </label>
             <input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-md border border-input bg-background p-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
-              required
+              {...register("password")}
+              className={`w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-1 transition-colors ${
+                errors.password
+                  ? "border-destructive focus:ring-destructive focus:border-destructive"
+                  : "border-input focus:border-ring focus:ring-ring"
+              }`}
             />
+            {errors.password && (
+              <p className="mt-1 text-[11px] text-destructive leading-tight">
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           <div>
@@ -118,20 +122,27 @@ function UpdatePassword() {
             </label>
             <input
               type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-md border border-input bg-background p-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
-              required
+              {...register("confirmPassword")}
+              className={`w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-1 transition-colors ${
+                errors.confirmPassword
+                  ? "border-destructive focus:ring-destructive focus:border-destructive"
+                  : "border-input focus:border-ring focus:ring-ring"
+              }`}
             />
+            {errors.confirmPassword && (
+              <p className="mt-1 text-[11px] text-destructive leading-tight">
+                {errors.confirmPassword.message}
+              </p>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Updating in Supabase..." : "Update Password"}
+            {isSubmitting ? "Updating in Supabase..." : "Update Password"}
           </button>
         </form>
       </div>

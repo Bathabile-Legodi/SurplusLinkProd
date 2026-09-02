@@ -36,7 +36,7 @@ export function useGoogleMaps() {
     script.id = "google-maps-script";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&callback=initGoogleMaps&loading=async&libraries=routes`;
+    }&callback=initGoogleMaps&loading=async&libraries=routes,marker,geometry`;
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
@@ -58,11 +58,15 @@ export async function getBatchDrivingDistances(
     return destinations.map(() => "Distance unavailable");
   }
 
-  const validDestinations = destinations.map((d) => (d.trim() === "" ? "Unknown Location" : d));
+  const validDestinations = destinations.map((d) => {
+    if (d.trim() === "") return "Unknown Location";
+    return d.toLowerCase().includes("south africa") ? d : `${d}, South Africa`;
+  });
+  const zaOrigin = origin.toLowerCase().includes("south africa") ? origin : `${origin}, South Africa`;
 
   try {
     const request = {
-      origins: [origin],
+      origins: [zaOrigin],
       destinations: validDestinations,
       travelMode: "DRIVING",
       fields: ["distanceMeters", "condition"],

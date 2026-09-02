@@ -10,8 +10,11 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/history")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({ meta: [{ title: "Donation History — SurplusLink" }] }),
   component: DonorHistory,
 });
@@ -56,16 +59,18 @@ function formatDonationTime(dateStr: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
   const styles: Record<string, string> = {
-    Pending:   "bg-amber-100 text-amber-700 border-amber-200",
-    Claimed:   "bg-blue-100 text-blue-700 border-blue-200",
-    Delivered: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    Expired:   "bg-neutral-100 text-neutral-500 border-neutral-200",
-    Cancelled: "bg-red-100 text-red-600 border-red-200",
+    pending:   "bg-amber-100 text-amber-700 border-amber-200",
+    claimed:   "bg-blue-100 text-blue-700 border-blue-200",
+    delivered: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    expired:   "bg-neutral-100 text-neutral-500 border-neutral-200",
+    cancelled: "bg-red-100 text-red-600 border-red-200",
+    unclaimed: "bg-neutral-100 text-neutral-500 border-neutral-200",
   };
-  const cls = styles[status] ?? "bg-neutral-100 text-neutral-500 border-neutral-200";
+  const cls = styles[normalized] ?? "bg-neutral-100 text-neutral-500 border-neutral-200";
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${cls}`}>
       {status}
     </span>
   );
@@ -194,6 +199,7 @@ function Meta({ label, value }: { label: string; value: string }) {
 const STATUS_OPTIONS = ["All", "Pending", "Claimed", "Delivered", "Expired", "Cancelled"];
 
 function DonorHistory() {
+  const { initials } = useAuth();
   const [donations, setDonations] = useState<DBBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -308,8 +314,8 @@ function DonorHistory() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" />
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <AppHeader nav={donorNav} userLabel={initials} />
+      <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">Donation History</h1>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -54,10 +54,15 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
   );
 }
 
+import { queryClient } from "./lib/query";
+import type { QueryClient } from "@tanstack/react-query";
+
 export const getRouter = () => {
   const router = createRouter({
     routeTree,
-    context: {},
+    context: { 
+      queryClient 
+    } as { queryClient: QueryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
     defaultErrorComponent: DefaultErrorComponent,
@@ -65,3 +70,9 @@ export const getRouter = () => {
 
   return router;
 };
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: ReturnType<typeof getRouter>;
+  }
+}

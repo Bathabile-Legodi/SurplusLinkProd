@@ -39,17 +39,26 @@ function ReviewBatch() {
     return "Mixed Donation";
   })();
 
+  const earliestExpiryDate = items
+    .map((item) => item.expiry?.split("T")[0])
+    .filter(Boolean)
+    .sort()[0] ?? undefined;
+
   const handleSubmit = async () => {
     if (items.length === 0) return;
     setIsSubmitting(true);
     setError(null);
+
     try {
+      // 1. Submit batch to database
       const result = await submitDonationBatch(
         items,
         batchType,
         collectionDateTime,
         new Date().toISOString()
       );
+
+      // 2. Navigate to success page
       navigate({
         to: "/donor/donate/success",
         search: { batchId: result.id },
@@ -65,7 +74,9 @@ function ReviewBatch() {
       <AppHeader nav={donorNav} userLabel="FM" />
       <main className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Review Your Batch</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Review Your Batch
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Confirm the items below and set a collection window before submitting.
           </p>
@@ -88,7 +99,9 @@ function ReviewBatch() {
                 <thead className="bg-secondary text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Item</th>
-                    <th className="px-4 py-3 text-left font-medium">Category</th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Category
+                    </th>
                     <th className="px-4 py-3 text-left font-medium">Qty</th>
                     <th className="px-4 py-3 text-left font-medium">Expiry</th>
                   </tr>
@@ -133,13 +146,16 @@ function ReviewBatch() {
 
         {/* Collection window */}
         <section className="mb-8 rounded-xl border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">Collection Deadline (optional)</h2>
+          <h2 className="mb-1 text-sm font-semibold">
+            Collection Deadline
+          </h2>
           <p className="mb-3 text-xs text-muted-foreground">
             Set a date by which NGOs should collect this batch.
           </p>
           <DateTimePicker
             value={collectionDateTime}
             onChange={setCollectionDateTime}
+            maxDate={earliestExpiryDate}
           />
         </section>
 

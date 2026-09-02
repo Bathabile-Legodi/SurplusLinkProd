@@ -1,54 +1,97 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "@tanstack/react-router";
+import { supabase } from "@/lib/supabase";
 
 export function useNgoVerification() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const verifyAccess = async () => {
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !user) {
-          navigate({ to: '/login' });
+        // Force refresh the session to pull updated user metadata
+        await supabase.auth.refreshSession();
+
+        const {
+          data: { user: currentUser },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !currentUser) {
+          if (isMounted) {
+            setIsChecking(false);
+            navigate({ to: "/login" });
+          }
           return;
         }
 
-        // 1. Point to 'ngos' and select 'is_verified' 
-        const { data, error: dbError } = await supabase
-          .from('ngos')
-          .select('is_verified')
-          .eq('id', user.id)
-          .single();
-
-        if (dbError) throw dbError;
-
-        // 2. Check the verification status
-        if (data) {
-          if (data.is_verified === false) {
-            // User is an NGO but not yet approved by an admin
-            navigate({ to: '/ngo/not-verified' });
-          } else if (data.is_verified === true) {
-            // User is approved, let them into the dashboard
-            setIsAuthorized(true);
+        const metadata = currentUser.user_metadata || {};
+        const isNgo = metadata.role === "ngo";
+        
+        let verified = false;
+        if (isNgo) {
+          const { data, error } = await supabase
+            .from("ngos")
+            .select("is_verified")
+            .eq("id", currentUser.id)
+            .single();
+            
+          if (!error && data) {
+            verified = Boolean(data.is_verified);
+          } else {
+            verified = Boolean(metadata.is_verified);
           }
-        } else {
-          // No NGO record found for this user ID (maybe they are a donor?)
-          navigate({ to: '/login' });
+
+          // Force unverified status for target restricted email address
+          if (currentUser.email?.toLowerCase() === "anithafetumane@gmail.com") {
+            verified = false;
+          }
+        }
+
+        if (!isNgo) {
+          if (isMounted) {
+            setIsChecking(false);
+            navigate({ to: "/login" });
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setUser(currentUser);
+          setIsVerified(verified);
+          setIsAuthorized(true);
+        }
+
+        // If NGO is NOT verified and attempts to access protected routes, redirect to /ngo/dashboard
+        if (
+          !verified &&
+          location.pathname !== "/ngo/dashboard" &&
+          location.pathname !== "/ngo/verification" &&
+          location.pathname !== "/ngo/profile"
+        ) {
+          navigate({ to: "/ngo/dashboard" });
+          return;
         }
       } catch (error) {
         console.error("Verification check failed:", error);
-        navigate({ to: '/login' });
+        if (isMounted) navigate({ to: "/login" });
       } finally {
-        setIsChecking(false);
+        if (isMounted) setIsChecking(false);
       }
     };
 
     verifyAccess();
-  }, [navigate]);
 
-  return { isAuthorized, isChecking };
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate, location.pathname]);
+
+  return { isAuthorized, isVerified, isChecking, user };
 }

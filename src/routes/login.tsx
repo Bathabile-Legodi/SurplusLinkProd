@@ -1,133 +1,122 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { FormEvent } from "react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Field } from "@/components/Field";
 import { toast } from "sonner";
+import { redirectIfAuthenticated } from "@/lib/auth-guard";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
 });
 
-type LoginErrors = { email?: string; password?: string };
+const loginSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(1, "Password is required."),
+});
 
-function isValidEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
+type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<"donor" | "ngo">("donor");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState<LoginErrors>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  function validate(fields = form): LoginErrors {
-    const e: LoginErrors = {};
-    if (!fields.email) {
-      e.email = "Email is required.";
-    } else if (!isValidEmail(fields.email)) {
-      e.email = "Enter a valid email address.";
-    }
-    if (!fields.password) {
-      e.password = "Password is required.";
-    }
-    return e;
-  }
-
-  function handleBlur(field: keyof typeof form) {
-    setTouched((t) => ({ ...t, [field]: true }));
-    setErrors(validate());
-  }
-
-  function handleChange(field: keyof typeof form, value: string) {
-    const next = { ...form, [field]: value };
-    setForm(next);
-    if (touched[field]) setErrors(validate(next));
-  }
-
-  async function handleLogin(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    // Mark all as touched and validate
-    setTouched({ email: true, password: true });
-    const errs = validate();
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    setLoading(true);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
+  async function handleLogin(data: LoginForm) {
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
     });
 
-    setLoading(false);
-
     if (error) {
-      // Map Supabase error messages to friendly field-level errors
       const msg = error.message.toLowerCase();
-      if (msg.includes("invalid login") || msg.includes("invalid credentials") || msg.includes("wrong") || msg.includes("password")) {
-        setErrors({ password: "Incorrect email or password." });
+      if (
+        msg.includes("invalid login") ||
+        msg.includes("invalid credentials") ||
+        msg.includes("wrong") ||
+        msg.includes("password")
+      ) {
+        setError("password", { message: "Incorrect email or password." });
       } else if (msg.includes("email")) {
-        setErrors({ email: error.message });
+        setError("email", { message: error.message });
       } else {
         toast.error(error.message);
       }
       return;
     }
 
-    const userRole = data.user.user_metadata.role;
-
-    if (userRole !== tab) {
-      await supabase.auth.signOut();
-      toast.error(`This account is registered as a ${userRole.toUpperCase()}, not a ${tab.toUpperCase()}.`);
-      return;
-    }
-
+    // Navigate based on role stored in metadata — ignore the UI tab selection.
+    const userRole = authData.user.user_metadata?.role as string | undefined;
     toast.success("Successfully logged in!");
-    navigate({ to: tab === "donor" ? "/donor/dashboard" : "/ngo/dashboard" });
+    if (userRole === "ngo") {
+      navigate({ to: "/ngo/dashboard" });
+    } else {
+      navigate({ to: "/donor/dashboard" });
+    }
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
+    <main className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden px-4 py-10">
+      {/* Animated background blobs — navy blue family */}
+      <div className="pointer-events-none absolute top-0 -left-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/10 blur-[120px] [animation-duration:8s]" />
+      <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/7 blur-[150px] [animation-duration:12s]" />
+      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-sky-400/5 blur-[80px]" />
+
+      <div className="relative w-full max-w-md rounded-3xl glass-lg p-8 animate-in fade-in zoom-in-95 duration-500 ease-out" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.18), 0 4px 16px oklch(0.18 0.16 264 / 0.10)'}}>
+        <div className="mb-6 flex justify-center">
+          <Logo className="h-10" />
         </div>
 
         {/* Role Switch */}
-        <div className="mb-6 grid grid-cols-2 rounded-md bg-secondary p-1 text-sm">
+        <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm">
           <button
             type="button"
             onClick={() => setTab("donor")}
-            className={`rounded py-1.5 transition ${tab === "donor" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            className={`rounded-lg py-2 font-medium transition-all ${tab === "donor" ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:text-foreground"}`}
           >
             Donor
           </button>
           <button
             type="button"
             onClick={() => setTab("ngo")}
-            className={`rounded py-1.5 transition ${tab === "ngo" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            className={`rounded-lg py-2 font-medium transition-all ${tab === "ngo" ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:text-foreground"}`}
           >
             NGO
           </button>
         </div>
 
-        <form onSubmit={handleLogin} noValidate className="space-y-4">
-          <Field
-            label="Email Address"
-            type="email"
-            value={form.email}
-            onChange={(v) => handleChange("email", v)}
-            onBlur={() => handleBlur("email")}
-            placeholder="you@example.com"
-            error={touched.email ? errors.email : undefined}
-          />
+        <form onSubmit={handleSubmit(handleLogin)} noValidate className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-foreground">Email Address</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              {...register("email")}
+              className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                errors.email
+                  ? "border-destructive focus:ring-destructive focus:border-destructive"
+                  : "border-input focus:border-ring focus:ring-ring"
+              }`}
+            />
+            {errors.email && (
+              <p className="text-[11px] text-destructive leading-tight">{errors.email.message}</p>
+            )}
+          </div>
 
           {/* Password with show/hide toggle */}
           <div className="flex flex-col gap-1">
@@ -135,12 +124,10 @@ function LoginPage() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                onBlur={() => handleBlur("password")}
                 placeholder="••••••••"
+                {...register("password")}
                 className={`w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors
-                  ${touched.password && errors.password
+                  ${errors.password
                     ? "border-destructive focus:ring-destructive"
                     : "border-input focus:border-ring focus:ring-ring"
                   }`}
@@ -165,16 +152,17 @@ function LoginPage() {
                 )}
               </button>
             </div>
-            {touched.password && errors.password && (
-              <p className="text-[11px] text-destructive leading-tight">{errors.password}</p>
+            {errors.password && (
+              <p className="text-[11px] text-destructive leading-tight">{errors.password.message}</p>
             )}
           </div>
 
           <button
-            disabled={loading}
-            className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 transition-all"
           >
-            {loading ? "Logging in…" : tab === "donor" ? "Login as Donor" : "Login as NGO"}
+            {isSubmitting ? "Logging in…" : tab === "donor" ? "Login as Donor" : "Login as NGO"}
           </button>
         </form>
 

@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -9,30 +12,33 @@ export const Route = createFileRoute("/forgot-password")({
   component: ForgotPassword,
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+});
+
+type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
+
 function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  async function handleResetPassword(e: React.FormEvent) {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordForm>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
+
+  async function handleResetPassword(data: ForgotPasswordForm) {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (!email) {
-      setErrorMsg("Please enter your email address.");
-      return;
-    }
-
-    setLoading(true);
-
-    // Points to your local dev server running on port 3000
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/update-password",
+    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+      redirectTo: `${import.meta.env.VITE_APP_URL ?? window.location.origin}/update-password`,
     });
 
-    setLoading(false);
 
     if (error) {
       setErrorMsg(error.message);
@@ -66,27 +72,34 @@ function ForgotPassword() {
           </div>
         )}
 
-        <form onSubmit={handleResetPassword} className="space-y-4">
+        <form onSubmit={handleSubmit(handleResetPassword)} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">
               Email Address
             </label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full rounded-md border border-input bg-background p-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
-              required
+              {...register("email")}
+              className={`w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-1 transition-colors ${
+                errors.email
+                  ? "border-destructive focus:ring-destructive focus:border-destructive"
+                  : "border-input focus:border-ring focus:ring-ring"
+              }`}
             />
+            {errors.email && (
+              <p className="mt-1 text-[11px] text-destructive leading-tight">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Sending link..." : "Send Reset Link"}
+            {isSubmitting ? "Sending link..." : "Send Reset Link"}
           </button>
         </form>
 

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate, Outlet, useLocation } from "@tanstack/react-router";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
+import { useGoogleMaps } from "@/hooks/useGoogleMaps";
 
 import imgBeverages from "@/assets/images/beverages.jpeg";
 import imgCannedGoods from "@/assets/images/canned-goods.jpeg";
@@ -10,19 +13,24 @@ import imgMeat from "@/assets/images/meat.jpeg";
 import imgMixed from "@/assets/images/mixed-donation.jpg";
 import imgPreparedGoods from "@/assets/images/prepared-goods.jpeg";
 import imgSnacks from "@/assets/images/snacks.jpeg";
+import imgBakery from "@/assets/images/bakery.png";
 
-function getImageForCategory(type: string) {
-  const t = (type || "").toLowerCase();
-  if (t.includes("beverage") || t.includes("drink")) return imgBeverages;
-  if (t.includes("can")) return imgCannedGoods;
-  if (t.includes("dairy") || t.includes("milk") || t.includes("cheese")) return imgDairy;
-  if (t.includes("meat") || t.includes("poultry") || t.includes("fish")) return imgMeat;
-  if (t.includes("prepared") || t.includes("meal")) return imgPreparedGoods;
-  if (t.includes("snack") || t.includes("chip") || t.includes("candy")) return imgSnacks;
+function getImageForCategory(typeOrCategories: string | string[]) {
+  const types = Array.isArray(typeOrCategories) ? typeOrCategories : [typeOrCategories];
+  const combined = types.join(" ").toLowerCase();
+  
+  if (combined.includes("beverage") || combined.includes("drink")) return imgBeverages;
+  if (combined.includes("can")) return imgCannedGoods;
+  if (combined.includes("dairy") || combined.includes("milk") || combined.includes("cheese")) return imgDairy;
+  if (combined.includes("meat") || combined.includes("poultry") || combined.includes("fish")) return imgMeat;
+  if (combined.includes("prepared") || combined.includes("meal")) return imgPreparedGoods;
+  if (combined.includes("snack") || combined.includes("chip") || combined.includes("candy")) return imgSnacks;
+  if (combined.includes("bakery") || combined.includes("bread") || combined.includes("pastry")) return imgBakery;
   return imgMixed; // Fallback
 } 
 
 export const Route = createFileRoute("/ngo/donations/$id")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "Donation Details — SurplusLink" }] }),
   component: DonationDetail,
 });
@@ -37,50 +45,7 @@ interface DonationDetailState {
   status: string;
 }
 
-function useGoogleMaps() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const globalWin = window as any;
-    if (globalWin.google?.maps?.routes) {
-      setReady(true);
-      return;
-    }
-
-    if (!globalWin._mapsReadyCallbacks) {
-      globalWin._mapsReadyCallbacks = [];
-    }
-
-    globalWin._mapsReadyCallbacks.push(() => setReady(true));
-
-    globalWin.initGoogleMaps = () => {
-      if (globalWin._mapsReadyCallbacks) {
-        globalWin._mapsReadyCallbacks.forEach((cb: () => void) => cb());
-      }
-    };
-
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if (globalWin.google?.maps?.routes) setReady(true);
-      });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&libraries=routes&callback=initGoogleMaps&loading=async`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {};
-  }, []);
-
-  return ready;
-}
+// useGoogleMaps is now imported from @/hooks/useGoogleMaps
 
 export async function getRealDrivingDistance(
   origin: string, 
@@ -107,11 +72,13 @@ export async function getRealDrivingDistance(
       );
 
       const response: any = await Promise.race([modernCall, timeout]);
-      const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0];
+      const element = response?.matrix?.rows?.[0]?.items?.[0] || response?.[0]?.elements?.[0] || (Array.isArray(response) ? response[0] : null);
 
       if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
         const meters = element.distanceMeters;
-        if (typeof meters === "number") {
+        if (typeof meters === "number" && !isNaN(meters)) {
+          if (meters === 0) return "Same location";
+          if (meters < 100) return "< 0.1 km away";
           const km = (meters / 1000).toFixed(1);
           return `${km} km away`;
         }
@@ -149,6 +116,7 @@ export async function getRealDrivingDistance(
 
 function DonationDetail() {
   const { id } = Route.useParams();
+  const { initials } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isMapsReady = useGoogleMaps(); 
@@ -199,7 +167,7 @@ function DonationDetail() {
             batch_type,
             collection_datetime,
             status,
-            donors (
+            donors!donor_id (
               organization_name,
               address
             ),
@@ -316,7 +284,7 @@ function DonationDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel="HS" />
+        <AppHeader nav={ngoNav} userLabel={initials} />
         <main className="mx-auto max-w-3xl px-6 py-10 text-sm text-muted-foreground">
           Loading donation details...
         </main>
@@ -327,7 +295,7 @@ function DonationDetail() {
   if (!batch) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel="HS" />
+        <AppHeader nav={ngoNav} userLabel={initials} />
         <main className="mx-auto max-w-3xl px-6 py-10 text-sm text-muted-foreground">
           Donation batch not found.
           <div className="mt-4">
@@ -342,7 +310,7 @@ function DonationDetail() {
     <>
       {!isChildRoute && (
         <div className="min-h-screen bg-background">
-          <AppHeader nav={ngoNav} userLabel={ngoName.substring(0, 2).toUpperCase()} />
+          <AppHeader nav={ngoNav} userLabel={initials} />
           <main className="mx-auto max-w-3xl px-6 py-10">
             <Link to="/ngo/explore" className="text-sm text-muted-foreground hover:text-foreground">
               ← Back to Available Donations
@@ -351,7 +319,7 @@ function DonationDetail() {
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <div className="aspect-square rounded-xl border bg-secondary overflow-hidden">
                 <img 
-                  src={getImageForCategory(batch?.batch_type || "")} 
+                  src={getImageForCategory([batch?.batch_type || "", ...itemCategories])} 
                   alt={batch?.batch_type || "Donation"} 
                   className="h-full w-full object-cover"
                 />
@@ -359,7 +327,7 @@ function DonationDetail() {
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 capitalize
                     ${batch.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
                     ${batch.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
                     ${batch.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}

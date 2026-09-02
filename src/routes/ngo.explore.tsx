@@ -1,18 +1,94 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, redirect, Link } from "@tanstack/react-router";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Search, Filter, ArrowUpDown, Clock, MapPin, Package, Heart } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { supabase } from "@/lib/supabase"; 
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { useGoogleMaps } from "@/hooks/useGoogleMaps";
+
+export const getAvailableDonations = createServerFn({ method: "GET" }).handler(async () => {
+  const supabaseServer = createSupabaseServerClient();
+  const { data: { user } } = await supabaseServer.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: ngoProfile } = await supabaseServer
+    .from("ngos")
+    .select("id, organization_name, address")
+    .eq("id", user.id)
+    .single();
+
+  const { data, error } = await supabaseServer
+    .from("donation_batches")
+    .select(`
+      id,
+      donor_id,
+      batch_type,
+      collection_datetime,
+      status,
+      claimed_by,
+      donors (
+        organization_name,
+        address
+      ),
+      donation_items (
+        quantity,
+        unit
+      )
+    `)
+    .or("status.eq.unclaimed,status.eq.Unclaimed") 
+    .limit(25);
+
+  if (error) throw error;
+
+  const formattedData: DonationUI[] = (data || []).map((batch: any) => {
+    const donorInfo = Array.isArray(batch.donors) ? batch.donors[0] : batch.donors;
+    const donorAddress = donorInfo?.address || "";
+    const donorName = donorInfo?.organization_name || "Anonymous Donor";
+
+    const itemQuantities = (batch.donation_items ?? [])
+      .map((item: any) => {
+        if (item.quantity === null || item.quantity === undefined) return null;
+        const quantity = String(item.quantity).trim();
+        const unit = item.unit ? String(item.unit).trim() : "items";
+        if (!quantity) return null;
+        return unit ? `${quantity} ${unit}` : quantity;
+      })
+      .filter(Boolean) as string[];
+
+    const quantityText = itemQuantities.length > 0 ? itemQuantities.join(" • ") : "1 Batch";
+
+    return {
+      id: batch.id,
+      title: batch.batch_type || "General Batch",
+      quantity: quantityText,
+      pickup: donorAddress || "Location not specified",
+      donor: donorName,
+      distance: "Calculating...",
+      status: batch.status || "Unclaimed",
+      created_at: batch.created_at,
+      collection_datetime: batch.collection_datetime
+    };
+  });
+
+  return {
+    ngoAddress: ngoProfile?.address || "",
+    ngoName: ngoProfile?.organization_name || "Hope Shelter",
+    donations: formattedData
+  };
+});
+
+export const exploreQueryOptions = queryOptions({
+  queryKey: ["donations", "available"],
+  queryFn: () => getAvailableDonations(),
+});
 
 export const Route = createFileRoute("/ngo/explore")({
-  // Guard the route before rendering: Redirect to login if no valid session
-  beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw redirect({
-        to: "/login", // Adjust to match your login route path
-      });
-    }
-  },
+  beforeLoad: () => requireRole("ngo"),
+  loader: ({ context }) => context.queryClient.ensureQueryData(exploreQueryOptions),
   head: () => ({ meta: [{ title: "Explore Donations — SurplusLink" }] }),
   component: ExplorePage,
 });
@@ -29,49 +105,7 @@ interface DonationUI {
   collection_datetime: string | null;
 }
 
-function useGoogleMaps() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if ((window as any).google?.maps?.routes) {
-      setReady(true);
-      return;
-    }
-
-    if (!(window as any)._mapsReadyCallbacks) {
-      (window as any)._mapsReadyCallbacks = [];
-    }
-
-    (window as any)._mapsReadyCallbacks.push(() => setReady(true));
-
-    (window as any).initGoogleMaps = () => {
-      if ((window as any)._mapsReadyCallbacks) {
-        (window as any)._mapsReadyCallbacks.forEach((cb: () => void) => cb());
-      }
-    };
-
-    const existing = document.getElementById("google-maps-script");
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if ((window as any).google?.maps?.routes) setReady(true);
-      });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }&callback=initGoogleMaps&loading=async&libraries=routes`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {};
-  }, []);
-
-  return ready;
-}
+// useGoogleMaps is now imported from @/hooks/useGoogleMaps
 
 export async function getBatchDrivingDistances(
   origin: string,
@@ -94,14 +128,24 @@ export async function getBatchDrivingDistances(
 
     const response = await globalWin.google.maps.routes.RouteMatrix.computeRouteMatrix(request);
     
-    const matrixItems = response?.matrix?.rows?.[0]?.items || response?.[0]?.elements;
+    let matrixItems: any[] = [];
+    if (Array.isArray(response)) {
+      matrixItems = response;
+    } else if (Array.isArray(response?.matrix?.rows?.[0]?.items)) {
+      matrixItems = response.matrix.rows[0].items;
+    } else if (Array.isArray(response?.[0]?.elements)) {
+      matrixItems = response[0].elements;
+    }
 
-    if (Array.isArray(matrixItems)) {
+    if (matrixItems.length > 0) {
       return matrixItems.map((element: any) => {
         if (element && (element.condition === "ROUTE_EXISTS" || !element.status)) {
           const meters = element.distanceMeters;
-          if (typeof meters === "number") {
-            return `${(meters / 1000).toFixed(1)} km away`;
+          if (typeof meters === "number" && !isNaN(meters)) {
+            if (meters === 0) return "Same location";
+            if (meters < 100) return "< 0.1 km away";
+            const km = (meters / 1000).toFixed(1);
+            return `${km} km away`;
           }
         }
         return "Distance unknown";
@@ -117,127 +161,40 @@ export async function getBatchDrivingDistances(
 }
 
 function ExplorePage() {
-  const isMapsReady = useGoogleMaps();
-  const [rawDonations, setRawDonations] = useState<DonationUI[]>([]);
+  const { initials } = useAuth();
+  const isMapsReady = useGoogleMaps("routes");
+
+  const { data: queryData } = useSuspenseQuery(exploreQueryOptions);
+
+  const [rawDonations, setRawDonations] = useState<DonationUI[]>(queryData.donations);
+  const [ngoAddress] = useState<string>(queryData.ngoAddress);
+  const [ngoName] = useState<string>(queryData.ngoName);
+
   const [distancesMap, setDistancesMap] = useState<Record<string, string>>({});
-  const [ngoAddress, setNgoAddress] = useState<string>("");
-  const [ngoName, setNgoName] = useState<string>("NGO");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showSort, setShowSort] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [showExpired, setShowExpired] = useState(false);
-  const [loading, setLoading] = useState<boolean>(true);
+
+  // Click-outside refs for the sort/filter dropdowns
+  const sortRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function fetchDonationsAndProfile() {
-      try {
-        setLoading(true);
-
-        // 1. Verify active session prior to requesting auth user data
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError || !session) {
-          if (isMounted) {
-            console.warn("No active auth session detected or session has expired.");
-          }
-        } else {
-          // 2. Fetch authenticated user data safely using active session
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-          if (userError) {
-            console.error("User retrieval error:", userError.message);
-          } else if (user && isMounted) {
-            const { data: ngoProfile } = await supabase
-              .from("ngos")
-              .select("id, organization_name, address")
-              .eq("id", user.id)
-              .single();
-
-            if (ngoProfile && isMounted) {
-              setNgoAddress(ngoProfile.address || "");
-              setNgoName(ngoProfile.organization_name || "Hope Shelter");
-            }
-          }
-        }
-
-        // 3. Fetch unclaimed donation batches
-        const { data, error } = await supabase
-          .from("donation_batches")
-          .select(`
-            id,
-            donor_id,
-            batch_type,
-            collection_datetime,
-            status,
-            claimed_by,
-            donors (
-              organization_name,
-              address
-            ),
-            donation_items (
-              quantity,
-              unit
-            )
-          `)
-          .or("status.eq.unclaimed,status.eq.Unclaimed") 
-          .limit(25);
-
-        if (error) throw error;
-
-        if (data && isMounted) {
-          const formattedData: DonationUI[] = data.map((batch: any) => {
-            const donorInfo = Array.isArray(batch.donors) ? batch.donors[0] : batch.donors;
-            const donorAddress = donorInfo?.address || "";
-            const donorName = donorInfo?.organization_name || "Anonymous Donor";
-
-            const itemQuantities = (batch.donation_items ?? [])
-              .map((item: any) => {
-                if (item.quantity === null || item.quantity === undefined) return null;
-                const quantity = String(item.quantity).trim();
-                const unit = item.unit ? String(item.unit).trim() : "items";
-
-                if (!quantity) return null;
-
-                return unit ? `${quantity} ${unit}` : quantity;
-              })
-              .filter(Boolean) as string[];
-
-            const quantityText = itemQuantities.length > 0
-              ? itemQuantities.join(" • ")
-              : "1 Batch";
-
-            return {
-              id: batch.id,
-              title: batch.batch_type || "General Batch",
-              quantity: quantityText,
-              pickup: donorAddress || "Location not specified",
-              donor: donorName,
-              distance: "Calculating...",
-              status: batch.status || "Unclaimed",
-              created_at: batch.created_at,
-              collection_datetime: batch.collection_datetime
-            };
-          });
-
-          setRawDonations(formattedData);
-        }
-      } catch (error) {
-        if (isMounted) console.error("Error fetching data:", error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+    function handleClickOutside(e: MouseEvent) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setShowSort(false);
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowFilters(false);
     }
-
-    fetchDonationsAndProfile();
-
-    return () => {
-      isMounted = false;
-    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Keep raw donations in sync if queryData changes (e.g. after manual invalidation)
+  useEffect(() => {
+    setRawDonations(queryData.donations);
+  }, [queryData.donations]);
 
   useEffect(() => {
     if (!isMapsReady || rawDonations.length === 0 || !ngoAddress) return;
@@ -315,9 +272,9 @@ function ExplorePage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={ngoName.substring(0, 2).toUpperCase()} />
-      <main className="mx-auto max-w-5xl px-6 py-10">
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader nav={ngoNav} userLabel={initials} />
+      <main className="mx-auto flex-1 w-full max-w-7xl px-6 py-8">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome, {ngoName}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Here's surplus food from verified donors near you.
@@ -332,7 +289,7 @@ function ExplorePage() {
             className="flex-1 rounded-md border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <div className="flex gap-2">
-            <div className="relative">
+            <div className="relative" ref={sortRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -363,7 +320,7 @@ function ExplorePage() {
               )}
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -410,9 +367,7 @@ function ExplorePage() {
           {showExpired ? "All Donations" : "Active Donations Near You"} ({sortedDonations.length})
         </h2>
 
-        {loading ? (
-          <div className="text-sm text-muted-foreground">Loading available donations...</div>
-        ) : sortedDonations.length === 0 ? (
+        {sortedDonations.length === 0 ? (
           <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
             {searchQuery || selectedCategory
               ? "No donations matching your filters found."
@@ -436,11 +391,11 @@ function ExplorePage() {
                       ? new Date(d.collection_datetime) < now
                       : false;
                     return isExpired ? (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200 capitalize">
                         Expired
                       </span>
                     ) : (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600">
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600 capitalize">
                         {d.status}
                       </span>
                     );

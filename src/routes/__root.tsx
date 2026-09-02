@@ -1,4 +1,5 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -25,7 +26,7 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -33,12 +34,22 @@ export const Route = createRootRoute({
       { title: "SurplusLink" },
       { name: "description", content: "Connect surplus food with verified NGOs. Reduce waste, feed communities." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "SurplusLink — Connecting Excess to Impact" },
+      { property: "og:description", content: "Connect surplus food with verified NGOs. Reduce waste, feed communities." },
+      { property: "og:image", content: "/images/surpluslink1.png" },
+      { property: "og:url", content: import.meta.env.VITE_APP_URL ?? "" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/images/surpluslink1.png" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
       },
     ],
   }),
@@ -46,6 +57,8 @@ export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
+
+import { SupportChat } from "@/components/SupportChat";
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
@@ -55,6 +68,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <SupportChat />
         <Toaster position="bottom-right" richColors />
         <Scripts />
       </body>
@@ -63,5 +77,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  const { queryClient } = Route.useRouteContext();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+    </QueryClientProvider>
+  );
 }

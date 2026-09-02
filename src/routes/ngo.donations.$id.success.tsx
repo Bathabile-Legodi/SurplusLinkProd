@@ -2,17 +2,18 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   CheckCircle2,
-  Package,
-  Calendar,
-  Building2,
   Truck,
   MapPin,
   Check,
 } from "lucide-react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
+import { sendClaimNotificationEmail } from "@/lib/email";
 
 export const Route = createFileRoute("/ngo/donations/$id/success")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({
     meta: [{ title: "Donation Claimed — SurplusLink" }],
   }),
@@ -22,42 +23,72 @@ export const Route = createFileRoute("/ngo/donations/$id/success")({
 interface BatchSummary {
   batch_type: string;
   donor: string;
+  donorEmail?: string;
+  pickupAddress?: string;
   collection_datetime: string | null;
 }
 
 function ClaimSuccess() {
   const { id } = Route.useParams();
+  const { initials } = useAuth();
   const navigate = useNavigate();
 
   const [batch, setBatch] = useState<BatchSummary | null>(null);
   const [method, setMethod] = useState<"pickup" | "delivery" | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    async function fetchBatch() {
-      const { data, error } = await supabase
-        .from("donation_batches")
-        .select(`
-          batch_type,
-          collection_datetime,
-          donors (
-            organization_name
-          )
-        `)
-        .eq("id", id)
-        .single();
+    setIsClient(true);
+  }, []);
 
-      if (!error && data) {
-        const raw = data as any;
+  async function loadBatchData(): Promise<BatchSummary | null> {
+    const { data: batchData, error: batchError } = await supabase
+      .from("donation_batches")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
-        setBatch({
-          batch_type: raw.batch_type || "Surplus Food",
-          donor: raw.donors?.organization_name || "Anonymous Donor",
-          collection_datetime: raw.collection_datetime,
-        });
+    if (batchError || !batchData) {
+      console.error("Error fetching batch:", batchError);
+      return null;
+    }
+
+    let donorName = "Anonymous Donor";
+    let donorEmail = "";
+
+    const targetDonorId = batchData.donor_id || batchData.user_id;
+
+    if (targetDonorId) {
+      const { data: donorData, error: donorError } = await supabase
+        .from("donors")
+        .select("*")
+        .eq("id", targetDonorId)
+        .maybeSingle();
+
+      if (donorError) {
+        console.error("Donors table query error:", donorError);
+      } else if (donorData) {
+        donorName = donorData.organization_name || donorData.name || donorName;
+        donorEmail = donorData.email || donorData.contact_email || "";
       }
     }
 
-    fetchBatch();
+    return {
+      batch_type: batchData.batch_type || "Surplus Food",
+      donor: donorName,
+      donorEmail: donorEmail,
+      pickupAddress: batchData.pickup_address || batchData.address || "",
+      collection_datetime: batchData.collection_datetime,
+    };
+  }
+
+  useEffect(() => {
+    async function init() {
+      const data = await loadBatchData();
+      if (data) setBatch(data);
+    }
+    if (id) init();
   }, [id]);
 
   const deadlineLabel = batch?.collection_datetime
@@ -71,38 +102,102 @@ function ClaimSuccess() {
     : "—";
 
   async function handleConfirm() {
-    if (!method) return;
+    if (!method || isSubmitting) return;
+    setIsSubmitting(true);
 
-    // Best-effort: persist collection_type for future use (column may not exist yet)
     try {
-      await supabase
+      let activeBatch = batch;
+      if (!activeBatch || !activeBatch.donorEmail) {
+        activeBatch = await loadBatchData();
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      let ngoName =
+        user?.user_metadata?.organization_name ||
+        user?.user_metadata?.name ||
+        "";
+      let ngoAddress = "";
+
+      if (user?.id) {
+        const { data: ngoData, error: ngoErr } = await supabase
+          .from("ngos")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (ngoErr) {
+          console.error("NGO table lookup error:", ngoErr);
+        } else if (ngoData) {
+          ngoName = ngoData.organization_name || ngoData.name || ngoName;
+          ngoAddress = ngoData.address || ngoAddress;
+        }
+      }
+
+      if (!ngoName || ngoName === "Claiming NGO") {
+        ngoName = user?.email ? user.email.split("@")[0] : "Claiming NGO";
+      }
+
+      const verificationPin = Math.floor(1000 + Math.random() * 9000).toString();
+
+      if (!activeBatch?.donorEmail) {
+        console.error("ERROR: Donor email is empty.");
+      } else {
+        await sendClaimNotificationEmail({
+          donorEmail: activeBatch.donorEmail,
+          donorName: activeBatch.donor,
+          ngoName: ngoName,
+          donationDescription: activeBatch.batch_type,
+          collectionDate: deadlineLabel,
+          fulfillmentType: method === "pickup" ? "Pick-up" : "Delivery",
+          pickupAddress: activeBatch.pickupAddress,
+          deliveryAddress: ngoAddress,
+          verificationPin: method === "pickup" ? verificationPin : undefined,
+        });
+      }
+
+      const updatePayload: Record<string, any> = { collection_type: method };
+      if (method === "pickup") {
+        updatePayload.verification_pin = verificationPin;
+      }
+
+      const { error: updateError } = await supabase
         .from("donation_batches")
-        .update({ collection_type: method })
+        .update(updatePayload)
         .eq("id", id);
+
+      if (updateError) {
+        console.error("Error updating batch collection method:", updateError);
+      }
+
+      if (method === "pickup") {
+        // @ts-ignore
+        navigate({
+          to: "/ngo/collection/instructions/$id",
+          params: { id },
+        });
+        return;
+      }
+
+      if (method === "delivery") {
+        navigate({ to: "/ngo/claims" });
+      }
     } catch (err) {
-      console.warn("[handleConfirm] collection_type update failed (column may not exist yet):", err);
+      console.error("Error in handleConfirm:", err);
+    } finally {
+      setIsSubmitting(false);
     }
+  }
 
-    if (method === "pickup") {
-      navigate({
-        to: "/ngo/collection/instructions/$id",
-        params: () => ({ id }),
-      });
-      return;
-    }
-
-    if (method === "delivery") {
-      navigate({ to: "/ngo/claims" });
-    }
+  if (!isClient) {
+    return <div className="min-h-screen bg-background" />;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel="HS" />
+      <AppHeader nav={ngoNav} userLabel={initials} />
 
-      <main className="mx-auto max-w-3xl px-6 py-10">
-
-        {/* Success banner */}
+      <main className="mx-auto max-w-2xl px-6 py-16">
         <div className="mb-8 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 shadow-sm">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-[color:var(--success)]">
             <CheckCircle2 className="h-5 w-5" />
@@ -115,7 +210,6 @@ function ClaimSuccess() {
           </div>
         </div>
 
-        {/* Donation details */}
         <section className="mb-6 rounded-xl border bg-card">
           <div className="border-b px-5 py-4">
             <h2 className="text-sm font-semibold">Donation Details</h2>
@@ -135,14 +229,12 @@ function ClaimSuccess() {
           </div>
         </section>
 
-        {/* Pickup method */}
         <section className="mb-6 rounded-xl border bg-card">
           <div className="border-b px-5 py-4">
             <h2 className="text-sm font-semibold">Collection Method</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">Choose how your organisation will receive this donation.</p>
           </div>
           <div className="grid gap-3 p-5 sm:grid-cols-2">
-            {/* Self-collect */}
             <button
               type="button"
               onClick={() => setMethod("pickup")}
@@ -169,7 +261,6 @@ function ClaimSuccess() {
               </p>
             </button>
 
-            {/* Delivery */}
             <button
               type="button"
               onClick={() => setMethod("delivery")}
@@ -198,7 +289,6 @@ function ClaimSuccess() {
           </div>
         </section>
 
-        {/* Actions */}
         <div className="flex gap-3">
           <Link
             to="/ngo/dashboard"
@@ -208,15 +298,14 @@ function ClaimSuccess() {
           </Link>
           <button
             type="button"
-            disabled={!method}
+            disabled={!method || isSubmitting}
             onClick={handleConfirm}
             className="flex-1 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Confirm →
+            {isSubmitting ? "Processing…" : "Confirm →"}
           </button>
         </div>
-
       </main>
     </div>
   );
-}
+}

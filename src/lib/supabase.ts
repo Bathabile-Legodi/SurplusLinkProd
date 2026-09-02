@@ -1,6 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-const supabaseUrl = 'https://iakeosgtaahderawczya.supabase.co';
-const supabaseAnonKey = 'sb_publishable_uVqlTqpYJINNVed47Jlikw_4_U0u8Rj';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    '[SurplusLink] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set in your .env file.',
+  );
+}
+
+// Re-exported so server-side helpers (supabase-server.ts) can import the
+// validated URL/key without duplicating the env-var lookup.
+export { supabaseUrl, supabaseAnonKey };
+
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);

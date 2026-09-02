@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { sendPushNotification, notifyNGOsOfNewDonation } from "./notifications";
 
 export type DonationItem = {
   id: string;
@@ -74,6 +75,14 @@ function getEarliestExpiry(items: DonationItem[]): Date | null {
   return new Date(Math.min(...expiries.map((date) => date.getTime())));
 }
 
+function getEarliestExpiryDate(items: DonationItem[]): string | null {
+  const expiryDates = items
+    .map((item) => item.expiry?.split("T")[0])
+    .filter((date): date is string => Boolean(date));
+
+  return expiryDates.length > 0 ? expiryDates.sort()[0] : null;
+}
+
 function pruneExpiredRecentDonations(donations: RecentDonation[]): RecentDonation[] {
   const now = new Date();
 
@@ -86,7 +95,16 @@ function pruneExpiredRecentDonations(donations: RecentDonation[]): RecentDonatio
   });
 }
 
-function mapItemRow(row: any): DonationItem {
+interface RawDonationItemRow {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number | string;
+  unit: string;
+  expiry: string;
+}
+
+function mapItemRow(row: RawDonationItemRow): DonationItem {
   return {
     id: row.id,
     name: row.name,
@@ -97,24 +115,34 @@ function mapItemRow(row: any): DonationItem {
   };
 }
 
-function mapBatchRow(row: any): RecentDonation {
+interface RawBatchRow {
+  id: string;
+  display_id?: number;
+  batch_type?: string;
+  submitted_at?: string;
+  status?: string;
+  collection_datetime?: string;
+  donation_items?: RawDonationItemRow[];
+}
+
+export function mapBatchRow(row: RawBatchRow): RecentDonation {
   // display_id is a generated sequence column; fall back to a stable
   // numeric hash of the UUID so formatBatchId never receives undefined.
   const displayId =
     typeof row.display_id === "number"
       ? row.display_id
       : Math.abs(
-          String(row.id)
-            .split("")
-            .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
-        ) % 1000;
+        String(row.id)
+          .split("")
+          .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
+      ) % 1000;
   return {
     id: displayId,
     batchId: row.id,
     category: row.batch_type ?? "Donation",
     time: row.submitted_at ? formatDonationTime(row.submitted_at) : "—",
     status: row.status ?? "Pending",
-    submittedAt: row.submitted_at,
+    submittedAt: row.submitted_at ?? "",
     collectionDateTime: row.collection_datetime,
     items: (row.donation_items ?? []).map(mapItemRow),
   };
@@ -127,7 +155,18 @@ export function loadCurrentBatch(): DonationItem[] {
 
 export function saveCurrentBatch(items: DonationItem[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CURRENT_BATCH_KEY, JSON.stringify(items));
+  const json = JSON.stringify(items);
+  window.localStorage.setItem(CURRENT_BATCH_KEY, json);
+  // Notify other tabs that the in-progress batch changed
+  try {
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: CURRENT_BATCH_KEY,
+      newValue: json,
+      storageArea: window.localStorage,
+    }));
+  } catch {
+    // StorageEvent dispatch is best-effort
+  }
 }
 
 export function clearCurrentBatch() {
@@ -155,6 +194,12 @@ export async function submitDonationBatch(
   collectionDateTime: string,
   submittedAt: string
 ): Promise<RecentDonation> {
+  const earliestExpiryDate = getEarliestExpiryDate(items);
+  const collectionDate = collectionDateTime.split("T")[0];
+  if (earliestExpiryDate && collectionDate > earliestExpiryDate) {
+    throw new Error("The collection date must be on or before the earliest item expiry date.");
+  }
+
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
     throw new Error("You must be signed in to submit a donation.");
@@ -172,7 +217,42 @@ export async function submitDonationBatch(
       : uniqueCategories[0] || "Donation";
   }
 
-  // 3. Perform parent batch insert
+  // Ensure the user has a row in the donors table (satisfies the FK constraint).
+  // This is a no-op for existing donors; it only inserts on first donation.
+  // The DB trigger `handle_new_user` should create this row on signup — this
+  // is a safety-net for accounts created before the trigger existed.
+  const userMeta = userData.user.user_metadata ?? {};
+  const { error: upsertError } = await supabase.from("donors").upsert(
+    {
+      id: userData.user.id,
+      organization_name: userMeta.business_name ?? userMeta.organization_name ?? "Unknown Donor",
+      address: userMeta.address ?? "",
+    },
+    { onConflict: "id" }
+  );
+
+  if (upsertError) {
+    // RLS may block this upsert for users whose donor row was created by the
+    // DB trigger (which runs as SECURITY DEFINER). Check if the row already
+    // exists before treating this as a hard failure.
+    const { data: existingDonor } = await supabase
+      .from("donors")
+      .select("id")
+      .eq("id", userData.user.id)
+      .maybeSingle();
+
+    if (!existingDonor) {
+      // Donor row truly doesn't exist and we can't create it — surface this clearly.
+      console.error("[donations] donors upsert failed and row not found:", upsertError);
+      throw new Error(
+        "Your donor profile could not be found. Please sign out, sign back in, and try again."
+      );
+    }
+    // Row exists — RLS just blocked the upsert write. Safe to continue.
+    console.warn("[donations] donors upsert blocked by RLS (row already exists, continuing):", upsertError.message);
+  }
+
+  // Perform parent batch insert
   const { data: batchRow, error: batchError } = await supabase
     .from("donation_batches")
     .insert({
@@ -186,7 +266,8 @@ export async function submitDonationBatch(
     .single();
 
   if (batchError || !batchRow) {
-    throw batchError ?? new Error("Failed to create donation batch");
+    console.error("[donations] Batch insert error:", batchError);
+    throw new Error("Failed to submit your donation. Please try again.");
   }
 
   // 4. Map and batch save your line items
@@ -204,7 +285,30 @@ export async function submitDonationBatch(
     .insert(itemRows)
     .select();
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    console.error("[donations] Items insert error:", itemsError);
+    throw new Error("Failed to save donation items. Please try again.");
+  }
+
+  // Fire and forget push notification to the donor
+  sendPushNotification({
+    data: {
+      userId: userData.user.id,
+      payload: {
+        title: "Donation Received!",
+        body: `Your batch ${batchRow.batch_type} has been listed. You'll be notified when an NGO claims it.`,
+        url: "/donor/dashboard",
+      },
+    },
+  }).catch((err: any) => console.error("Push failed:", err));
+
+  // Also broadcast to all verified NGOs so they know about the new donation
+  notifyNGOsOfNewDonation({
+    data: {
+      batchType: batchRow.batch_type,
+      batchId: batchRow.id,
+    },
+  }).catch(console.error);
 
   clearCurrentBatch();
   return mapBatchRow({ ...batchRow, donation_items: insertedItems });

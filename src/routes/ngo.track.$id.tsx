@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useEffect, useRef, useState } from "react";
 import { AppHeader, ngoNav } from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
+import { sendPushNotification } from "@/lib/notifications";
 import {
   Package,
   Navigation,
@@ -11,6 +12,7 @@ import {
   AlertCircle,
   Loader2,
   MapPin,
+  FlaskConical,
 } from "lucide-react";
 import {
   getSimulatedDriver,
@@ -19,8 +21,11 @@ import {
   type SimulatedDriver,
 } from "@/lib/delivery-sim";
 import { useDeliveryMap } from "@/lib/useDeliveryMap";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/track/$id")({
+  beforeLoad: () => requireRole("ngo"),
   head: () => ({ meta: [{ title: "Track Delivery — SurplusLink" }] }),
   component: TrackDelivery,
 });
@@ -31,6 +36,9 @@ interface BatchInfo {
   status: string;
   collection_datetime: string | null;
   claimed_at: string | null;
+  // needed for push notifications
+  claimed_by: string | null;
+  donor_id: string | null;
   donor: string;
   pickup: string;
 }
@@ -39,6 +47,7 @@ interface BatchInfo {
 
 function TrackDelivery() {
   const { id } = Route.useParams();
+  const { initials } = useAuth();
 
   const [batch,      setBatch]      = useState<BatchInfo | null>(null);
   const [ngoAddress, setNgoAddress] = useState("");
@@ -83,7 +92,7 @@ function TrackDelivery() {
           }
         }
 
-        // Fetch donation batch details
+        // Fetch donation batch details — include claimed_by and donor_id for push notifications
         const { data, error } = await supabase
           .from("donation_batches")
           .select(`
@@ -92,7 +101,9 @@ function TrackDelivery() {
             status,
             collection_datetime,
             claimed_at,
-            donors (
+            claimed_by,
+            donor_id,
+            donors!donor_id (
               organization_name,
               address
             )
@@ -112,6 +123,8 @@ function TrackDelivery() {
             status: raw.status || "Claimed",
             collection_datetime: raw.collection_datetime,
             claimed_at: raw.claimed_at,
+            claimed_by: raw.claimed_by ?? null,
+            donor_id: raw.donor_id ?? null,
             donor: raw.donors?.organization_name || "Anonymous Donor",
             pickup: raw.donors?.address || "Location not specified",
           });
@@ -178,7 +191,22 @@ function TrackDelivery() {
           .from("donation_batches")
           .update({ status: "In Transit" })
           .eq("id", batch!.id);
-        if (!error) setBatch((b) => (b ? { ...b, status: "In Transit" } : b));
+        if (!error) {
+          setBatch((b) => (b ? { ...b, status: "In Transit" } : b));
+          // Notify NGO that it's on the way
+          if (batch!.claimed_by) {
+            sendPushNotification({
+              data: {
+                userId: batch!.claimed_by,
+                payload: {
+                  title: "Courier En Route",
+                  body: "The driver has picked up the donation and is heading your way.",
+                  url: `/ngo/track/${batch!.id}`,
+                },
+              },
+            }).catch(console.error);
+          }
+        }
       }
 
       if (
@@ -190,7 +218,37 @@ function TrackDelivery() {
           .from("donation_batches")
           .update({ status: "Delivered" })
           .eq("id", batch!.id);
-        if (!error) setBatch((b) => (b ? { ...b, status: "Delivered" } : b));
+        if (!error) {
+          setBatch((b) => (b ? { ...b, status: "Delivered" } : b));
+
+          // Notify NGO that the donation was delivered
+          if (batch!.claimed_by) {
+            sendPushNotification({
+              data: {
+                userId: batch!.claimed_by,
+                payload: {
+                  title: "Donation Delivered",
+                  body: "The courier has arrived with your donation.",
+                  url: `/ngo/track/${batch!.id}`,
+                },
+              },
+            }).catch(console.error);
+          }
+
+          // Notify Donor
+          if (batch!.donor_id) {
+            sendPushNotification({
+              data: {
+                userId: batch!.donor_id,
+                payload: {
+                  title: "Donation Delivered",
+                  body: "Your donation has successfully reached the NGO. Thank you!",
+                  url: "/donor/dashboard",
+                },
+              },
+            }).catch(console.error);
+          }
+        }
       }
     }
     maybeUpdate();
@@ -215,14 +273,13 @@ function TrackDelivery() {
     ? getSimulatedDriver(batch.id)
     : null;
 
-  const userInitials = ngoName ? ngoName.substring(0, 2).toUpperCase() : "NG";
+  // 4) Render -------------------------------------------------------------------
 
-  // ── Render: loading ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={userInitials} />
-        <main className="mx-auto max-w-5xl px-6 py-10">
+        <AppHeader nav={ngoNav} userLabel={initials} />
+        <main className="mx-auto max-w-3xl px-6 py-10">
           <div className="h-5 w-40 rounded bg-muted animate-pulse" />
           <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
             <div className="space-y-3">
@@ -241,8 +298,8 @@ function TrackDelivery() {
   if (notFound || !batch) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={userInitials} />
-        <main className="mx-auto max-w-5xl px-6 py-10 text-center">
+        <AppHeader nav={ngoNav} userLabel={initials} />
+        <main className="mx-auto max-w-3xl px-6 py-10 text-center">
           <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-4 text-sm font-medium">Donation not found</p>
           <Link
@@ -259,7 +316,8 @@ function TrackDelivery() {
   // ── Render: main ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={userInitials} />
+      <AppHeader nav={ngoNav} userLabel={initials} />
+
       <main className="mx-auto max-w-5xl px-6 py-10">
 
         {/* Back link */}
@@ -269,6 +327,16 @@ function TrackDelivery() {
         >
           ← Back to Claims
         </Link>
+
+        {/* ── Simulation disclosure ─────────────────────────────────────── */}
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-200">
+          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            <span className="font-semibold">Simulated tracking — </span>
+            Driver details, progress, and ETA shown here are estimated and not sourced from a
+            live courier system. Coordinate directly with your donor for real-time updates.
+          </p>
+        </div>
 
         {/* Page header */}
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -568,16 +636,17 @@ function DriverCard({ driver }: { driver: SimulatedDriver }) {
 }
 
 function StatusChip({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
   const map: Record<string, string> = {
-    Claimed:      "bg-blue-100 text-blue-700 border-blue-200",
-    "In Transit": "bg-amber-100 text-amber-700 border-amber-200",
-    Delivered:    "bg-emerald-100 text-emerald-700 border-emerald-200",
-    Cancelled:    "bg-red-100 text-red-600 border-red-200",
+    "claimed":      "bg-blue-100 text-blue-700 border-blue-200",
+    "in transit":   "bg-amber-100 text-amber-700 border-amber-200",
+    "delivered":    "bg-emerald-100 text-emerald-700 border-emerald-200",
+    "cancelled":    "bg-red-100 text-red-600 border-red-200",
   };
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-        map[status] ?? "bg-muted text-muted-foreground border-muted"
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
+        map[normalized] ?? "bg-muted text-muted-foreground border-muted"
       }`}
     >
       {status}

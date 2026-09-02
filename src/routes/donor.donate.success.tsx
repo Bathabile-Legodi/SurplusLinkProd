@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader, donorNav } from "@/components/AppHeader";
+import { requireRole } from "@/lib/auth-guard";
+import { useAuth } from "@/hooks/useAuth";
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
 }
 
 export const Route = createFileRoute("/donor/donate/success")({
+  beforeLoad: () => requireRole("donor"),
   validateSearch: (search: Record<string, unknown>): { batchId: number | null } => {
     const parsed = Number(search.batchId);
     return { batchId: Number.isFinite(parsed) ? parsed : null };
@@ -16,10 +19,11 @@ export const Route = createFileRoute("/donor/donate/success")({
 
 function SuccessPage() {
   const { batchId } = Route.useSearch();
+  const { initials } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" />
+      <AppHeader nav={donorNav} userLabel={initials} />
       <main className="mx-auto max-w-2xl px-6 py-16">
 
         {/* Success card */}

@@ -11,8 +11,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Download, FileText } from "lucide-react";
+import { requireRole } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/donor/impact")({
+  beforeLoad: () => requireRole("donor"),
   head: () => ({
     meta: [{ title: "Impact & Records — SurplusLink" }],
   }),
