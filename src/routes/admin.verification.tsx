@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { requireAuth } from "@/lib/auth-guard";
@@ -66,6 +66,12 @@ function AdminVerificationPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-5xl px-6 py-10">
+        <Link
+          to="/"
+          className="mb-6 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          &larr; Back to Home
+        </Link>
         <h1 className="text-2xl font-semibold tracking-tight">NGO Verification Queue</h1>
         <p className="mt-1 text-sm text-muted-foreground">Review and approve pending NGO registrations.</p>
 

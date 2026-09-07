@@ -76,8 +76,8 @@ function UpdatePassword() {
     <main className="page-transition flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm rounded-xl border bg-card p-8 shadow-sm space-y-4">
         <div className="text-center">
-          <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>
-          <h2 className="text-sm font-medium text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight">SurplusLink</h1>
+          <h2 className="text-sm text-muted-foreground mt-1">
             Set Your New Password
           </h2>
         </div>

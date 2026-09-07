@@ -390,6 +390,12 @@ function CreateBatch() {
   return (
     <>
       <main className="mx-auto max-w-3xl px-6 py-10">
+        <Link
+          to="/donor/dashboard"
+          className="mb-6 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          &larr; Back to Dashboard
+        </Link>
         <p className="mt-1 text-sm text-muted-foreground">
           Add individual items to your current batch before submitting.
         </p>

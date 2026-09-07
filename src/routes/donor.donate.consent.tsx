@@ -36,6 +36,12 @@ function ConsentPage() {
     <>
       <div className="flex min-h-screen items-center justify-center bg-foreground/40 px-4 py-10">
         <div className="w-full max-w-lg rounded-xl border bg-card p-8 shadow-xl">
+          <Link
+            to="/donor/dashboard"
+            className="mb-6 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            &larr; Back to Dashboard
+          </Link>
           <div className="mb-6">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">SurplusLink</p>
             <h1 className="mt-1 text-lg font-semibold">Welcome, {displayName}</h1>

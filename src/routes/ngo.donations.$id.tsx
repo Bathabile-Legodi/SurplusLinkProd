@@ -4,6 +4,7 @@ import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type com
 
 import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useGoogleMaps } from "@/hooks/useGoogleMaps";
@@ -310,59 +311,60 @@ function DonationDetail() {
     <>
       {!isChildRoute && (
         <>
-          <main className="mx-auto max-w-3xl px-6 py-10">
-            <Link to="/ngo/explore" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Back to Available Donations
+          <main className="mx-auto max-w-4xl px-6 py-10 w-full flex-1">
+            <Link to="/ngo/explore" className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="m15 18-6-6 6-6"/></svg>
+              Back to Available Donations
             </Link>
 
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <div className="aspect-square rounded-xl border bg-secondary overflow-hidden">
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="aspect-square rounded-3xl glass p-3 shadow-xl shadow-primary/5 overflow-hidden">
                 <img 
                   src={getImageForCategory([batch?.batch_type || "", ...itemCategories])} 
                   alt={batch?.batch_type || "Donation"} 
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover rounded-2xl"
                 />
               </div>
-              <div>
-                <div className="flex items-center justify-between gap-4">
-                  <h1 className="text-xl font-semibold capitalize">{batch?.batch_type}</h1>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 capitalize
-                    ${batch.status.toLowerCase() === "unclaimed" ? "bg-emerald-500/10 text-emerald-600" : ""}
-                    ${batch.status.toLowerCase() === "claimed" ? "bg-blue-500/10 text-blue-600" : ""}
-                    ${batch.status.toLowerCase() === "expired" ? "bg-destructive/10 text-destructive" : ""}
-                  `}>
-                    {batch.status}
-                  </span>
+              
+              <div className="flex flex-col">
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <h1 className="text-3xl font-bold tracking-tight capitalize leading-tight">{batch?.batch_type}</h1>
+                  <div className="mt-1">
+                    <StatusBadge status={batch.status} />
+                  </div>
                 </div>
-                <dl className="mt-4 space-y-2 text-sm">
-                  <Row label="Quantity" value={batch?.quantity} />
-                  <Row label="Expiry Time" value={batch?.collection_datetime || "N/A"} />
-                  <Row label="Donor" value={batch?.donor || "Anonymous Donor"} />
-                  <Row label="Distance" value={distance} />
-                  <Row 
-                    label="Location" 
-                    value={batch?.pickup || "Location not specified"} 
-                    highlight 
-                    href={
-                      batch?.pickup && batch.pickup !== "Location not specified"
-                        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(batch.pickup)}`
-                        : undefined
-                    }
-                  />
-                </dl>
+
+                <div className="rounded-2xl glass p-6 shadow-sm flex-1">
+                  <dl className="space-y-4 text-sm">
+                    <Row label="Quantity" value={batch?.quantity} />
+                    <Row label="Expiry Time" value={batch?.collection_datetime || "N/A"} />
+                    <Row label="Donor" value={batch?.donor || "Anonymous Donor"} />
+                    <Row label="Distance" value={distance} />
+                    <Row 
+                      label="Location" 
+                      value={batch?.pickup || "Location not specified"} 
+                      highlight 
+                      href={
+                        batch?.pickup && batch.pickup !== "Location not specified"
+                          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(batch.pickup)}`
+                          : undefined
+                      }
+                    />
+                  </dl>
+                </div>
               </div>
             </div>
 
-            <section className="mt-8 rounded-xl border bg-card p-5">
-              <h2 className="text-sm font-semibold">About This Donation</h2>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            <section className="mt-8 rounded-3xl glass p-8 shadow-md">
+              <h2 className="text-lg font-bold tracking-tight">About This Donation</h2>
+              <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
                 This donation includes {itemCategories.length > 0 ? itemCategories.join(", ") : batch?.batch_type}. 
                 Donation must be collected before {batch?.collection_datetime} - quality checked and ready for distribution.
               </p>
               {itemCategories.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {itemCategories.map((cat) => (
-                    <span key={cat} className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    <span key={cat} className="inline-flex items-center rounded-lg bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                       {cat}
                     </span>
                   ))}
@@ -374,10 +376,10 @@ function DonationDetail() {
               type="button"
               disabled={batch.status.toLowerCase() === "expired"}
               onClick={() => navigate({ to: `/ngo/donations/${id}/claim` })}
-              className={`mt-6 w-full rounded-md py-3 text-sm font-medium transition-colors ${
+              className={`mt-8 w-full rounded-2xl py-4 text-sm font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-xl ${
                 batch.status.toLowerCase() === "expired" 
-                  ? "bg-muted text-muted-foreground cursor-not-allowed" 
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-muted text-muted-foreground cursor-not-allowed shadow-none hover:shadow-none" 
+                  : "bg-primary text-primary-foreground hover:bg-primary/90 hover:-translate-y-0.5 active:translate-y-0"
               }`}
             >
               {batch.status.toLowerCase() === "expired" ? "Donation Expired" : "Claim Donation"}
@@ -402,15 +404,15 @@ function Row({
   href?: string; 
 }) {
   return (
-    <div className="flex justify-between border-b py-1.5 gap-4">
+    <div className="flex justify-between border-b border-border/40 py-2.5 gap-4">
       <dt className="text-muted-foreground shrink-0">{label}</dt>
-      <dd className={highlight ? "rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-900 truncate max-w-[70%]" : "font-medium text-right truncate max-w-[70%]"}>
+      <dd className={highlight ? "rounded-lg border border-primary/20 bg-primary/5 px-3 py-1 font-semibold text-primary truncate max-w-[70%]" : "font-medium text-foreground text-right truncate max-w-[70%]"}>
         {href ? (
           <a 
             href={href} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="hover:underline hover:text-blue-700 block truncate text-left"
+            className="hover:underline hover:text-primary/80 block truncate text-left"
           >
             {value}
           </a>

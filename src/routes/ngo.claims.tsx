@@ -41,7 +41,7 @@ interface ClaimedBatch {
  */
 function isActive(status: string) {
   const s = status.toLowerCase().replace("-", "_");
-  return s === "claimed" || s === "in_transit";
+  return s === "claimed" || s === "in_transit" || s === "in progress" || s === "in_progress";
 }
 
 /**
@@ -53,18 +53,20 @@ function isCompleted(status: string) {
   return s === "delivered" || s === "cancelled";
 }
 
-function statusMeta(status: string) {
+function statusMeta(status: string, isDelivery: boolean = false) {
   const s = status.toLowerCase().replace("-", "_");
   switch (s) {
     case "claimed":
       return {
-        label: "Awaiting Collection",
+        label: isDelivery ? "Awaiting Delivery" : "Awaiting Collection",
         cls: "bg-blue-50 text-blue-700 border-blue-200",
         icon: <Clock className="h-3 w-3" />,
       };
     case "in_transit":
+    case "in progress":
+    case "in_progress":
       return {
-        label: "In Transit",
+        label: isDelivery ? "In Transit" : "In Progress",
         cls: "bg-amber-50 text-amber-700 border-amber-200",
         icon: <Navigation className="h-3 w-3" />,
       };
@@ -248,9 +250,9 @@ function SectionHeader({
 // ─── Claim card ───────────────────────────────────────────────────────────────
 
 function ClaimCard({ claim, muted }: { claim: ClaimedBatch; muted?: boolean }) {
-  const { label, cls, icon: statusIcon } = statusMeta(claim.status);
   const isPickup = claim.collection_type === "pickup";
   const isDelivery = claim.collection_type === "delivery";
+  const { label, cls, icon: statusIcon } = statusMeta(claim.status, isDelivery);
   const deadline = formatDateTime(claim.collection_datetime);
 
   return (

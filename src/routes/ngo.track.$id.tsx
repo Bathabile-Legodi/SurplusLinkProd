@@ -4,6 +4,7 @@ import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type com
 
 import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { sendPushNotification } from "@/lib/notifications";
 import {
   Package,
@@ -327,44 +328,44 @@ function TrackDelivery() {
         </Link>
 
         {/* ── Simulation disclosure ─────────────────────────────────────── */}
-        <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-200">
-          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" />
+        <div className="mt-4 flex items-start gap-3 rounded-2xl glass border-amber-200/50 px-5 py-4 text-sm text-amber-900 shadow-sm">
+          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <p>
-            <span className="font-semibold">Simulated tracking — </span>
+            <span className="font-bold text-amber-800">Simulated tracking — </span>
             Driver details, progress, and ETA shown here are estimated and not sourced from a
             live courier system. Coordinate directly with your donor for real-time updates.
           </p>
         </div>
 
         {/* Page header */}
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Track Delivery</h1>
-            <p className="text-sm text-muted-foreground capitalize">
+            <h1 className="text-2xl font-bold tracking-tight">Track Delivery</h1>
+            <p className="mt-1 text-sm text-muted-foreground capitalize">
               {batch.batch_type} · Batch #{batch.id.toUpperCase().slice(0, 8)} ·{" "}
-              from {batch.donor}
+              from <span className="font-medium text-foreground">{batch.donor}</span>
             </p>
           </div>
-          <StatusChip status={batch.status} />
+          <StatusBadge status={batch.status} />
         </div>
 
         {/* ETA banner */}
         {phase !== "delivered" ? (
           <div
-            className={`mt-4 flex items-center gap-2.5 rounded-xl border px-4 py-3 ${
+            className={`mt-6 flex items-center gap-3 rounded-2xl px-5 py-4 shadow-sm transition-all ${
               phase === "preparing"
-                ? "border-blue-200 bg-blue-50 text-blue-700"
+                ? "glass border-blue-200/50 text-blue-900"
                 : phase === "nearby"
-                ? "border-orange-200 bg-orange-50 text-orange-700"
-                : "border-amber-200 bg-amber-50 text-amber-700"
+                ? "glass border-orange-200/50 text-orange-900"
+                : "glass border-amber-200/50 text-amber-900"
             }`}
           >
             <Navigation
-              className={`h-4 w-4 shrink-0 ${
-                phase !== "preparing" ? "animate-pulse" : ""
+              className={`h-5 w-5 shrink-0 ${
+                phase !== "preparing" ? "animate-pulse text-amber-600" : "text-blue-600"
               }`}
             />
-            <span className="text-sm font-semibold">
+            <span className="text-sm font-bold tracking-wide">
               {phase === "preparing"
                 ? "Courier is preparing your delivery…"
                 : phase === "nearby"
@@ -372,27 +373,27 @@ function TrackDelivery() {
                 : `En route to your organisation — arriving in ${etaMinutes} min`}
             </span>
             {distanceText && (
-              <span className="ml-auto shrink-0 text-xs opacity-60">
+              <span className="ml-auto shrink-0 text-xs font-semibold opacity-70">
                 {distanceText}
               </span>
             )}
           </div>
         ) : (
-          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span className="text-sm font-semibold">
+          <div className="mt-6 flex items-center gap-3 rounded-2xl glass border-emerald-200/50 px-5 py-4 text-emerald-900 shadow-sm">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+            <span className="text-sm font-bold tracking-wide">
               Delivery complete — thank you!
             </span>
           </div>
         )}
 
         {/* Main 2-column grid */}
-        <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
+        <div className="mt-8 grid gap-8 md:grid-cols-[1fr_1.4fr]">
 
           {/* ── Left column: status rail + driver card ── */}
-          <div className="space-y-4">
-            <div className="rounded-xl border bg-card p-5">
-              <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="space-y-6">
+            <div className="rounded-3xl glass p-6 shadow-sm">
+              <p className="mb-5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Delivery Progress
               </p>
               <DeliveryRail phase={phase} />
@@ -402,12 +403,12 @@ function TrackDelivery() {
           </div>
 
           {/* ── Right column: live map + batch info ── */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Map card */}
-            <div className="overflow-hidden rounded-xl border bg-card">
-              <div className="flex items-center justify-between border-b px-4 py-3">
-                <p className="text-sm font-semibold">Live Delivery Map</p>
-                <span className="text-xs text-muted-foreground">
+            <div className="overflow-hidden rounded-3xl glass shadow-sm">
+              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+                <p className="text-sm font-bold tracking-tight">Live Delivery Map</p>
+                <span className="text-xs font-semibold text-muted-foreground">
                   {!routeReady && !geocodeError && (
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -424,21 +425,21 @@ function TrackDelivery() {
 
               {geocodeError ? (
                 /* Graceful fallback when geocoding fails */
-                <div className="flex h-72 flex-col items-center justify-center gap-3 px-8 text-center">
-                  <AlertCircle className="h-8 w-8 text-muted-foreground/40" />
+                <div className="flex h-[380px] flex-col items-center justify-center gap-4 px-8 text-center bg-white/20">
+                  <AlertCircle className="h-10 w-10 text-muted-foreground/40" />
                   <p className="text-sm font-medium text-muted-foreground">
                     {geocodeError}
                   </p>
-                  <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                  <div className="mt-2 space-y-2 text-xs font-medium text-muted-foreground">
                     {batch.pickup && batch.pickup !== "Location not specified" && (
-                      <p className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-emerald-600" />
+                      <p className="flex items-center justify-center gap-1.5">
+                        <MapPin className="h-4 w-4 text-emerald-600" />
                         Pickup: {batch.pickup}
                       </p>
                     )}
                     {ngoAddress && (
-                      <p className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-blue-600" />
+                      <p className="flex items-center justify-center gap-1.5">
+                        <MapPin className="h-4 w-4 text-blue-600" />
                         Destination: {ngoAddress}
                       </p>
                     )}
@@ -451,7 +452,7 @@ function TrackDelivery() {
             </div>
 
             {/* Batch info table */}
-            <div className="rounded-xl border bg-card p-4 text-sm">
+            <div className="rounded-3xl glass p-6 text-sm shadow-sm">
               <InfoRow label="Batch Type" value={batch.batch_type} />
               <InfoRow label="Donor" value={batch.donor} />
               <InfoRow
@@ -600,32 +601,32 @@ function RailStage({
 
 function DriverCard({ driver }: { driver: SimulatedDriver }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-3xl glass p-6 shadow-sm">
+      <p className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         Your Driver
       </p>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {/* Avatar */}
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary shadow-inner">
           {driver.initials}
         </div>
         <div>
-          <p className="text-sm font-semibold">{driver.name}</p>
-          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Car className="h-3 w-3" />
+          <p className="text-base font-bold tracking-tight">{driver.name}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Car className="h-4 w-4" />
             {driver.vehicle}
           </p>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t pt-3">
-        <div className="flex items-center gap-1">
-          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-          <span className="text-sm font-semibold">{driver.rating.toFixed(1)}</span>
-          <span className="ml-0.5 text-xs text-muted-foreground">rating</span>
+      <div className="mt-5 flex items-center justify-between border-t border-border/40 pt-4">
+        <div className="flex items-center gap-1.5">
+          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+          <span className="text-sm font-bold">{driver.rating.toFixed(1)}</span>
+          <span className="text-xs font-medium text-muted-foreground">rating</span>
         </div>
-        <span className="rounded border bg-muted/50 px-2 py-0.5 font-mono text-xs font-medium tracking-wide">
+        <span className="rounded-lg bg-secondary/80 px-2.5 py-1 font-mono text-xs font-semibold tracking-wider text-foreground">
           {driver.plate}
         </span>
       </div>
@@ -633,24 +634,7 @@ function DriverCard({ driver }: { driver: SimulatedDriver }) {
   );
 }
 
-function StatusChip({ status }: { status: string }) {
-  const normalized = status.toLowerCase();
-  const map: Record<string, string> = {
-    "claimed":      "bg-blue-100 text-blue-700 border-blue-200",
-    "in transit":   "bg-amber-100 text-amber-700 border-amber-200",
-    "delivered":    "bg-emerald-100 text-emerald-700 border-emerald-200",
-    "cancelled":    "bg-red-100 text-red-600 border-red-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
-        map[normalized] ?? "bg-muted text-muted-foreground border-muted"
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
+
 
 function InfoRow({
   label,
@@ -662,19 +646,19 @@ function InfoRow({
   href?: string;
 }) {
   return (
-    <div className="flex justify-between gap-4 border-b py-1.5 last:border-0">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
+    <div className="flex justify-between gap-4 border-b border-border/40 py-2.5 last:border-0">
+      <span className="shrink-0 text-muted-foreground font-medium">{label}</span>
       {href ? (
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="max-w-[60%] truncate text-right font-medium text-primary hover:underline"
+          className="max-w-[60%] truncate text-right font-semibold text-primary hover:underline hover:text-primary/80"
         >
           {value}
         </a>
       ) : (
-        <span className="max-w-[60%] truncate text-right font-medium capitalize">
+        <span className="max-w-[60%] truncate text-right font-semibold text-foreground capitalize">
           {value}
         </span>
       )}

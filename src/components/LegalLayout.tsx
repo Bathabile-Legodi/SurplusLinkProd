@@ -42,12 +42,12 @@ export function LegalLayout({
             Back to Home
           </Link>
 
-          <div className="rounded-3xl glass-lg p-8 sm:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out" style={{boxShadow: '0 20px 60px oklch(0.22 0.18 264 / 0.12), 0 4px 16px oklch(0.22 0.18 264 / 0.06)'}}>
+          <div className="rounded-3xl glass-lg p-8 sm:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out shadow-2xl shadow-primary/20">
             <header className="mb-10 border-b border-border/40 pb-8">
-              <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 {title}
               </h1>
-              <p className="mt-4 text-sm font-medium text-muted-foreground uppercase tracking-widest">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Last Updated: {lastUpdated}
               </p>
             </header>

@@ -187,12 +187,12 @@
   /* ─── Page transition animations ─── */
 
   @keyframes page-enter {
-    from { opacity: 0; transform: translateY(6px); }
+    from { opacity: 0; transform: translateY(2px); }
     to   { opacity: 1; transform: translateY(0);   }
   }
 
   @keyframes sidebar-enter {
-    from { opacity: 0; transform: translateX(-12px); }
+    from { opacity: 0; transform: translateX(-4px); }
     to   { opacity: 1; transform: translateX(0);      }
   }
 
@@ -202,15 +202,15 @@
   }
 
   .page-transition {
-    animation: page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: page-enter 0.1s ease-out both;
   }
 
   .sidebar-transition {
-    animation: sidebar-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: sidebar-enter 0.15s ease-out both;
   }
 
   .layout-transition {
-    animation: layout-fade-in 0.22s ease-out both;
+    animation: layout-fade-in 0.1s ease-out both;
   }
 
   /* ─── Auth Sliding Panel (md breakpoint and up) ─── */

@@ -427,6 +427,10 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
         <div className="pointer-events-none absolute top-0 -left-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/10 blur-[120px] [animation-duration:8s]" />
         <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/7 blur-[150px] [animation-duration:12s]" />
         
+        <Link to="/" className="absolute top-6 left-6 z-50 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground bg-background/50 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-sm">
+          &larr; Back to Home
+        </Link>
+
         <div className="relative w-full max-w-md rounded-3xl glass-lg p-8 shadow-2xl text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -454,13 +458,17 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
       <div className="pointer-events-none absolute top-0 -left-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-primary/10 blur-[120px] [animation-duration:8s]" />
       <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/7 blur-[150px] [animation-duration:12s]" />
 
+      <Link to="/" className="absolute top-6 left-6 z-50 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground bg-background/50 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-sm">
+        &larr; Back to Home
+      </Link>
+
       {/* Mobile Stacked View (<md) */}
       <div className="w-full max-w-md md:hidden space-y-6 z-10 relative">
         {/* Render only the active panel on mobile */}
         {isRightPanelActive ? (
           <div className="rounded-3xl glass-lg p-8">
             <div className="mb-6 flex justify-center"><Logo className="h-10" /></div>
-            <h1 className="text-xl font-bold tracking-tight text-center mb-6">Create Account</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-center mb-2">Create Account</h1>
             
             <div className="mb-4 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm">
               <button type="button" onClick={() => { setRegTab("donor"); setRegStep(1); setErrors({}); setTouched({}); }} className={`rounded-lg py-1.5 font-medium transition-all ${regTab === "donor" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>Donor</button>
@@ -512,7 +520,7 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
         ) : (
           <div className="rounded-3xl glass-lg p-8">
             <div className="mb-6 flex justify-center"><Logo className="h-10" /></div>
-            <h1 className="text-xl font-bold tracking-tight text-center mb-6">Sign In</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-center mb-2">Sign In</h1>
             <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm">
               <button type="button" onClick={() => setLoginTab("donor")} className={`rounded-lg py-1.5 font-medium transition-all ${loginTab === "donor" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>Donor</button>
               <button type="button" onClick={() => setLoginTab("ngo")} className={`rounded-lg py-1.5 font-medium transition-all ${loginTab === "ngo" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>NGO</button>
@@ -551,7 +559,7 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
         {/* Sign In Panel (Left Side of forms) */}
         <div className="auth-form-container auth-sign-in bg-white/40">
           <div className="h-full w-full flex flex-col justify-center px-10 py-8 overflow-y-auto">
-            <h1 className="text-3xl font-bold tracking-tight text-center mb-6">Sign In</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-center mb-2">Sign In</h1>
             <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm max-w-sm mx-auto w-full">
               <button type="button" onClick={() => setLoginTab("donor")} className={`rounded-lg py-1.5 font-medium transition-all ${loginTab === "donor" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>Donor</button>
               <button type="button" onClick={() => setLoginTab("ngo")} className={`rounded-lg py-1.5 font-medium transition-all ${loginTab === "ngo" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>NGO</button>
@@ -585,7 +593,7 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
         {/* Sign Up Panel (Right Side of forms) */}
         <div className="auth-form-container auth-sign-up bg-white/40">
           <div className="h-full w-full flex flex-col justify-center px-10 py-8 overflow-y-auto">
-            <h1 className="text-3xl font-bold tracking-tight text-center mb-6">Create Account</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-center mb-2">Create Account</h1>
             <div className="mb-4 grid grid-cols-2 rounded-xl bg-black/5 p-1 text-sm max-w-sm mx-auto w-full">
               <button type="button" onClick={() => { setRegTab("donor"); setRegStep(1); setErrors({}); setTouched({}); }} className={`rounded-lg py-1.5 font-medium transition-all ${regTab === "donor" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>Donor</button>
               <button type="button" onClick={() => { setRegTab("ngo"); setRegStep(1); setErrors({}); setTouched({}); }} className={`rounded-lg py-1.5 font-medium transition-all ${regTab === "ngo" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}>NGO</button>
@@ -648,8 +656,8 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
             {/* Overlay Panel: Left (Shown when Right Panel is Active i.e. Register mode is active) */}
             <div className="auth-overlay-panel auth-overlay-left px-12">
               <Logo className="h-14 mb-8 filter brightness-0 invert" />
-              <h1 className="text-3xl font-bold mb-4">Already a Member?</h1>
-              <p className="text-sm font-medium mb-8 opacity-75 leading-relaxed max-w-xs mx-auto">
+              <h1 className="text-2xl font-bold tracking-tight mb-2">Already a Member?</h1>
+              <p className="text-sm font-medium mb-8 text-white/75 leading-relaxed max-w-xs mx-auto">
                 Welcome back! Sign in to manage your donations, track your impact, and connect with partners.
               </p>
               <button
@@ -663,8 +671,8 @@ export function AuthPage({ defaultMode = "login" }: { defaultMode?: "login" | "r
             {/* Overlay Panel: Right (Shown when Left Panel is Active i.e. Login mode is active) */}
             <div className="auth-overlay-panel auth-overlay-right px-12">
               <Logo className="h-14 mb-8 filter brightness-0 invert" />
-              <h1 className="text-3xl font-bold mb-4">New to SurplusLink?</h1>
-              <p className="text-sm font-medium mb-8 opacity-75 leading-relaxed max-w-xs mx-auto">
+              <h1 className="text-2xl font-bold tracking-tight mb-2">New to SurplusLink?</h1>
+              <p className="text-sm font-medium mb-8 text-white/75 leading-relaxed max-w-xs mx-auto">
                 Join our network of Donors and NGOs to help redirect surplus food to communities in need.
               </p>
               <button

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { AppHeader } from '@/components/AppHeader'
 import { CommunityWalletForm } from '@/components/CommunityWalletForm'
 import { requireAuth } from '@/lib/auth-guard'
@@ -20,11 +20,17 @@ function CommunityWalletPage() {
         <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-secondary/10 blur-[120px] [animation-duration:10s]" />
 
         <div className="relative z-10 w-full max-w-4xl">
+          <Link
+            to="/"
+            className="mb-8 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            &larr; Back to Home
+          </Link>
           <header className="mb-10 text-center">
-            <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Community Wallet
             </h1>
-            <p className="mt-4 text-sm font-medium text-muted-foreground uppercase tracking-widest">
+            <p className="mt-1 text-sm text-muted-foreground">
               Fund the logistics that rescue the food
             </p>
           </header>

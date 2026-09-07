@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, Filter, ArrowUpDown, Clock, MapPin, Package, Heart } from "lucide-react";
 
 import { ngoSidebarNav } from "@/lib/nav";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -273,162 +274,189 @@ function ExplorePage() {
   });
 
   return (
-    <>
-      <main className="mx-auto flex-1 w-full max-w-7xl px-6 py-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome, {ngoName}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here's surplus food from verified donors near you.
-        </p>
+    <main className="mx-auto max-w-5xl px-6 py-10 w-full flex-1">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Explore Donations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Discover surplus food from verified donors near you.
+          </p>
+        </div>
+      </div>
 
-        <div className="relative mt-6 flex gap-3">
+      <div className="relative mt-8 flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search donations by title, donor or pickup location..."
-            className="flex-1 rounded-md border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full rounded-xl border bg-white/50 px-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
           />
-          <div className="flex gap-2">
-            <div className="relative" ref={sortRef}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSort(!showSort);
-                  setShowFilters(false);
-                }}
-                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showSort || sortBy ? "bg-secondary border-primary/40" : "bg-card"}`}
-              >
-                Sort {sortBy ? `(${sortBy})` : ""}
-              </button>
-
-              {showSort && (
-                <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sort By</label>
-                  <div className="flex flex-col gap-1">
-                    {["Nearest", "Deadline (Soonest)", "Recently Added"].map((sortOption) => (
-                      <button
-                        key={sortOption}
-                        type="button"
-                        onClick={() => setSortBy(sortBy === sortOption ? null : sortOption)}
-                        className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${sortBy === sortOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
-                      >
-                        {sortOption}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="relative" ref={filterRef}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFilters(!showFilters);
-                  setShowSort(false);
-                }}
-                className={`rounded-md border px-4 py-2 text-sm transition-colors hover:bg-secondary ${showFilters || selectedCategory || showExpired ? "bg-secondary border-primary/40" : "bg-card"}`}
-              >
-                Filters {selectedCategory || showExpired ? "(Active)" : ""}
-              </button>
-
-              {showFilters && (
-                <div className="absolute right-0 top-full z-10 mt-2 w-56 rounded-md border bg-popover p-4 shadow-md animate-in fade-in slide-in-from-top-1 duration-150">
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</label>
-                  <div className="flex flex-col gap-1">
-                    {['Produce', 'Bakery', 'Dairy', 'Meat', 'Prepared', 'Beverages', 'Snacks'].map((catOption) => (
-                      <button
-                        key={catOption}
-                        type="button"
-                        onClick={() => setSelectedCategory(selectedCategory === catOption ? null : catOption)}
-                        className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${selectedCategory === catOption ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
-                      >
-                        {catOption}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 border-t pt-3">
-                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Availability</label>
+        </div>
+        <div className="flex gap-2">
+          <div className="relative" ref={sortRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSort(!showSort);
+                setShowFilters(false);
+              }}
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all shadow-sm ${showSort || sortBy ? "bg-primary/5 border-primary/20 text-primary" : "bg-white/50 hover:bg-white"}`}
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              Sort {sortBy ? `(${sortBy})` : ""}
+            </button>
+            {showSort && (
+              <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-xl border glass p-2 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <label className="mb-1 block px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sort By</label>
+                <div className="flex flex-col gap-0.5">
+                  {["Nearest", "Deadline (Soonest)", "Recently Added"].map((sortOption) => (
                     <button
+                      key={sortOption}
                       type="button"
-                      onClick={() => setShowExpired(v => !v)}
-                      className={`w-full rounded px-2 py-1.5 text-left text-xs font-medium transition-colors ${showExpired ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"}`}
+                      onClick={() => setSortBy(sortBy === sortOption ? null : sortOption)}
+                      className={`w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors ${sortBy === sortOption ? "bg-primary text-primary-foreground" : "hover:bg-black/5 text-foreground"}`}
                     >
-                      {showExpired ? "✓ " : ""}Show expired listings
+                      {sortOption}
                     </button>
-                  </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
+
+          <div className="relative" ref={filterRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowFilters(!showFilters);
+                setShowSort(false);
+              }}
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all shadow-sm ${showFilters || selectedCategory || showExpired ? "bg-primary/5 border-primary/20 text-primary" : "bg-white/50 hover:bg-white"}`}
+            >
+              <Filter className="h-4 w-4" />
+              Filters {selectedCategory || showExpired ? "(Active)" : ""}
+            </button>
+            {showFilters && (
+              <div className="absolute right-0 top-full z-10 mt-2 w-56 rounded-xl border glass p-2 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <label className="mb-1 block px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</label>
+                <div className="flex flex-col gap-0.5">
+                  {['Produce', 'Bakery', 'Dairy', 'Meat', 'Prepared', 'Beverages', 'Snacks'].map((catOption) => (
+                    <button
+                      key={catOption}
+                      type="button"
+                      onClick={() => setSelectedCategory(selectedCategory === catOption ? null : catOption)}
+                      className={`w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors ${selectedCategory === catOption ? "bg-primary text-primary-foreground" : "hover:bg-black/5 text-foreground"}`}
+                    >
+                      {catOption}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 border-t pt-2">
+                  <label className="mb-1 block px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Availability</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowExpired(v => !v)}
+                    className={`w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors ${showExpired ? "bg-primary text-primary-foreground" : "hover:bg-black/5 text-foreground"}`}
+                  >
+                    {showExpired ? "✓ " : ""}Show expired listings
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
-        <h2 className="mt-8 mb-3 text-sm font-semibold">
-          {showExpired ? "All Donations" : "Active Donations Near You"} ({sortedDonations.length})
+      <div className="mt-8 flex items-center justify-between border-b pb-4">
+        <h2 className="text-lg font-bold tracking-tight">
+          {showExpired ? "All Donations" : "Active Donations"} 
+          <span className="ml-2 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+            {sortedDonations.length}
+          </span>
         </h2>
+      </div>
 
+      <div className="mt-6">
         {sortedDonations.length === 0 ? (
-          <div className="rounded-xl border border-dashed py-12 text-center text-sm text-muted-foreground">
-            {searchQuery || selectedCategory
-              ? "No donations matching your filters found."
-              : showExpired
-              ? "No donations found."
-              : "No active donations right now. Enable \"Show expired\" in Filters to see past listings."}
+          <div className="rounded-2xl border border-dashed glass py-16 text-center shadow-sm">
+            <Package className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">No donations found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {searchQuery || selectedCategory
+                ? "Try adjusting your search or filters."
+                : showExpired
+                ? "There are no past donations recorded."
+                : "No active donations right now. Check back later or enable \"Show expired\"."}
+            </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
             {sortedDonations.map((d) => (
               <Link
                 key={d.id}
                 to="/ngo/donations/$id"
                 params={{ id: d.id }}
-                className="rounded-xl border bg-card p-5 transition hover:shadow-sm block"
+                className="group relative flex flex-col rounded-2xl glass p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
               >
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold capitalize text-foreground">{d.title}</h3>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h3 className="font-bold text-lg leading-tight capitalize text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                    {d.title}
+                  </h3>
                   {(() => {
                     const isExpired = d.collection_datetime
                       ? new Date(d.collection_datetime) < now
                       : false;
                     return isExpired ? (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-neutral-100 text-neutral-500 border border-neutral-200 capitalize">
+                      <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-neutral-100 text-neutral-500">
                         Expired
                       </span>
                     ) : (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-600 capitalize">
-                        {d.status}
-                      </span>
+                      <StatusBadge status={d.status} />
                     );
                   })()}
                 </div>
                 
-                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Quantity</span>
-                    <span className="text-foreground font-medium">{d.quantity}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-0.5">
-                    <span>Pickup at</span>
-                    <span className="rounded-md border border-blue-100 bg-blue-50/50 px-2 py-0.5 font-semibold text-blue-900 max-w-[70%] truncate block">
-                      {d.pickup}
+                <div className="flex-1 space-y-2.5 text-sm text-muted-foreground mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Package className="h-4 w-4 shrink-0 text-primary/60" />
+                      Quantity
                     </span>
+                    <span className="font-medium text-foreground text-right">{d.quantity}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Donor</span>
-                    <span className="text-foreground font-medium">{d.donor}</span>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 shrink-0 text-primary/60" />
+                      Pickup at
+                    </span>
+                    <span className="truncate max-w-[50%] text-right font-medium text-foreground">{d.pickup}</span>
                   </div>
-                  <div className="flex justify-between">
+                </div>
+
+                <div className="mt-4 flex flex-col gap-2.5 border-t border-border/40 pt-4 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Heart className="h-4 w-4 shrink-0 text-primary/60" />
+                      Donor
+                    </span>
+                    <span className="truncate max-w-[50%] font-medium text-foreground text-right">{d.donor}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span>Distance</span>
-                    <span className="font-semibold text-foreground">
+                    <div className="shrink-0 rounded-md bg-secondary px-2.5 py-1 text-xs font-semibold text-foreground">
                       {distancesMap[d.id] || "Calculating..."}
-                    </span>
+                    </div>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
         )}
-      </main>
-    </>
+      </div>
+    </main>
   );
 }
