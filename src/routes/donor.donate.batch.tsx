@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { AppHeader, donorNav } from "@/components/AppHeader";
+import { AppHeader, donorNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { donorSidebarNav } from "@/lib/nav";
 import { DatePicker } from "@/components/ScrollPicker";
 import { Field } from "@/components/Field";
 import {loadCurrentBatch, makeItemId, saveCurrentBatch, type DonationItem } from "@/lib/donations";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 
 interface BatchItem extends DonationItem {
@@ -300,7 +302,7 @@ function BatchItemRow({
 }
 
 export const Route = createFileRoute("/donor/donate/batch")({
-  beforeLoad: () => requireRole("donor"),
+  
   head: () => ({ meta: [{ title: "Create Donation Batch — SurplusLink" }] }),
   component: CreateBatch,
 });
@@ -386,9 +388,7 @@ function CreateBatch() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel={initials} />
-
+    <>
       <main className="mx-auto max-w-3xl px-6 py-10">
         <p className="mt-1 text-sm text-muted-foreground">
           Add individual items to your current batch before submitting.
@@ -478,6 +478,6 @@ function CreateBatch() {
           </button>
         </div>
       </main>
-    </div>
+    </>
   );
 }

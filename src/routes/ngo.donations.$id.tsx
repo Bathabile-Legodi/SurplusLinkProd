@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate, Outlet, useLocation } from "@tanstack/react-router";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useGoogleMaps } from "@/hooks/useGoogleMaps";
 
@@ -30,7 +32,7 @@ function getImageForCategory(typeOrCategories: string | string[]) {
 } 
 
 export const Route = createFileRoute("/ngo/donations/$id")({
-  beforeLoad: () => requireRole("ngo"),
+  
   head: () => ({ meta: [{ title: "Donation Details — SurplusLink" }] }),
   component: DonationDetail,
 });
@@ -283,34 +285,31 @@ function DonationDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={initials} />
-        <main className="mx-auto max-w-3xl px-6 py-10 text-sm text-muted-foreground">
+      <>
+        <main className="mx-auto max-w-4xl px-6 py-10 text-sm text-muted-foreground">
           Loading donation details...
         </main>
-      </div>
+      </>
     );
   }
 
   if (!batch) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={initials} />
-        <main className="mx-auto max-w-3xl px-6 py-10 text-sm text-muted-foreground">
+      <>
+        <main className="mx-auto max-w-4xl px-6 py-10 text-center text-muted-foreground">
           Donation batch not found.
           <div className="mt-4">
             <Link to="/ngo/explore" className="text-primary hover:underline">← Back to Explore</Link>
           </div>
         </main>
-      </div>
+      </>
     );
   }
 
   return (
     <>
       {!isChildRoute && (
-        <div className="min-h-screen bg-background">
-          <AppHeader nav={ngoNav} userLabel={initials} />
+        <>
           <main className="mx-auto max-w-3xl px-6 py-10">
             <Link to="/ngo/explore" className="text-sm text-muted-foreground hover:text-foreground">
               ← Back to Available Donations
@@ -384,7 +383,7 @@ function DonationDetail() {
               {batch.status.toLowerCase() === "expired" ? "Donation Expired" : "Claim Donation"}
             </button>
           </main>
-        </div>
+        </>
       )}
       <Outlet />
     </>

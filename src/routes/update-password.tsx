@@ -73,7 +73,7 @@ function UpdatePassword() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <main className="page-transition flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm rounded-xl border bg-card p-8 shadow-sm space-y-4">
         <div className="text-center">
           <h1 className="text-xl font-semibold tracking-tight">SurplusLink</h1>

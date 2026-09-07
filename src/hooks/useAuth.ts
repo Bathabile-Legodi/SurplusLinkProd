@@ -114,7 +114,7 @@ export function useAuth(requiredRole?: "donor" | "ngo") {
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
       // Force navigation
-      window.location.href = "/login";
+      router.navigate({ to: "/login" });
     }
   }, [router]);
 

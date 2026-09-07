@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AppHeader, donorNav } from "@/components/AppHeader";
+import { AppHeader, donorNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { donorSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
 import {
   Package,
@@ -10,11 +12,11 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/history")({
-  beforeLoad: () => requireRole("donor"),
+  
   head: () => ({ meta: [{ title: "Donation History — SurplusLink" }] }),
   component: DonorHistory,
 });
@@ -86,7 +88,10 @@ function DonationRow({ d }: { d: DBBatch }) {
   const formattedId = d.display_id ? formatBatchId(d.display_id) : formatBatchId(d.id);
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden transition-shadow hover:shadow-sm">
+    <div 
+      className="glass rounded-3xl overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 mb-4"
+      style={{ boxShadow: "0 8px 32px oklch(0.18 0.16 264 / 0.05)" }}
+    >
       {/* Header row */}
       <button
         type="button"
@@ -127,7 +132,7 @@ function DonationRow({ d }: { d: DBBatch }) {
 
       {/* Expanded detail panel */}
       {expanded && (
-        <div className="border-t bg-secondary/40 px-5 py-4 space-y-4">
+        <div className="border-t border-border/30 bg-secondary/20 px-6 py-5 space-y-5">
           {/* Meta grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Meta label="Batch ID" value={formattedId} />
@@ -139,10 +144,10 @@ function DonationRow({ d }: { d: DBBatch }) {
           {/* Items table */}
           {d.donation_items && d.donation_items.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Items in batch
               </p>
-              <div className="overflow-hidden rounded-lg border bg-card">
+              <div className="overflow-hidden rounded-2xl glass shadow-sm" style={{ boxShadow: "0 4px 16px oklch(0.18 0.16 264 / 0.05)" }}>
                 <table className="w-full text-sm">
                   <thead className="bg-secondary">
                     <tr>
@@ -154,8 +159,8 @@ function DonationRow({ d }: { d: DBBatch }) {
                   </thead>
                   <tbody className="divide-y">
                     {d.donation_items.map((item) => (
-                      <tr key={item.id} className="hover:bg-secondary/50">
-                        <td className="px-4 py-2 font-medium">{item.name}</td>
+                      <tr key={item.id} className="transition-colors hover:bg-muted/50">
+                        <td className="px-4 py-3 font-medium">{item.name}</td>
                         <td className="px-4 py-2">
                           <div className="flex flex-wrap gap-1">
                             {item.category.split(", ").map((c) => (
@@ -313,74 +318,80 @@ function DonorHistory() {
   const pending = donations.filter((d) => d.status === "Pending").length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel={initials} />
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Donation History</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            A complete record of every batch you've submitted.
-          </p>
-        </div>
+    <>
+      <div className="relative min-h-[calc(100vh-56px)] overflow-hidden page-transition">
+        {/* Background blobs */}
+        <div className="pointer-events-none absolute -top-1/4 left-0 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/5 blur-[150px] [animation-duration:15s]" />
+        <div className="pointer-events-none absolute bottom-0 -right-1/4 h-[500px] w-[500px] animate-pulse rounded-full bg-secondary/5 blur-[120px] [animation-duration:10s]" />
 
-        {/* Summary cards */}
-        <div className="mb-6 grid grid-cols-3 gap-4">
-          <div className="rounded-xl border bg-card p-4 text-center">
-            <p className="text-2xl font-bold">{total}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground uppercase tracking-wide">Total Batches</p>
+        <main className="relative mx-auto max-w-4xl px-6 py-10 z-10">
+          <div className="mb-10">
+            <h1 className="text-3xl font-black tracking-tight text-foreground">
+              Donation Records
+            </h1>
+            <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest">
+              Review your past contributions and their current status
+            </p>
           </div>
-          <div className="rounded-xl border bg-card p-4 text-center">
-            <p className="text-2xl font-bold text-emerald-600">{delivered}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground uppercase tracking-wide">Delivered</p>
-          </div>
-          <div className="rounded-xl border bg-card p-4 text-center">
-            <p className="text-2xl font-bold text-amber-600">{pending}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground uppercase tracking-wide">Pending</p>
-          </div>
-        </div>
 
-        {/* Search + filter bar */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by item name, category…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-md border bg-card pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="flex gap-1 flex-wrap">
-              {STATUS_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    statusFilter === s
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+          {/* Summary cards */}
+          <div className="mb-8 grid grid-cols-3 gap-4">
+            <div className="glass rounded-3xl p-6 text-center shadow-sm hover:-translate-y-1 transition-all" style={{ boxShadow: "0 4px 16px oklch(0.18 0.16 264 / 0.05)" }}>
+              <p className="text-3xl font-black">{total}</p>
+              <p className="mt-2 text-xs text-muted-foreground uppercase tracking-widest font-bold">Total Batches</p>
+            </div>
+            <div className="glass rounded-3xl p-6 text-center shadow-sm hover:-translate-y-1 transition-all" style={{ boxShadow: "0 4px 16px oklch(0.18 0.16 264 / 0.05)" }}>
+              <p className="text-3xl font-black text-emerald-600">{delivered}</p>
+              <p className="mt-2 text-xs text-muted-foreground uppercase tracking-widest font-bold">Delivered</p>
+            </div>
+            <div className="glass rounded-3xl p-6 text-center shadow-sm hover:-translate-y-1 transition-all" style={{ boxShadow: "0 4px 16px oklch(0.18 0.16 264 / 0.05)" }}>
+              <p className="text-3xl font-black text-amber-600">{pending}</p>
+              <p className="mt-2 text-xs text-muted-foreground uppercase tracking-widest font-bold">Pending</p>
             </div>
           </div>
-        </div>
+
+          {/* Search + filter bar */}
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass rounded-3xl p-6" style={{ boxShadow: "0 8px 32px oklch(0.18 0.16 264 / 0.05)" }}>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search batches or items..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-2xl border bg-background/50 pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary backdrop-blur-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex gap-1 flex-wrap">
+                {STATUS_OPTIONS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all ${
+                      statusFilter === s
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-background/50 border border-border/50 text-muted-foreground hover:text-foreground backdrop-blur-sm hover:bg-background"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
         {/* List */}
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 rounded-xl border bg-card animate-pulse" />
+              <div key={i} className="h-24 rounded-3xl glass animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-xl border bg-card py-16 text-center">
+          <div className="rounded-3xl glass py-20 text-center shadow-sm">
             <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
             <p className="mt-3 text-sm font-medium">No donations found</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -390,13 +401,14 @@ function DonorHistory() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filtered.map((d) => (
               <DonationRow key={d.id} d={d} />
             ))}
           </div>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 }

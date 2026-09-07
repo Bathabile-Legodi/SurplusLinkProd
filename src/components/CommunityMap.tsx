@@ -67,7 +67,7 @@ function MapBoundsFitter({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
     if (points.length > 0) {
-      map.fitBounds(points, { padding: [50, 50] });
+      map.fitBounds(points, { padding: [50, 50], maxZoom: 13 });
     }
   }, [map, points]);
   return null;
@@ -166,19 +166,28 @@ export default function CommunityMap({ loggedInDonorId, donorAddress }: Communit
         style={{ height: '100%', width: '100%', zIndex: 0 }}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          // @ts-ignore
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
-        <Marker position={donorLocation} icon={donorIcon}>
+        <Marker position={donorLocation} icon={donorIcon} zIndexOffset={1000}>
           <Popup>Your Hub</Popup>
         </Marker>
 
       <MapBoundsFitter points={[donorLocation, ...validNgos.map(ngo => [Number(ngo.ngo_latitude), Number(ngo.ngo_longitude)] as [number, number])]} />
 
       {validNgos.map((ngo, index) => {
-        const ngoPosition: [number, number] = [Number(ngo.ngo_latitude), Number(ngo.ngo_longitude)];
+        let ngoLat = Number(ngo.ngo_latitude);
+        let ngoLng = Number(ngo.ngo_longitude);
+        
+        // If the NGO and Donor are at the exact same coordinates, 
+        // add a tiny offset (~15 meters) so both markers are visible
+        if (Math.abs(ngoLat - donorLocation[0]) < 0.0001 && Math.abs(ngoLng - donorLocation[1]) < 0.0001) {
+          ngoLat += 0.00015;
+          ngoLng += 0.00015;
+        }
+        
+        const ngoPosition: [number, number] = [ngoLat, ngoLng];
         
         return (
           <React.Fragment key={index}>

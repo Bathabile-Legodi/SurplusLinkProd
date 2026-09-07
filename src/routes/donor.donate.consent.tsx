@@ -1,12 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
 import { loadCurrentBatch, clearCurrentBatch } from "@/lib/donations";
 
 export const Route = createFileRoute("/donor/donate/consent")({
-  beforeLoad: () => requireRole("donor"),
-  head: () => ({ meta: [{ title: "Donation Consent — SurplusLink" }] }),
+    head: () => ({ meta: [{ title: "Donation Consent — SurplusLink" }] }),
   component: ConsentPage,
 });
 

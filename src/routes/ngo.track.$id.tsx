@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useEffect, useRef, useState } from "react";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
 import { sendPushNotification } from "@/lib/notifications";
 import {
@@ -21,11 +23,11 @@ import {
   type SimulatedDriver,
 } from "@/lib/delivery-sim";
 import { useDeliveryMap } from "@/lib/useDeliveryMap";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/track/$id")({
-  beforeLoad: () => requireRole("ngo"),
+  
   head: () => ({ meta: [{ title: "Track Delivery — SurplusLink" }] }),
   component: TrackDelivery,
 });
@@ -277,8 +279,7 @@ function TrackDelivery() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={initials} />
+      <>
         <main className="mx-auto max-w-3xl px-6 py-10">
           <div className="h-5 w-40 rounded bg-muted animate-pulse" />
           <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
@@ -290,15 +291,14 @@ function TrackDelivery() {
             <div className="h-96 rounded-xl border bg-card animate-pulse" />
           </div>
         </main>
-      </div>
+      </>
     );
   }
 
   // ── Render: not found ──────────────────────────────────────────────────────
   if (notFound || !batch) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={initials} />
+      <>
         <main className="mx-auto max-w-3xl px-6 py-10 text-center">
           <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-4 text-sm font-medium">Donation not found</p>
@@ -309,15 +309,13 @@ function TrackDelivery() {
             ← Back to Claims
           </Link>
         </main>
-      </div>
+      </>
     );
   }
 
   // ── Render: main ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={initials} />
-
+    <>
       <main className="mx-auto max-w-5xl px-6 py-10">
 
         {/* Back link */}
@@ -493,7 +491,7 @@ function TrackDelivery() {
           </div>
         </div>
       </main>
-    </div>
+    </>
   );
 }
 

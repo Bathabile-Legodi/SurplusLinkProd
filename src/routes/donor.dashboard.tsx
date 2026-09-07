@@ -1,11 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AppHeader, donorNav } from "@/components/AppHeader";
+
+
+import { LayoutDashboard, History, BarChart2, Network, Wallet } from "lucide-react";
 import { mapBatchRow, type RecentDonation } from "@/lib/donations";
-import { requireRole } from "@/lib/auth-guard";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { StatusBadge } from "@/components/ui/status-badge";
+
+
 
 function formatBatchId(id: number) {
   return `#${id.toString().padStart(3, "0")}`;
@@ -55,7 +60,7 @@ export const donorDashboardQueryOptions = queryOptions({
 });
 
 export const Route = createFileRoute("/donor/dashboard")({
-  beforeLoad: () => requireRole("donor"),
+  
   head: () => ({
     meta: [{ title: "Donor Dashboard — SurplusLink" }],
   }),
@@ -66,14 +71,18 @@ export const Route = createFileRoute("/donor/dashboard")({
 function DonorDashboard() {
   const { data: { displayName, recent } } = useSuspenseQuery(donorDashboardQueryOptions);
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel={displayName.slice(0, 2).toUpperCase()} />
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        {/* Welcome Section */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <>
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        {/* Greeting */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome, {displayName}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {greeting}, {displayName} 👋
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Thank you for helping fight food waste in your community.
             </p>
@@ -166,24 +175,8 @@ function DonorDashboard() {
             </table>
           </div>
         </section>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }
-
-function StatusBadge({ status }: { status: string }) {
-  const normalized = status.toLowerCase();
-  const tone =
-    normalized === "claimed"
-      ? "bg-warning/20 text-warning-foreground"
-      : normalized === "delivered"
-        ? "bg-success/15 text-[color:var(--success)]"
-        : "bg-secondary text-muted-foreground";
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tone}`}
-    >
-      {status}
-    </span>
-  );
-}
+

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { AppHeader, ngoNav } from '@/components/AppHeader'
+
+import { ngoSidebarNav } from '@/lib/nav'
 import { useNgoVerification } from '@/hooks/useNgoVerification'
 import { UploadCloud, CheckCircle, FileText, Clock, Check } from 'lucide-react'
 
@@ -79,9 +80,7 @@ function NgoVerification() {
   ]
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={ngoNav} userLabel={initials} />
-      
+    <>
       <main className="flex-1 w-full flex items-center justify-center p-6">
         <div className="w-full max-w-xl">
           
@@ -217,6 +216,6 @@ function NgoVerification() {
           </div>
         </div>
       </main>
-    </div>
+    </>
   )
 }

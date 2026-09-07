@@ -2,10 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { sendPushNotification } from "@/lib/notifications";
-import { requireRole } from "@/lib/auth-guard";
+
 
 export const Route = createFileRoute("/ngo/donations/$id/claim")({
-  beforeLoad: () => requireRole("ngo"),
+  
   head: () => ({ meta: [{ title: "Processing Claim — SurplusLink" }] }),
   component: ClaimProcessing,
 });

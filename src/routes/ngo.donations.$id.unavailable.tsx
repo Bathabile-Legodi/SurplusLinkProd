@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { requireRole } from "@/lib/auth-guard";
+import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { ngoSidebarNav } from "@/lib/nav";
+
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/donations/$id/unavailable")({
-  beforeLoad: () => requireRole("ngo"),
+  
   head: () => ({ meta: [{ title: "Donation Unavailable — SurplusLink" }] }),
   component: Unavailable,
 });
@@ -12,8 +14,7 @@ export const Route = createFileRoute("/ngo/donations/$id/unavailable")({
 function Unavailable() {
   const { initials } = useAuth();
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={initials} />
+    <>
       <main className="mx-auto max-w-md px-6 py-16 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/15">
           <span className="text-2xl text-destructive">✕</span>
@@ -29,6 +30,6 @@ function Unavailable() {
           Back to Donations List
         </Link>
       </main>
-    </div>
+    </>
   );
 }

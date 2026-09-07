@@ -173,7 +173,7 @@ function Hero() {
             <h1 className="text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
               Connecting<br />
               Excess to<br />
-              <span className="italic font-serif text-primary">Impact.</span>
+              <span className="italic text-primary">Impact.</span>
             </h1>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-neutral-600">
               SurplusLink is the instant communication channel that bridges the gap between food
@@ -231,6 +231,8 @@ function ImageCarousel() {
           src={images[idx]}
           alt={`SurplusLink food rescue — image ${idx + 1} of ${images.length}`}
           className="h-full w-full object-cover transition-opacity duration-500"
+          loading="lazy"
+          decoding="async"
         />
         <div className="absolute left-4 bottom-4 rounded-xl glass px-3 py-2 text-sm text-white border-white/20">
           <span className="font-semibold">SurplusLink</span>
@@ -426,7 +428,7 @@ function CTA() {
       <div className="relative mx-auto max-w-7xl px-6 py-24 text-center">
         <h2 className="mx-auto max-w-3xl text-4xl font-black leading-tight tracking-tight text-white md:text-6xl">
           The next meal is already on the shelf.{" "}
-          <span className="italic font-serif text-primary-foreground/70">Don't let it expire.</span>
+          <span className="italic text-primary-foreground/70">Don't let it expire.</span>
         </h2>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
@@ -484,7 +486,7 @@ function CommunityWallet() {
           </p>
         </div>
 
-        <div className="mx-auto max-w-4xl rounded-3xl glass-lg overflow-hidden" style={{boxShadow: '0 20px 60px oklch(0.18 0.16 264 / 0.12), 0 4px 16px oklch(0.18 0.16 264 / 0.07)'}}>
+        <div className="mx-auto max-w-4xl rounded-3xl glass-lg shadow-2xl shadow-primary/20 overflow-hidden">
           <div className="grid md:grid-cols-2">
             {/* Left — perks */}
             <div className="p-10 md:p-12">
@@ -649,7 +651,7 @@ function FooterCol({
 
 function Landing() {
   return (
-    <main className="min-h-screen scroll-smooth bg-background text-foreground antialiased">
+    <main className="page-transition min-h-screen scroll-smooth bg-background text-foreground antialiased">
       <Nav />
       <Hero />
       <Stats />

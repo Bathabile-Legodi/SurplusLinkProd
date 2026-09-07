@@ -6,14 +6,16 @@ import {
   MapPin,
   Check,
 } from "lucide-react";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 import { sendClaimNotificationEmail } from "@/lib/email";
 
 export const Route = createFileRoute("/ngo/donations/$id/success")({
-  beforeLoad: () => requireRole("ngo"),
+  
   head: () => ({
     meta: [{ title: "Donation Claimed — SurplusLink" }],
   }),
@@ -190,13 +192,11 @@ function ClaimSuccess() {
   }
 
   if (!isClient) {
-    return <div className="min-h-screen bg-background" />;
+    return <><div /></>;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={ngoNav} userLabel={initials} />
-
+    <>
       <main className="mx-auto max-w-2xl px-6 py-16">
         <div className="mb-8 flex items-center gap-4 rounded-xl border bg-card px-5 py-4 shadow-sm">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-[color:var(--success)]">
@@ -306,6 +306,6 @@ function ClaimSuccess() {
           </button>
         </div>
       </main>
-    </div>
+    </>
   );
 }

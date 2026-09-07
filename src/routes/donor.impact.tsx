@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { AppHeader, donorNav } from "@/components/AppHeader";
+import { AppHeader, donorNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { donorSidebarNav } from "@/lib/nav";
 import {
   BarChart,
   Bar,
@@ -10,11 +12,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Download, FileText } from "lucide-react";
-import { requireRole } from "@/lib/auth-guard";
+import { Download, FileText, Package, Banknote, Leaf, ArrowUpRight } from "lucide-react";
+
 
 export const Route = createFileRoute("/donor/impact")({
-  beforeLoad: () => requireRole("donor"),
+  
   head: () => ({
     meta: [{ title: "Impact & Records — SurplusLink" }],
   }),
@@ -67,50 +69,57 @@ function DonorImpact() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} />
+    <>
+      <div className="relative min-h-[calc(100vh-56px)] overflow-hidden page-transition">
+        {/* Background blobs */}
+        <div className="pointer-events-none absolute -top-1/4 -right-1/4 h-[600px] w-[600px] animate-pulse rounded-full bg-primary/5 blur-[150px] [animation-duration:15s]" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-[500px] w-[500px] animate-pulse rounded-full bg-secondary/5 blur-[120px] [animation-duration:10s]" />
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        {/* Page Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Impact & Records
-          </h1>
+        <main className="relative mx-auto max-w-7xl px-6 py-10 z-10">
+          {/* Page Header */}
+          <div className="mb-12">
+            <h1 className="text-3xl font-black tracking-tight text-foreground">
+              Impact & Records
+            </h1>
+            <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest">
+              Monitor your community impact and access compliance documentation.
+            </p>
+          </div>
 
-          <p className="mt-2 text-muted-foreground">
-            Monitor your community impact and access compliance documentation.
-          </p>
-        </div>
-
+          {/* Hero Metrics */}
         {/* Hero Metrics */}
-        {/* Hero Metrics */}
-<div className="mb-10 grid gap-6 md:grid-cols-3">
-  <MetricCard
-    title="Food Batches Donated"
-    value="1,250 batches"
-    trend="+15% this month"
-  />
+          <div className="mb-12 grid gap-6 md:grid-cols-3">
+            <MetricCard
+              title="Food Batches Donated"
+              value="1,250"
+              subtitle="batches"
+              trend="+15% this month"
+              icon={<Package className="h-5 w-5" />}
+            />
 
-  <MetricCard
-    title="Total Donation Value"
-    value="R195,000"
-    trend="+12% this month"
-  />
+            <MetricCard
+              title="Total Donation Value"
+              value="R195,000"
+              trend="+12% this month"
+              icon={<Banknote className="h-5 w-5" />}
+            />
 
-  <MetricCard
-    title="Estimated CO₂ Offset"
-    value="16.8 tonnes"
-    trend="+8% this month"
-  />
-</div>
+            <MetricCard
+              title="Estimated CO₂ Offset"
+              value="16.8"
+              subtitle="tonnes"
+              trend="+8% this month"
+              icon={<Leaf className="h-5 w-5" />}
+            />
+          </div>
 
-        {/* Donation Value Chart */}
-        <div className="mb-10 rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="mb-6 text-lg font-semibold">
-            Donation Value (Last 6 Months)
-          </h2>
+          {/* Donation Value Chart */}
+          <div className="mb-12 glass rounded-3xl p-8 shadow-sm" style={{ boxShadow: "0 8px 32px oklch(0.18 0.16 264 / 0.05)" }}>
+            <h2 className="mb-8 text-lg font-bold text-foreground">
+              Donation Value (Last 6 Months)
+            </h2>
 
-          <div className="h-[300px] w-full">
+            <div className="h-[320px] w-full">
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -190,18 +199,17 @@ function DonorImpact() {
           </div>
         </div>
 
-        {/* Compliance Center */}
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Compliance Center</h2>
+          {/* Compliance Center */}
+          <section>
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">Compliance Center</h2>
+              <button className="text-xs font-bold uppercase tracking-wider text-primary hover:text-primary/80 transition-colors">
+                View All →
+              </button>
+            </div>
 
-            <button className="text-sm font-medium text-primary hover:underline">
-              View All
-            </button>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-            <table className="w-full text-sm">
+            <div className="overflow-hidden rounded-3xl glass shadow-sm" style={{ boxShadow: "0 8px 32px oklch(0.18 0.16 264 / 0.05)" }}>
+              <table className="w-full text-sm">
               <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-6 py-4 text-left font-medium">
@@ -264,37 +272,62 @@ function DonorImpact() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </>
   );
 }
 
 function MetricCard({
   title,
   value,
+  subtitle,
   trend,
+  icon,
 }: {
   title: string;
   value: string;
+  subtitle?: string;
   trend: string;
+  icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
-      <p className="text-sm font-medium text-muted-foreground">
-        {title}
-      </p>
+    <div 
+      className="glass rounded-3xl p-8 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
+      style={{ boxShadow: "0 8px 32px oklch(0.18 0.16 264 / 0.05)" }}
+    >
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </p>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground border border-border/50">
+          {icon}
+        </div>
+      </div>
 
-      <p className="mt-3 text-4xl font-bold tracking-tight">
-        {value}
-      </p>
+      <div className="flex items-baseline gap-2">
+        <p className="text-4xl font-black tracking-tight text-foreground">
+          {value}
+        </p>
+        {subtitle && (
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+            {subtitle}
+          </p>
+        )}
+      </div>
 
-      <p className="mt-2 text-sm font-medium text-emerald-600">
-        {trend}
-      </p>
+      <div className="mt-4 flex items-center gap-1.5">
+        <div className="flex items-center justify-center rounded-full bg-emerald-500/10 p-1 text-emerald-600">
+          <ArrowUpRight className="h-3 w-3" />
+        </div>
+        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">
+          {trend}
+        </p>
+      </div>
     </div>
   );
 }

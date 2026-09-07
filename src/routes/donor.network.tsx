@@ -1,15 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppHeader, donorNav } from "@/components/AppHeader";
+import { AppHeader, donorNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { donorSidebarNav } from "@/lib/nav";
 import { useEffect, useState } from "react";
 import { MapPin, ChevronRight, X, HeartHandshake, Loader2 } from "lucide-react";
 import CommunityMap from "@/components/CommunityMap";
 import { supabase } from "@/lib/supabase";
 import { useGoogleMaps, getBatchDrivingDistances, parseDistance } from "@/lib/distance";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/donor/network")({
-  beforeLoad: () => requireRole("donor"),
+  
   head: () => ({
     meta: [{ title: "Community Network — Developing digital projects" }],
   }),
@@ -242,8 +244,7 @@ function DonorNetwork() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={donorNav} userLabel={initials} />
+    <>
       <main className="mx-auto flex-1 w-full max-w-7xl px-6 py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Community Network</h1>
@@ -404,6 +405,6 @@ function DonorNetwork() {
           </div>
         </div>
       </main>
-    </div>
+    </>
   );
 }

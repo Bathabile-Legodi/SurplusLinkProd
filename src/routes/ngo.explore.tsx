@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, Filter, ArrowUpDown, Clock, MapPin, Package, Heart } from "lucide-react";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
-import { requireRole } from "@/lib/auth-guard";
+
+import { ngoSidebarNav } from "@/lib/nav";
+
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
@@ -87,7 +88,7 @@ export const exploreQueryOptions = queryOptions({
 });
 
 export const Route = createFileRoute("/ngo/explore")({
-  beforeLoad: () => requireRole("ngo"),
+  
   loader: ({ context }) => context.queryClient.ensureQueryData(exploreQueryOptions),
   head: () => ({ meta: [{ title: "Explore Donations — SurplusLink" }] }),
   component: ExplorePage,
@@ -272,8 +273,7 @@ function ExplorePage() {
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={ngoNav} userLabel={initials} />
+    <>
       <main className="mx-auto flex-1 w-full max-w-7xl px-6 py-8">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome, {ngoName}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -429,6 +429,6 @@ function ExplorePage() {
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 }

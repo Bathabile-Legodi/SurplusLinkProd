@@ -8,13 +8,15 @@ import {
   MapPin,
   CheckCircle2,
 } from "lucide-react";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
-import { requireRole } from "@/lib/auth-guard";
+
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/ngo/collection/instructions/$id")({
-  beforeLoad: () => requireRole("ngo"),
+  
   head: () => ({
     meta: [{ title: "Collection Instructions — SurplusLink" }],
   }),
@@ -113,8 +115,7 @@ function CollectionInstructions() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={ngoNav} userLabel={initials} />
+    <>
       <main className="mx-auto flex-1 w-full max-w-3xl px-6 py-10">
 
         {/* Page header */}
@@ -374,6 +375,6 @@ function CollectionInstructions() {
         )}
 
       </main>
-    </div>
+    </>
   );
 }

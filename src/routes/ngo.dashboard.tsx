@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
+
+
 import { useNgoVerification } from "@/hooks/useNgoVerification";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +19,14 @@ import {
   LogOut,
   ExternalLink,
   Activity,
+  LayoutDashboard,
+  Search,
+  ClipboardList,
+  UserCircle,
 } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
+
+
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -42,24 +50,20 @@ function formatRelative(isoString: string | null): string {
   return m <= 1 ? "Just now" : `${m}m ago`;
 }
 
+const collectionTimeFormatter = new Intl.DateTimeFormat("en-ZA", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 function formatCollectionTime(dt: string | null): string {
   if (!dt) return "—";
-  return new Intl.DateTimeFormat("en-ZA", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date(dt));
+  return collectionTimeFormatter.format(new Date(dt));
 }
 
-function statusMeta(status: string) {
-  const s = status.toLowerCase();
-  if (s === "claimed")   return { label: "Claimed",   cls: "bg-blue-100 text-blue-700 border-blue-200" };
-  if (s === "delivered") return { label: "Delivered", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-  if (s === "cancelled") return { label: "Cancelled", cls: "bg-red-100 text-red-600 border-red-200" };
-  return { label: status, cls: "bg-neutral-100 text-neutral-500 border-neutral-200" };
-}
+// Use StatusBadge component instead of local statusMeta
 
 // ─── Server fn ──────────────────────────────────────────────────────────────
 
@@ -196,21 +200,21 @@ export const Route = createFileRoute("/ngo/dashboard")({
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+const todayFormatter = new Intl.DateTimeFormat("en-ZA", {
+  weekday: "long", day: "numeric", month: "long", year: "numeric",
+});
+
 function NgoDashboard() {
   const { isAuthorized, isVerified, isChecking, user } = useNgoVerification();
   const { signOut } = useAuth();
   const { data: stats } = useSuspenseQuery(ngoDashboardQueryOptions);
 
   const orgName = user?.user_metadata?.organization_name ?? "Organisation";
-  const todayLabel = new Intl.DateTimeFormat("en-ZA", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  }).format(new Date());
+  const todayLabel = todayFormatter.format(new Date());
 
-  // ── Loading skeleton ──
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="h-14 glass-nav" />
+      <>
         <main className="mx-auto max-w-5xl px-6 py-10 space-y-6">
           <div className="flex items-start justify-between">
             <div><Skeleton className="h-8 w-56 mb-2" /><Skeleton className="h-4 w-40" /></div>
@@ -222,21 +226,19 @@ function NgoDashboard() {
           <Skeleton className="h-32 w-full rounded-2xl" />
           <Skeleton className="h-48 w-full rounded-2xl" />
         </main>
-      </div>
+      </>
     );
   }
 
   if (!isAuthorized) return null;
 
-  // ── Unverified state ──
   if (!isVerified) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader nav={ngoNav} userLabel={orgName.slice(0, 2).toUpperCase()} />
+      <>
         <main className="mx-auto max-w-5xl px-6 py-10">
           <h1 className="text-2xl font-bold tracking-tight">NGO Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">Welcome back, {orgName}.</p>
-          <div className="mt-6 rounded-2xl glass border-l-4 border-warning p-6" style={{ boxShadow: "0 4px 16px oklch(0.82 0.16 85 / 0.12)" }}>
+          <div className="mt-6 rounded-2xl glass border-l-4 border-warning p-6 shadow-lg shadow-warning/20">
             <div className="flex items-start gap-3">
               <Clock className="mt-0.5 h-5 w-5 text-warning shrink-0" />
               <div>
@@ -256,26 +258,28 @@ function NgoDashboard() {
             </div>
           </div>
         </main>
-      </div>
+      </>
     );
   }
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   // ── Verified dashboard ──
   return (
-    <div className="relative min-h-screen bg-background overflow-x-hidden">
-      {/* Background depth blob */}
-      <div className="pointer-events-none absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-primary/4 blur-[100px]" />
+    <>
+      <div className="relative overflow-x-hidden">
+        {/* Background depth blobs */}
+        <div className="pointer-events-none absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-primary/4 blur-[100px]" />
 
-      <AppHeader nav={ngoNav} userLabel={orgName.slice(0, 2).toUpperCase()} />
+        <main className="relative mx-auto max-w-5xl px-6 py-8 space-y-8">
 
-      <main className="relative mx-auto max-w-5xl px-6 py-10 space-y-8">
-
-        {/* ── Header ── */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">Welcome back, {orgName}</h1>
+          {/* ── Header ── */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl font-bold tracking-tight">{greeting}, {orgName} 👋</h1>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                 <CheckCircle2 className="h-3 w-3" /> Verified
               </span>
@@ -309,7 +313,8 @@ function NgoDashboard() {
         <RecentActivitySection activity={stats.recentActivity} />
 
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -418,14 +423,13 @@ function ActiveClaimsSection({ claims }: { claims: { id: string; batch_type: str
             </thead>
             <tbody className="divide-y divide-border/40">
               {claims.map((c) => {
-                const { label, cls } = statusMeta(c.status);
                 return (
                   <tr key={c.id} className="transition-colors hover:bg-black/[0.015]">
                     <td className="px-5 py-3.5 font-medium">{c.batch_type}</td>
                     <td className="hidden sm:table-cell px-5 py-3.5 text-muted-foreground">{c.donor}</td>
                     <td className="hidden md:table-cell px-5 py-3.5 text-muted-foreground">{formatCollectionTime(c.collection_datetime)}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
+                      <StatusBadge status={c.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <Link
@@ -472,7 +476,6 @@ function RecentActivitySection({ activity }: { activity: { id: string; batch_typ
         <div className="glass rounded-2xl overflow-hidden">
           <ul className="divide-y divide-border/40">
             {activity.map((a) => {
-              const { label, cls } = statusMeta(a.status);
               return (
                 <li key={a.id} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-black/[0.015]">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary/60">
@@ -482,9 +485,7 @@ function RecentActivitySection({ activity }: { activity: { id: string; batch_typ
                     <p className="text-sm font-medium truncate">{a.batch_type}</p>
                     <p className="text-xs text-muted-foreground">{formatRelative(a.claimed_at)}</p>
                   </div>
-                  <span className={`shrink-0 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
-                    {label}
-                  </span>
+                  <StatusBadge status={a.status} />
                 </li>
               );
             })}

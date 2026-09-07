@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AppHeader, donorNav } from "@/components/AppHeader";
+import { AppHeader, donorNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+
+import { donorSidebarNav } from "@/lib/nav";
 import {
   loadCurrentBatch,
   submitDonationBatch,
@@ -70,8 +72,7 @@ function ReviewBatch() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader nav={donorNav} userLabel="FM" />
+    <>
       <main className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -185,6 +186,6 @@ function ReviewBatch() {
           </button>
         </div>
       </main>
-    </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AppHeader, ngoNav } from "@/components/AppHeader";
+import { AppHeader, ngoNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
+import { ngoSidebarNav } from "@/lib/nav";
 import { supabase } from "@/lib/supabase";
 import {
   Package,
@@ -13,13 +14,11 @@ import {
   XCircle,
   Navigation,
 } from "lucide-react";
-import { requireRole } from "@/lib/auth-guard";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/ngo/claims")({
-  beforeLoad: () => requireRole("ngo"),
-  head: () => ({ meta: [{ title: "My Claimed Donations — SurplusLink" }] }),
+    head: () => ({ meta: [{ title: "My Claimed Donations — SurplusLink" }] }),
   component: MyClaims,
 });
 
@@ -151,13 +150,7 @@ function MyClaims() {
   // anything else (unknown statuses) stays hidden — not shown in completed
 
   return (
-    <div className="relative min-h-screen bg-background overflow-x-hidden">
-      {/* Background blobs */}
-      <div className="pointer-events-none absolute -top-32 -right-32 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[100px]" />
-      <div className="pointer-events-none absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-primary/4 blur-[80px]" />
-
-      <AppHeader nav={ngoNav} userLabel={initials} />
-
+    <>
       <main className="relative mx-auto max-w-4xl px-6 py-10">
         {/* Page header */}
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -222,7 +215,7 @@ function MyClaims() {
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 }
 

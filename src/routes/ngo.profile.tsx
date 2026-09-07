@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useRef } from 'react'
-import { requireRole } from '@/lib/auth-guard'
-import { AppHeader, ngoNav } from '@/components/AppHeader'
+
+import { AppHeader, ngoNav } from '@/components/AppHeader' // kept for type compat — unused after migration
+
+import { ngoSidebarNav } from "@/lib/nav";
 import { useAuth } from '@/hooks/useAuth'
 import { Mail, Phone, Home, Settings, Shield, HelpCircle, FileText, ShieldAlert, KeyRound } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { usePlacesAutocomplete } from '@/hooks/usePlacesAutocomplete'
 
 export const Route = createFileRoute('/ngo/profile')({
-  beforeLoad: () => requireRole('ngo'),
+  
   component: NgoProfile,
 })
 
@@ -179,9 +181,7 @@ function NgoProfile() {
   const isVerified = dbVerified
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={ngoNav} userLabel={initials} />
-      
+    <>
       <main className="mx-auto flex-1 w-full max-w-5xl px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">NGO Profile</h1>
@@ -402,6 +402,6 @@ function NgoProfile() {
           
         </div>
       </main>
-    </div>
+    </>
   )
 }

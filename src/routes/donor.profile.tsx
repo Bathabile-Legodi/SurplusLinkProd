@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useRef } from 'react'
-import { requireRole } from '@/lib/auth-guard'
-import { AppHeader, donorNav } from '@/components/AppHeader'
+
+import { AppHeader, donorNav } from '@/components/AppHeader' // kept for type compat — unused after migration
+
+import { donorSidebarNav } from "@/lib/nav";
 import { useAuth } from '@/hooks/useAuth'
 import { Mail, Phone, Home, Settings, HelpCircle, FileText, ShieldAlert, KeyRound } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { usePlacesAutocomplete } from '@/hooks/usePlacesAutocomplete'
 
 export const Route = createFileRoute('/donor/profile')({
-  beforeLoad: () => requireRole('donor'),
+  
   component: DonorProfile,
 })
 
@@ -166,9 +168,7 @@ function DonorProfile() {
   }
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader nav={donorNav} userLabel={initials} />
-      
+    <>
       <main className="mx-auto flex-1 w-full max-w-5xl px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Donor Profile</h1>
@@ -376,6 +376,6 @@ function DonorProfile() {
           
         </div>
       </main>
-    </div>
+    </>
   )
 }
