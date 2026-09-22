@@ -2,6 +2,8 @@ import { Outlet, Link, createRootRouteWithContext, HeadContent, Scripts } from "
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { SupportChat } from "@/components/SupportChat";
+import { getSessionServer } from "@/lib/auth-guard";
+import type { User } from "@supabase/supabase-js";
 
 import appCss from "../styles.css?url";
 
@@ -27,7 +29,24 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export interface MyRouterContext {
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<MyRouterContext>()({
+  beforeLoad: async () => {
+    try {
+      const { user } = await getSessionServer();
+      return { 
+        auth: { 
+          user, 
+          role: user?.user_metadata?.role as "donor" | "ngo" | undefined 
+        } 
+      };
+    } catch (e) {
+      return { auth: { user: null, role: undefined } };
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

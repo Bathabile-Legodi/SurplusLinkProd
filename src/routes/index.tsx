@@ -212,8 +212,6 @@ function ImageCarousel() {
     "/images/surpluslink2.png",
     "/images/surpluslink3.png",
     "/images/surpluslink4.png",
-    "/images/surpluslink5.webp",
-    "/images/surpluslink6.png",
   ];
   const [idx, setIdx] = useState(0);
 
@@ -228,8 +226,8 @@ function ImageCarousel() {
       <div className="absolute -inset-4 rounded-3xl glass opacity-60" />
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-2xl shadow-primary/15">
         <img
-          src={images[idx]}
-          alt={`SurplusLink food rescue — image ${idx + 1} of ${images.length}`}
+          src={images[idx % images.length]}
+          alt={`SurplusLink food rescue — image ${(idx % images.length) + 1} of ${images.length}`}
           className="h-full w-full object-cover transition-opacity duration-500"
           loading="lazy"
           decoding="async"
@@ -243,7 +241,7 @@ function ImageCarousel() {
             <button
               key={i}
               onClick={() => setIdx(i)}
-              className={`h-1.5 rounded-full transition-all ${i === idx ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
+              className={`h-1.5 rounded-full transition-all ${i === (idx % images.length) ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
             />
           ))}
         </div>

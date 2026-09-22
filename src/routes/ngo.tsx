@@ -11,7 +11,7 @@ export const ngoSidebarNav: SidebarNavItem[] = [
 ];
 
 export const Route = createFileRoute("/ngo")({
-  beforeLoad: () => requireRole("ngo"),
+  beforeLoad: ({ context }) => requireRole("ngo", context.auth),
   component: NgoLayout,
 });
 

@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/verification")({
-  beforeLoad: () => requireAuth(),
+  beforeLoad: ({ context }) => requireAuth(context.auth),
   head: () => ({ meta: [{ title: "Admin Verification — SurplusLink" }] }),
   component: AdminVerificationPage,
 });

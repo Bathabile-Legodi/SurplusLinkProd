@@ -64,7 +64,8 @@ export const getRouter = () => {
       queryClient 
     } as { queryClient: QueryClient },
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    defaultPreload: 'intent',
+    defaultPreloadStaleTime: 10000,
     defaultErrorComponent: DefaultErrorComponent,
   });
 

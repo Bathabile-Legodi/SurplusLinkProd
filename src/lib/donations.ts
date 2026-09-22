@@ -18,6 +18,7 @@ export type RecentDonation = {
   status: string;
   submittedAt: string;
   collectionDateTime?: string;
+  collectionType?: string | null;
   items: DonationItem[];
 };
 
@@ -122,6 +123,7 @@ interface RawBatchRow {
   submitted_at?: string;
   status?: string;
   collection_datetime?: string;
+  collection_type?: string | null;
   donation_items?: RawDonationItemRow[];
 }
 
@@ -144,6 +146,7 @@ export function mapBatchRow(row: RawBatchRow): RecentDonation {
     status: row.status ?? "Pending",
     submittedAt: row.submitted_at ?? "",
     collectionDateTime: row.collection_datetime,
+    collectionType: row.collection_type ?? null,
     items: (row.donation_items ?? []).map(mapItemRow),
   };
 }

@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-
-import { LayoutDashboard, History, BarChart2, Network, Wallet } from "lucide-react";
+import { LayoutDashboard, History, BarChart2, Network, Wallet, ShieldCheck } from "lucide-react";
 import { mapBatchRow, type RecentDonation } from "@/lib/donations";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,7 +38,7 @@ export const getDonorDashboardStats = createServerFn({ method: "GET" }).handler(
 
   const { data, error } = await supabase
     .from("donation_batches")
-    .select("*, donation_items(*)")
+    .select("*, collection_type, donation_items(*)")
     .eq("donor_id", user.id)
     .order("submitted_at", { ascending: false })
     .limit(10);
@@ -139,15 +138,16 @@ function DonorDashboard() {
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Batch ID</th>
                   <th className="px-4 py-3 text-left font-medium">Category</th>
-                  <th className="px-4 py-3 text-left font-medium">Date & Time</th>
+                  <th className="px-4 py-3 text-left font-medium">Date &amp; Time</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {recent.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 py-6 text-center text-sm text-muted-foreground"
                     >
                       No recent donations yet.
@@ -167,6 +167,19 @@ function DonorDashboard() {
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={r.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.status.toLowerCase() === 'claimed' &&
+                          r.collectionType === 'pickup' && (
+                          <Link
+                            to="/donor/verify/$id"
+                            params={{ id: r.batchId }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Verify Pickup
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))

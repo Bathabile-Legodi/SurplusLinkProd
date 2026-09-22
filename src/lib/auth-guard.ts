@@ -1,6 +1,12 @@
 import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { createSupabaseServerClient } from "./supabase-server";
+import type { User } from "@supabase/supabase-js";
+
+export interface AuthContext {
+  user: User | null;
+  role: "donor" | "ngo" | undefined;
+}
 
 /**
  * Server function to securely retrieve the current user from cookies.
@@ -17,46 +23,37 @@ export const getSessionServer = createServerFn({ method: "GET" }).handler(async 
  * Throws a redirect to /login if the user is unauthenticated or has a
  * different role. Returns { user, role } on success.
  */
-export async function requireRole(required: "donor" | "ngo") {
-  const { user } = await getSessionServer();
-
-  if (!user) {
+export function requireRole(required: "donor" | "ngo", auth?: AuthContext) {
+  if (!auth?.user) {
     throw redirect({ to: "/login" });
   }
 
-  const role = user.user_metadata?.role as string | undefined;
-
-  if (role !== required) {
+  if (auth.role !== required) {
     throw redirect({ to: "/login" });
   }
 
-  return { user, role };
+  return auth;
 }
 
 /**
  * Use inside a route's `beforeLoad` to enforce any authenticated session
  * without caring about role (e.g. shared pages).
  */
-export async function requireAuth() {
-  const { user } = await getSessionServer();
-
-  if (!user) {
+export function requireAuth(auth?: AuthContext) {
+  if (!auth?.user) {
     throw redirect({ to: "/login" });
   }
 
-  return { user, role: user.user_metadata?.role as "donor" | "ngo" | undefined };
+  return auth;
 }
 
 /**
  * Use inside /login and /register `beforeLoad` to redirect already-authenticated
  * users straight to their dashboard.
  */
-export async function redirectIfAuthenticated() {
-  const { user } = await getSessionServer();
+export function redirectIfAuthenticated(auth?: AuthContext) {
+  if (!auth?.user) return; // Not logged in — allow through.
 
-  if (!user) return; // Not logged in — allow through.
-
-  const role = user.user_metadata?.role as string | undefined;
-  if (role === "donor") throw redirect({ to: "/donor/dashboard" });
-  if (role === "ngo") throw redirect({ to: "/ngo/dashboard" });
+  if (auth.role === "donor") throw redirect({ to: "/donor/dashboard" });
+  if (auth.role === "ngo") throw redirect({ to: "/ngo/dashboard" });
 }

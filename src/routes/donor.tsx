@@ -13,7 +13,7 @@ export const donorSidebarNav: SidebarNavItem[] = [
 ];
 
 export const Route = createFileRoute("/donor")({
-  beforeLoad: () => requireRole("donor"),
+  beforeLoad: ({ context }) => requireRole("donor", context.auth),
   component: DonorLayout,
 });
 

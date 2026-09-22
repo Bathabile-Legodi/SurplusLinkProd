@@ -35,6 +35,7 @@ import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as NgoTrackIdRouteImport } from './routes/ngo.track.$id'
 import { Route as NgoDonationsIdRouteImport } from './routes/ngo.donations.$id'
+import { Route as DonorVerifyIdRouteImport } from './routes/donor.verify.$id'
 import { Route as DonorDonateSuccessRouteImport } from './routes/donor.donate.success'
 import { Route as DonorDonateReviewRouteImport } from './routes/donor.donate.review'
 import { Route as DonorDonateConsentRouteImport } from './routes/donor.donate.consent'
@@ -174,6 +175,11 @@ const NgoDonationsIdRoute = NgoDonationsIdRouteImport.update({
   path: '/donations/$id',
   getParentRoute: () => NgoRoute,
 } as any)
+const DonorVerifyIdRoute = DonorVerifyIdRouteImport.update({
+  id: '/verify/$id',
+  path: '/verify/$id',
+  getParentRoute: () => DonorRoute,
+} as any)
 const DonorDonateSuccessRoute = DonorDonateSuccessRouteImport.update({
   id: '/donate/success',
   path: '/donate/success',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
   '/donor/donate/success': typeof DonorDonateSuccessRoute
+  '/donor/verify/$id': typeof DonorVerifyIdRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
   '/ngo/collection/instructions/$id': typeof NgoCollectionInstructionsIdRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
   '/donor/donate/success': typeof DonorDonateSuccessRoute
+  '/donor/verify/$id': typeof DonorVerifyIdRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
   '/ngo/collection/instructions/$id': typeof NgoCollectionInstructionsIdRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/donor/donate/consent': typeof DonorDonateConsentRoute
   '/donor/donate/review': typeof DonorDonateReviewRoute
   '/donor/donate/success': typeof DonorDonateSuccessRoute
+  '/donor/verify/$id': typeof DonorVerifyIdRoute
   '/ngo/donations/$id': typeof NgoDonationsIdRouteWithChildren
   '/ngo/track/$id': typeof NgoTrackIdRoute
   '/ngo/collection/instructions/$id': typeof NgoCollectionInstructionsIdRoute
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/donor/donate/consent'
     | '/donor/donate/review'
     | '/donor/donate/success'
+    | '/donor/verify/$id'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
     | '/ngo/collection/instructions/$id'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/donor/donate/consent'
     | '/donor/donate/review'
     | '/donor/donate/success'
+    | '/donor/verify/$id'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
     | '/ngo/collection/instructions/$id'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '/donor/donate/consent'
     | '/donor/donate/review'
     | '/donor/donate/success'
+    | '/donor/verify/$id'
     | '/ngo/donations/$id'
     | '/ngo/track/$id'
     | '/ngo/collection/instructions/$id'
@@ -636,6 +648,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NgoDonationsIdRouteImport
       parentRoute: typeof NgoRoute
     }
+    '/donor/verify/$id': {
+      id: '/donor/verify/$id'
+      path: '/verify/$id'
+      fullPath: '/donor/verify/$id'
+      preLoaderRoute: typeof DonorVerifyIdRouteImport
+      parentRoute: typeof DonorRoute
+    }
     '/donor/donate/success': {
       id: '/donor/donate/success'
       path: '/donate/success'
@@ -706,6 +725,7 @@ interface DonorRouteChildren {
   DonorDonateConsentRoute: typeof DonorDonateConsentRoute
   DonorDonateReviewRoute: typeof DonorDonateReviewRoute
   DonorDonateSuccessRoute: typeof DonorDonateSuccessRoute
+  DonorVerifyIdRoute: typeof DonorVerifyIdRoute
 }
 
 const DonorRouteChildren: DonorRouteChildren = {
@@ -719,6 +739,7 @@ const DonorRouteChildren: DonorRouteChildren = {
   DonorDonateConsentRoute: DonorDonateConsentRoute,
   DonorDonateReviewRoute: DonorDonateReviewRoute,
   DonorDonateSuccessRoute: DonorDonateSuccessRoute,
+  DonorVerifyIdRoute: DonorVerifyIdRoute,
 }
 
 const DonorRouteWithChildren = DonorRoute._addFileChildren(DonorRouteChildren)

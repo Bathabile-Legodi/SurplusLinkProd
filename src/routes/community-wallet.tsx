@@ -4,6 +4,7 @@ import { CommunityWalletForm } from '@/components/CommunityWalletForm'
 import { requireAuth } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/community-wallet')({
+  beforeLoad: ({ context }) => requireAuth(context.auth),
   component: CommunityWalletPage,
 })
 

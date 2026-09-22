@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader, donorNav } from "@/components/AppHeader"; // kept for type compat — unused after migration
 
@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Search,
   SlidersHorizontal,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -37,8 +38,9 @@ interface DBBatch {
   display_id: number; 
   batch_type: string;
   created_at: string;
-  status: "Pending" | "Claimed" | "Delivered" | "Expired" | "Cancelled";
+  status: "Pending" | "Claimed" | "Delivered" | "Expired" | "Cancelled" | "Collected";
   collection_datetime: string | null;
+  collection_type?: string | null;
   donation_items: DBItem[];
 }
 
@@ -186,6 +188,26 @@ function DonationRow({ d }: { d: DBBatch }) {
               </div>
             </div>
           )}
+
+          {/* Verify Pickup CTA */}
+          {d.status.toLowerCase() === 'claimed' && d.collection_type === 'pickup' && (
+            <div className="flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4">
+              <div>
+                <p className="text-sm font-bold text-foreground">Self-Collection Pending Verification</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Verify the 4-digit PIN when the NGO arrives to collect.
+                </p>
+              </div>
+              <Link
+                to="/donor/verify/$id"
+                params={{ id: d.id }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Verify Pickup
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -259,6 +281,7 @@ function DonorHistory() {
               created_at: createdAt,
               status: batch.status || "Pending",
               collection_datetime: collectionDatetime,
+              collection_type: batch.collection_type ?? null,
               donation_items: items
                 ? (items as any[])
                     .filter((item) => item.batch_id === batch.id)

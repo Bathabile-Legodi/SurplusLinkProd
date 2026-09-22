@@ -3,7 +3,7 @@ import { redirectIfAuthenticated } from "@/lib/auth-guard";
 import { AuthPage } from "@/components/AuthPage";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: () => redirectIfAuthenticated(),
+  beforeLoad: ({ context }) => redirectIfAuthenticated(context.auth),
   component: LoginPage,
 });
 
