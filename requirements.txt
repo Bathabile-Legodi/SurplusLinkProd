@@ -1,2 +1,0 @@
-npm install @emailjs/browser
-npm install -D @types/emailjs-browser
